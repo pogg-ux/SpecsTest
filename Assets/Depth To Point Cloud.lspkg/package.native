@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/40dd832e-2397-4c21-a9a1-3daa701e5ba9>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: Depth to Point Cloud VFX Asset VFX asset that uses the depth data from a depth texture to generate a real-time point cloud. Click here to learn more about VFX Editor Click here to learn more about Depth Texture
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: d4cd64c7-44ac-4589-a8bc-f88d74e945b3
+  ComponentUid: 9d4d9ca0-d2a3-4023-8c4f-58cb5462f8da
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

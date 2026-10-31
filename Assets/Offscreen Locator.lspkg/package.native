@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/bec5ebf6-0bbf-45d2-a5f7-8deed576aa0f>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: "Offscreen Locator This pack is great for locating objects which are out of the camera view. This will point an arrow at objects which are off the screen. Make sure after importing, place the downloaded prefab as a child of the Orthographic camera. Click here to learn how to add Orthographic Camera Click here to learn more about Screen Transform"
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: f52a419d-86a6-4dfc-a4c9-9122173ab3b7
+  ComponentUid: 92b6164c-968e-4b7c-bfb0-21dfeb92fded
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

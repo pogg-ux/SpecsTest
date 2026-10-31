@@ -1,0 +1,54 @@
+- !<AssetImportMetadata/135d4fdb-d5f6-8118-8430-a2977972d659>
+  ImportedAssetIds:
+    JavaScriptAsset: !<reference> c4f80527-6c6a-4b62-8108-d813e07cbc4b
+  ImporterName: JavaScriptAssetImporter
+  PrimaryAsset: !<reference> c4f80527-6c6a-4b62-8108-d813e07cbc4b
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    JavaScriptAsset: !<own> 2d98df9d-5234-4ebb-a493-55f41cb26474
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<ScriptAssetData/2d98df9d-5234-4ebb-a493-55f41cb26474>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: f0950286-7e71-42ca-8fdc-41928a8afc4a
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    faceCount: false
+    material: false
+    parentOfPOIs: false
+    radius: false
+    rebuildOnUpdate: false
+    renderMeshVisual: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - renderMeshVisual: !<reference.RenderMeshVisual> 00000000-0000-0000-0000-000000000000
+      material: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      parentOfPOIs: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      faceCount: 10
+      radius: 1
+      rebuildOnUpdate: false
+  ScriptTypes:
+    -
+      {}

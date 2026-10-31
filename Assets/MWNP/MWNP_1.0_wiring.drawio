@@ -1,0 +1,106 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="mwnp10" name="MWNP 1.0 Wiring">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="750" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b&gt;MWNP 1.0 — Bench Trainer Wiring Diagram&lt;/b&gt;&lt;br&gt;12 VDC · Rev A · 2026-10-31 · Designer: Philip" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="600" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Components -->
+        <mxCell id="PS1" value="&lt;b&gt;PS1&lt;/b&gt;&lt;br&gt;Adj. DC supply&lt;br&gt;set 12.0 VDC&lt;br&gt;&lt;br&gt;(+) top / (−) bottom" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="120" height="300" as="geometry" />
+        </mxCell>
+
+        <mxCell id="TS1" value="&lt;b&gt;TS-1&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="230" y="190" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="TS2" value="&lt;b&gt;TS-2&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="230" y="430" width="70" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="S1" value="&lt;b&gt;S1&lt;/b&gt;&lt;br&gt;SPDT toggle&lt;br&gt;&lt;br&gt;COM ← wire 1&lt;br&gt;UP → 2a (EXTEND)&lt;br&gt;DOWN → 3a (RETRACT)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="370" y="150" width="140" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="TS4" value="&lt;b&gt;TS-4&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="580" y="140" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="TS5" value="&lt;b&gt;TS-5&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="580" y="300" width="70" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="F1" value="&lt;b&gt;F1&lt;/b&gt;  0.5 A FB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="710" y="140" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="F2" value="&lt;b&gt;F2&lt;/b&gt;  0.5 A FB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="710" y="300" width="110" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="L1" value="&lt;b&gt;L1&lt;/b&gt;&lt;br&gt;EXTEND&lt;br&gt;12 V LED lamp" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="880" y="120" width="110" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="L2" value="&lt;b&gt;L2&lt;/b&gt;&lt;br&gt;RETRACT&lt;br&gt;12 V LED lamp" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="880" y="280" width="110" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Wires -->
+        <mxCell id="w1a" value="wire 1 (+12)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;" edge="1" parent="1" source="PS1" target="TS1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="160" y="210" as="sourcePoint" />
+            <Array as="points"><mxPoint x="195" y="210" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="w1b" value="wire 1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="TS1" target="S1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w2a" value="2a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;exitX=1;exitY=0.25;entryX=0;entryY=0.5;" edge="1" parent="1" source="S1" target="TS4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w2b" value="2b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="TS4" target="F1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w2c" value="2c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F1" target="L1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w3a" value="3a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;exitX=1;exitY=0.75;entryX=0;entryY=0.5;" edge="1" parent="1" source="S1" target="TS5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w3b" value="3b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="TS5" target="F2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w3c" value="3c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#CC0000;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="F2" target="L2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="w0ps" value="wire 0 (0 V)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#0000CC;fontStyle=1;exitX=1;exitY=0.9;entryX=0;entryY=0.5;" edge="1" parent="1" source="PS1" target="TS2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="195" y="450" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="w0L1" value="wire 0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#0000CC;fontStyle=1;exitX=1;exitY=0.5;entryX=0.5;entryY=1;" edge="1" parent="1" source="L1" target="TS2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1050" y="160" />
+              <mxPoint x="1050" y="530" />
+              <mxPoint x="265" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="w0L2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeWidth=2;strokeColor=#0000CC;exitX=1;exitY=0.5;" edge="1" parent="1" source="L2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1050" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Notes -->
+        <mxCell id="notes" value="&lt;b&gt;Operation&lt;/b&gt;&lt;br&gt;S1 UP = EXTEND (L1 on) · S1 DOWN = RETRACT (L2 on)&lt;br&gt;&lt;br&gt;&lt;b&gt;Test points&lt;/b&gt; (meter black lead on TS-2)&lt;br&gt;TS-1 = 12 V always · TS-4 = 12 V with S1 UP · TS-5 = 12 V with S1 DOWN&lt;br&gt;F1 out / L1(+) = 12 V with S1 UP if F1 and 2b/2c are good&lt;br&gt;&lt;br&gt;&lt;b&gt;Red&lt;/b&gt; = +12 VDC conductors · &lt;b&gt;Blue&lt;/b&gt; = 0 V return. TS-3 spare.&lt;br&gt;Supply current limit ~0.2 A during setup." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;strokeColor=#666666;fillColor=#f5f5f5;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="620" height="150" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

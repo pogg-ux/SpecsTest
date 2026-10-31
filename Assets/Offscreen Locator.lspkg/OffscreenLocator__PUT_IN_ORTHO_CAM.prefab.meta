@@ -1,0 +1,205 @@
+- !<AssetImportMetadata/f5babd2d-300e-87dc-efef-68bf9b705d2b>
+  ImportedAssetIds:
+    ObjectPrefab: !<reference> e5e23bae-eb8e-4185-905a-601af7a46a80
+  ImporterName: ObjectPrefabImporter
+  PrimaryAsset: !<reference> e5e23bae-eb8e-4185-905a-601af7a46a80
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    ObjectPrefab: !<own> 9b691715-0f7d-4f56-b640-14508096fae7
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<ScreenRegionComponent/09933317-e903-438b-5bd6-198d3682680a>
+  PrefabRemaps:
+    []
+  Name: Screen Region
+  Enabled: true
+  ScreenRegionType: FullFrame
+  ResizeWithKeyboard: false
+- !<SceneObject/518f719e-a50f-455c-7473-6d55e894df86>
+  PrefabRemaps:
+    []
+  Name: Tracked Object
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 171.726440, y: -2.021988, z: -40.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 6ef7eeb8-435c-4a6b-4871-c6c314411426
+- !<RenderMeshVisual/6ef7eeb8-435c-4a6b-4871-c6c314411426>
+  PrefabRemaps:
+    []
+  Name: Mesh Visual 1
+  Enabled: true
+  RenderOrder: 1
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 545baa7d-d4dd-4bd1-bba7-ebd9848ad2dd
+  Mesh: !<reference> 887c1f2e-017c-4ba4-accc-3fcc68b8b7c1
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<ScreenTransform/996e4901-7a7c-489b-7705-282821ea4be3>
+  PrefabRemaps:
+    []
+  Name: Screen Transform
+  Enabled: true
+  IsAdvanced: false
+  Constraints:
+    pinToLeft: false
+    pinToTop: false
+    pinToRight: false
+    pinToBottom: false
+    fixedWidth: false
+    fixedHeight: false
+    deactivatedFixedSprite: false
+    deactivatedFixedPivot: false
+  Pivot: {x: 0.000000, y: 0.000000}
+  Transform:
+    position: {x: 0.000000, y: 0.000000, z: -40.000000}
+    rotation: {x: 0.000000, y: -0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  RawMode: true
+  ForceBasic: true
+  EnableDebugRender: false
+  Anchor:
+    left: -1.000000
+    bottom: -1.000000
+    right: 1.000000
+    top: 1.000000
+  Offset:
+    left: 0.000000
+    bottom: 0.000000
+    right: 0.000000
+    top: 0.000000
+- !<ObjectPrefabAssetData/9b691715-0f7d-4f56-b640-14508096fae7>
+  Prototype: !<ObjectOwner/0cee9d69-354e-473d-9123-31604368b735>
+    PackagePath: ""
+    objects:
+      - !<own> c549d6ad-29e3-432d-559d-d616e01a7d34
+- !<ScreenTransform/b89dbfc1-ee2b-4d75-50b2-9fffbef76219>
+  PrefabRemaps:
+    []
+  Name: Screen Transform
+  Enabled: true
+  IsAdvanced: false
+  Constraints:
+    pinToLeft: false
+    pinToTop: false
+    pinToRight: false
+    pinToBottom: false
+    fixedWidth: false
+    fixedHeight: false
+    deactivatedFixedSprite: false
+    deactivatedFixedPivot: false
+  Pivot: {x: 0.000000, y: 0.000000}
+  Transform:
+    position: {x: 0.000000, y: 0.000000, z: -40.000000}
+    rotation: {x: 0.000000, y: -0.000000, z: 0.000000}
+    scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    hasSegmentScaleCompensation: false
+  RawMode: true
+  ForceBasic: true
+  EnableDebugRender: false
+  Anchor:
+    left: -0.000000
+    bottom: 0.000000
+    right: -0.000000
+    top: 0.000000
+  Offset:
+    left: -0.500000
+    bottom: -0.500000
+    right: 0.500000
+    top: 0.500000
+- !<SceneObject/c549d6ad-29e3-432d-559d-d616e01a7d34>
+  PrefabRemaps:
+    []
+  Name: OffscreenLocator__PUT_IN_ORTHO_CAM
+  Enabled: true
+  Layers: 1048576
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: -40.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> f34f8156-69fe-4614-5307-326bdc12649f
+    - !<own> 518f719e-a50f-455c-7473-6d55e894df86
+  Components:
+    - !<own> 09933317-e903-438b-5bd6-198d3682680a
+    - !<own> 996e4901-7a7c-489b-7705-282821ea4be3
+    - !<own> ee23c23c-0010-4281-41ac-842802d807cc
+- !<ScriptComponent/ee23c23c-0010-4281-41ac-842802d807cc>
+  PrefabRemaps:
+    []
+  Name: OffscreenLocator
+  Enabled: true
+  ScriptAsset: !<reference> 8fe83d64-1f3b-4d4d-8008-9aaa0d1a2206
+  ScriptInputsDefault:
+    mode: true
+    edgeBound: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      mode: center
+      locator: !<reference.SceneObject> 518f719e-a50f-455c-7473-6d55e894df86
+      indicator: !<reference.ScreenTransform> b89dbfc1-ee2b-4d75-50b2-9fffbef76219
+      edgeBound: 0.800000
+      camera: !<reference.Camera> 00000000-0000-0065-0000-000000000065
+  ScriptTypes:
+    "":
+      {}
+- !<SceneObject/f34f8156-69fe-4614-5307-326bdc12649f>
+  PrefabRemaps:
+    []
+  Name: "Indicator [EDIT_ME]"
+  Enabled: true
+  Layers: 1048576
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: -40.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> b89dbfc1-ee2b-4d75-50b2-9fffbef76219
+    - !<own> f3db79bb-fc74-4d22-51ab-6ecd3b64b156
+- !<Image/f3db79bb-fc74-4d22-51ab-6ecd3b64b156>
+  PrefabRemaps:
+    []
+  Name: Image
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Fit
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 37d49f49-24d7-4763-8d41-97924a0f065e
+  FlipX: false
+  FlipY: false
+  RotationAngle: 0
+  Pivot: {x: 0.000000, y: 0.000000}
+  ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000

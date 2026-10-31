@@ -1,0 +1,41 @@
+- !<NativePackageDescriptor/20960f5b-8438-40f2-a148-cec32a1ac3ee>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: |-
+    The script in the package positions a target object at a fixed distance in front of the camera along the xz-plane.
+    Using a child object of a camera as a reference object and its position to determine the direction. The target object's y-coordinate is fixed at 0.
+    If the reference object's height exceeds a specified threshold, the script will not update the target object's position.
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: c2a1558c-cb6a-4b9b-ba7b-574303bcaf3f
+  ComponentUid: 260ee272-2ed1-4f9a-86fc-7464ac4c3552
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "isolatedModules": true,
+    "lib": [
+      "es2021"
+    ],
+    "module": "commonjs",
+    "noEmit": true,
+    "paths": {
+      "*": [
+        "./Assets/*",
+        "./Packages/*",
+        "./Cache/TypeScript/Src/Packages/*"
+      ],
+      "Spatial Triggers.lspkg/Scripts/Behavior.lsc/*": [
+        "./Assets/Spatial Triggers.lspkg/Scripts/Behavior.lsc/*",
+        "./Cache/TypeScript/Src/Assets/Spatial Triggers.lspkg/Scripts/Behavior.lsc/*"
+      ],
+      "Waypoint Tween.lspkg/Scripts/Tween.lsc/*": [
+        "./Assets/Waypoint Tween.lspkg/Scripts/Tween.lsc/*",
+        "./Cache/TypeScript/Src/Assets/Waypoint Tween.lspkg/Scripts/Tween.lsc/*"
+      ],
+      "Waypoint Tween.lspkg/Scripts/TweenManager.lsc/*": [
+        "./Assets/Waypoint Tween.lspkg/Scripts/TweenManager.lsc/*",
+        "./Cache/TypeScript/Src/Assets/Waypoint Tween.lspkg/Scripts/TweenManager.lsc/*"
+      ]
+    },
+    "skipDefaultLibCheck": true,
+    "target": "es2021",
+    "types": []
+  },
+  "exclude": [
+    "node_modules/typescript/lib/lib.dom.d.ts"
+  ],
+  "include": [
+    "./Cache/TypeScript/lib/LensifyTS/Declarations/**/*.d.ts",
+    "./Assets/**/*.ts",
+    "./Packages/**/*.ts",
+    "./Cache/TypeScript/Src/Packages/**/*.ts",
+    "./Cache/TypeScript/Src/Assets/Spatial Triggers.lspkg/Scripts/Behavior.lsc/**/*.ts",
+    "./Cache/TypeScript/Src/Assets/Waypoint Tween.lspkg/Scripts/Tween.lsc/**/*.ts",
+    "./Cache/TypeScript/Src/Assets/Waypoint Tween.lspkg/Scripts/TweenManager.lsc/**/*.ts"
+  ]
+}

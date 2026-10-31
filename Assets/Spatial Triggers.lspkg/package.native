@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/2b1ae073-7579-4d44-8f32-dd59aba4aa9a>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: This script places prefabs in a circle around a center point. Each instantiated prefab acts as a spatial trigger that triggers a Behavior when a user enters or exits it.
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: ff8a5264-e60a-4e35-b913-2234dfc31f0c
+  ComponentUid: 2c711f33-dbfd-42c7-9e64-760f0407da06
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

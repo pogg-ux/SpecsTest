@@ -1,0 +1,57 @@
+- !<AssetImportMetadata/79283af9-ce0c-9bb1-469e-62329710ee71>
+  ImportedAssetIds:
+    JavaScriptAsset: !<reference> 28baeb98-e8bd-4135-ab09-32a31dab5bc5
+  ImporterName: JavaScriptAssetImporter
+  PrimaryAsset: !<reference> 28baeb98-e8bd-4135-ab09-32a31dab5bc5
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    JavaScriptAsset: !<own> 93b17faf-8b3e-4342-889d-1eac650a022a
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<ScriptAssetData/93b17faf-8b3e-4342-889d-1eac650a022a>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 1aa0a032-ef19-40d9-ad95-6965bafea428
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    cameraObject: false
+    detectionRadiusSqrt: false
+    orientStationsToCenter: false
+    perStationCount: false
+    spawnAutomatically: false
+    spawnRadius: false
+    stations: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - stations: !<reference.ObjectPrefab[]>
+        []
+      perStationCount: 1
+      spawnRadius: !<float> 50.000000
+      orientStationsToCenter: false
+      detectionRadiusSqrt: !<float> 100.000000
+      cameraObject: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      spawnAutomatically: false
+  ScriptTypes:
+    -
+      {}

@@ -1,0 +1,82 @@
+{
+  "machine": "MWNP 1.0",
+  "description": "Bench trainer: SPDT toggle selects EXTEND or RETRACT lamp, each on its own fused 12 VDC branch.",
+  "revision": "A",
+  "date": "2026-10-31",
+  "supply_voltage": "12 VDC",
+  "components": [
+    { "id": "PS1", "type": "power_supply", "description": "Adjustable DC bench supply, set to 12.0 VDC, current limit ~0.2 A during setup", "terminals": ["+", "-"], "part_number": "TBD" },
+    { "id": "TS-1", "type": "terminal", "description": "+12 VDC distribution", "part_number": "TBD" },
+    { "id": "TS-2", "type": "terminal", "description": "0 V common return", "part_number": "TBD" },
+    { "id": "TS-3", "type": "terminal", "description": "Spare", "part_number": "TBD" },
+    { "id": "TS-4", "type": "terminal", "description": "EXTEND branch feed from S1 UP", "part_number": "TBD" },
+    { "id": "TS-5", "type": "terminal", "description": "RETRACT branch feed from S1 DOWN", "part_number": "TBD" },
+    { "id": "S1", "type": "switch_spdt", "description": "Toggle: UP = EXTEND, DOWN = RETRACT", "terminals": ["COM", "UP", "DOWN"], "part_number": "TBD" },
+    { "id": "F1", "type": "fuse", "rating": "0.5 A fast-blow (rating TBD from fuse pack)", "description": "Protects EXTEND branch", "terminals": ["IN", "OUT"], "part_number": "TBD" },
+    { "id": "F2", "type": "fuse", "rating": "0.5 A fast-blow (rating TBD from fuse pack)", "description": "Protects RETRACT branch", "terminals": ["IN", "OUT"], "part_number": "TBD" },
+    { "id": "L1", "type": "lamp", "description": "EXTEND indicator, 12 V LED lamp (stand-in for actuator extend)", "terminals": ["+", "-"], "part_number": "TBD" },
+    { "id": "L2", "type": "lamp", "description": "RETRACT indicator, 12 V LED lamp (stand-in for actuator retract)", "terminals": ["+", "-"], "part_number": "TBD" }
+  ],
+  "wires": [
+    { "id": "1",  "from": "PS1:+",    "to": "TS-1",    "nominal": "+12 VDC always" },
+    { "id": "1",  "from": "TS-1",     "to": "S1:COM",  "nominal": "+12 VDC always" },
+    { "id": "2a", "from": "S1:UP",    "to": "TS-4",    "nominal": "+12 VDC when S1 UP" },
+    { "id": "2b", "from": "TS-4",     "to": "F1:IN",   "nominal": "+12 VDC when S1 UP" },
+    { "id": "2c", "from": "F1:OUT",   "to": "L1:+",    "nominal": "+12 VDC when S1 UP and F1 intact" },
+    { "id": "3a", "from": "S1:DOWN",  "to": "TS-5",    "nominal": "+12 VDC when S1 DOWN" },
+    { "id": "3b", "from": "TS-5",     "to": "F2:IN",   "nominal": "+12 VDC when S1 DOWN" },
+    { "id": "3c", "from": "F2:OUT",   "to": "L2:+",    "nominal": "+12 VDC when S1 DOWN and F2 intact" },
+    { "id": "0",  "from": "PS1:-",    "to": "TS-2",    "nominal": "0 V" },
+    { "id": "0",  "from": "L1:-",     "to": "TS-2",    "nominal": "0 V" },
+    { "id": "0",  "from": "L2:-",     "to": "TS-2",    "nominal": "0 V" }
+  ],
+  "functions": {
+    "EXTEND":  { "control": "S1 UP",   "path": ["1", "2a", "2b", "2c"], "load": "L1", "return": "0" },
+    "RETRACT": { "control": "S1 DOWN", "path": ["1", "3a", "3b", "3c"], "load": "L2", "return": "0" }
+  },
+  "test_points": {
+    "reference": "Meter black lead on TS-2",
+    "TS-1": "12 V at all times with PS1 on",
+    "TS-4": "12 V with S1 UP",
+    "F1:OUT": "12 V with S1 UP if F1 good",
+    "L1:+": "12 V with S1 UP if F1, 2b and 2c good",
+    "TS-5": "12 V with S1 DOWN",
+    "F2:OUT": "12 V with S1 DOWN if F2 good",
+    "L2:+": "12 V with S1 DOWN if F2, 3b and 3c good"
+  },
+  "faults": [
+    {
+      "symptom": "EXTEND does not work (L1 off with S1 UP); RETRACT works",
+      "isolates": "PS1, wire 1 and S1 COM are good because RETRACT works",
+      "suspects": ["F1 open", "wire 2b loose at TS-4 or F1", "wire 2c loose", "S1 UP contact", "wire 2a", "L1 failed", "L1 return wire 0"],
+      "check_order": [
+        "12 V at TS-4 with S1 UP? If no: S1 UP contact or wire 2a.",
+        "12 V at F1:IN? If no: wire 2b open between TS-4 and F1.",
+        "12 V at F1:OUT? If no: F1 open — check fuse continuity with power off.",
+        "12 V at L1:+? If no: wire 2c open.",
+        "12 V at L1:+ but lamp off: L1 failed or L1 return (wire 0) open."
+      ]
+    },
+    {
+      "symptom": "RETRACT does not work (L2 off with S1 DOWN); EXTEND works",
+      "isolates": "PS1, wire 1 and S1 COM are good because EXTEND works",
+      "suspects": ["F2 open", "wire 3b loose at TS-5 or F2", "wire 3c loose", "S1 DOWN contact", "wire 3a", "L2 failed", "L2 return wire 0"],
+      "check_order": [
+        "12 V at TS-5 with S1 DOWN? If no: S1 DOWN contact or wire 3a.",
+        "12 V at F2:IN? If no: wire 3b open between TS-5 and F2.",
+        "12 V at F2:OUT? If no: F2 open — check fuse continuity with power off.",
+        "12 V at L2:+? If no: wire 3c open.",
+        "12 V at L2:+ but lamp off: L2 failed or L2 return (wire 0) open."
+      ]
+    },
+    {
+      "symptom": "Neither EXTEND nor RETRACT works",
+      "suspects": ["PS1 off or in current limit", "wire 1", "S1 COM", "common return wire 0 at TS-2"],
+      "check_order": [
+        "12 V at TS-1? If no: PS1 or wire 1 from PS1.",
+        "12 V at S1 COM? If no: wire 1 between TS-1 and S1.",
+        "If 12 V present at a lamp + but both lamps off: check wire 0 at TS-2 and PS1 (-)."
+      ]
+    }
+  ]
+}

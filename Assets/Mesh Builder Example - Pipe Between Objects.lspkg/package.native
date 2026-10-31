@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/3fcc7432-0a72-4a4e-a08a-af4ca5713e94>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: Mesh Builder Example - Pipe Between Objects See how you can make a cylinder with Mesh Builder. The script also shows how you can iterate through a list of objects and create a dynamic mesh that connects them all. This works great with Realtime Store and Persistent Cloud Storage APIs. Click here to learn more on how to use Mesh Builder
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: a9377e44-8b32-449c-9863-ceabc7fde454
+  ComponentUid: f8aa8265-231a-4fef-9865-c4564a4a13dc
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/9919c098-5928-4b14-b83e-5118e4e9a993>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: "The Look Around asset allows you to add 3D content all around the user. It uses the gyroscope to lock objects in the scene, allowing the user to look around and see different content. Learn more in the Look Around Asset guide"
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: cd010f96-e732-404a-b8aa-a66d2f73a71a
+  ComponentUid: 28496e0c-5894-4d07-ba20-0448931ecb12
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

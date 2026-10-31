@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/2f6dfa6e-b55a-4d9f-bada-8520d9f3dfa5>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: "Persistent Cloud Storage Example Leverage Lens Cloud to store data for the current user, or for a multiplayer session. This asset contains an example script that you can modify directly, or use as an API. This works great with Realtime Store and Connected Lenses Session. Click here to learn more on how to use Persistent Cloud Storage"
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: 465cdc75-b0c9-4b2e-908a-c98bc67532c4
+  ComponentUid: 80ac9ac3-d594-4816-9c70-cae050cb2175
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

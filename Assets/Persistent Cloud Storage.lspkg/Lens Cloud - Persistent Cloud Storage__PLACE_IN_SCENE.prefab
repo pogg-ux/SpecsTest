@@ -1,0 +1,39 @@
+- !<ObjectPrefab/47cb4468-ff84-4e65-b496-9396e1b3e0ac>
+  PackagePath: ""
+  objects:
+    - !<own> b50913d2-0c0d-4d3a-9e33-59afabe70711
+  LazyLoading: false
+  RetainAssets: true
+  PreviewEnvironment: !<reference> 00000000-0000-0000-0000-000000000000
+- !<ScriptComponent/1cafa89b-948f-4e4b-af5e-a50cc76d8b95>
+  PrefabRemaps:
+    []
+  Name: Lens Cloud - Persistent Cloud Storage
+  Enabled: true
+  ScriptAsset: !<reference> 8ce657af-df04-480a-91b4-69703f19cb52
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      cloudStorageModule: !<reference.CloudStorageModule> 2b75ab2c-270f-499e-acec-b00bd09a776b
+  ScriptTypes:
+    "":
+      {}
+- !<SceneObject/b50913d2-0c0d-4d3a-9e33-59afabe70711>
+  PrefabRemaps:
+    - 1cafa89b-948f-4e4b-af5e-a50cc76d8b95: 1cafa89b-948f-4e4b-50a1-5af33892746a
+    - b50913d2-0c0d-4d3a-9e33-59afabe70711: b50913d2-0c0d-4d3a-61cc-a6505418f8ee
+  Name: Lens Cloud - Persistent Cloud Storage__PLACE_IN_SCENE
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 1cafa89b-948f-4e4b-af5e-a50cc76d8b95

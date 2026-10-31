@@ -1,0 +1,114 @@
+SchemaVersion: 1
+Nodes:
+  ChildNodes:
+    Node0:
+      DependencyIndex: 0
+      LevelID: 0
+      NodeCount: 0
+      NodeType: 1
+      Ports:
+        Position:
+          IOType: 1
+          Variable: [0.0, 0.0, 0.0, 0.0]
+        Space:
+          ItemIndex: 1
+          ItemList: "Object : World : Camera : Screen ( NDC )"
+      PositionX: -311
+      PositionY: 138
+      TemplateID: node_effect_global_surface_position
+      TemplateVersionMinor: 1
+      Title1: Surface Position
+    Node0CheckValue: false
+    Node1:
+      DependencyIndex: 1
+      LevelID: 1
+      NodeCount: 0
+      NodeType: 1
+      Ports:
+        Input0:
+          Connection0:
+            NodeLevelID: 0
+            PortID: Position
+          Variable: [0.0, 0.0, 0.0, 0.0]
+        Output:
+          IOType: 1
+          Variable: [0.0, 0.0, 0.0, 0.0]
+        Type0:
+          ItemIndex: 0
+          ItemList: "auto : xyzw : rgba : xyz : rgb : xy : x"
+      PositionX: -116
+      PositionY: 126
+      TemplateID: nodes_math_normalize
+      Title1: Normalize
+    Node1CheckValue: false
+    Node2:
+      CommentSizeX: 0
+      CommentSizeY: 0
+      DependencyIndex: 2
+      LevelID: 4
+      NodeCount: 0
+      NodeType: 1
+      Ports:
+        Depth:
+          Variable: 0.0
+        FinalColor:
+          ClassType1: COLOR
+          Connection0:
+            NodeLevelID: 1
+            PortID: Output
+          Variable: [1.0, 1.0, 1.0, 1.0]
+        FinalColor1:
+          ClassType1: COLOR
+          Variable: [1.0, 1.0, 1.0, 1.0]
+        FinalColor2:
+          ClassType1: COLOR
+          Variable: [1.0, 1.0, 1.0, 1.0]
+        FinalColor3:
+          ClassType1: COLOR
+          Variable: [1.0, 1.0, 1.0, 1.0]
+        Negative:
+          Variable: false
+        Targets:
+          ItemIndex: 0
+          ItemList: "1 : 2 : 3 : 4"
+        Type:
+          ItemIndex: 0
+          ItemList: "3D : Post Effect"
+        WorldNormal:
+          Variable: [0.0, 1.0, 0.0]
+        WorldPosition:
+          Variable: [0.0, 0.0, 0.0]
+        WorldTangent:
+          Variable: [0.0, 0.0, 1.0]
+        WriteDepth:
+          Variable: false
+      PositionX: 37
+      PositionY: 105
+      TemplateID: nodes_main_graph
+      Title1: Shader
+      Title2: 3D
+  CommentSizeX: 0
+  CommentSizeY: 0
+  IsSubGraph0: true
+  IsSubGraph1: true
+  IsSubGraph2: true
+  IsSubGraph3: true
+  LevelID: 0
+  NodeType: 3
+  PositionX: 0
+  PositionY: 0
+  TemplateID: nodes_main_subgraph
+  Title1: ""
+  ViewOffsetX0: 50
+  ViewOffsetX1: 50
+  ViewOffsetX2: 50
+  ViewOffsetX3: 50
+  ViewOffsetY0: -168
+  ViewOffsetY1: -168
+  ViewOffsetY2: -168
+  ViewOffsetY3: -168
+Property:
+  CrossCompile:
+    Variables:
+      VariableX: false
+SystemID: dev.snap.shaders

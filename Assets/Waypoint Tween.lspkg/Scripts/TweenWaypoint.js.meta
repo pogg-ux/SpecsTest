@@ -1,0 +1,79 @@
+- !<AssetImportMetadata/591e38f0-60e3-aecc-df05-1cd9e956231b>
+  ImportedAssetIds:
+    JavaScriptAsset: !<reference> cda6f224-c583-40fa-908a-96a89a0d1bb6
+  ImporterName: JavaScriptAssetImporter
+  PrimaryAsset: !<reference> cda6f224-c583-40fa-908a-96a89a0d1bb6
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    JavaScriptAsset: !<own> bd7b386a-8649-4679-985c-43419909a5b5
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<ScriptAssetData/bd7b386a-8649-4679-985c-43419909a5b5>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: c3e7f7d0-be2a-42bb-8abd-8271009def13
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    constantDelay: false
+    constantTime: false
+    constantUpdate: false
+    delay: false
+    delayPoints: false
+    easingFunction: false
+    easingType: false
+    isLocal: false
+    loopType: false
+    playAutomatically: false
+    sceneObjectReference: false
+    time: false
+    timePoints: false
+    tweenName: false
+    type: false
+    waypoints: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - sceneObjectReference: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      tweenName: ""
+      playAutomatically: true
+      loopType: 0
+      type: 0
+      constantUpdate: true
+      waypoints: !<reference.SceneObject[]>
+        []
+      constantTime: true
+      time: !<float> 1.000000
+      timePoints: !<float[]>
+        - 1.000000
+        - 1.000000
+      constantDelay: true
+      delay: !<float> 0.000000
+      delayPoints: !<float[]>
+        - 0.000000
+        - 0.000000
+      isLocal: true
+      easingFunction: Quadratic
+      easingType: Out
+  ScriptTypes:
+    -
+      {}

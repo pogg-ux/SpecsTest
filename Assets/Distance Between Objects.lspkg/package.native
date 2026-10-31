@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/4b93ef87-a0f7-4278-8206-906e5eeb2283>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: "Distance Between Objects This helper script allows you to get the distance between objects. Take a look at the provided script to see an example of calling the API. You have the option to map the distance to a range, and also multiply each object's position by a vector to make your calculation more useful. It comes with several options like print to help you see distance without another script. Click here to learn more on how to use Persistent Cloud Storage"
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: e05f1902-2b17-47d0-af73-9a2100f4b780
+  ComponentUid: 69d4a43d-9c91-4732-88e9-2d534a878de3
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

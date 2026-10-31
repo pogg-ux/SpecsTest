@@ -1,0 +1,38 @@
+- !<NativePackageDescriptor/4adccf83-5a1d-4f23-88c0-ea2d85b3912d>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: 'Expanding Text Input Click on the text in preview to open the keyboard, the panel background will resize to the text length and formatting. This is achieved by using "Extents Target" property of a Text Component.'
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: ac90b32f-3618-42fb-a56b-83f9466be539
+  ComponentUid: 102a7993-a90a-46cf-8ff9-2483f1e896e7
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

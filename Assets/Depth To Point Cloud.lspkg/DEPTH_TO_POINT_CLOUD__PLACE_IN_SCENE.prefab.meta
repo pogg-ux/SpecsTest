@@ -1,0 +1,160 @@
+- !<AssetImportMetadata/d178e555-601a-89a1-479e-9d9ee813fbe5>
+  ImportedAssetIds:
+    ObjectPrefab: !<reference> 006be7c3-2a40-4c6f-bba0-59797fe53fe1
+  ImporterName: ObjectPrefabImporter
+  PrimaryAsset: !<reference> 006be7c3-2a40-4c6f-bba0-59797fe53fe1
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    ObjectPrefab: !<own> 78505b41-dbe7-4980-8e7d-1aa8e999e18d
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<DeviceTracking/1a53821d-6942-48c3-7058-2736b7ee27de>
+  PrefabRemaps:
+    []
+  Name: Device Tracking
+  Enabled: true
+  DeviceTrackingMode: World
+  RotationOptions: !<RotationOptions>
+    InvertRotation: false
+  SurfaceOptions: !<SurfaceOptions>
+    EnhanceWithNativeAR: false
+- !<SceneObject/20326720-5797-48c6-403d-701992129201>
+  PrefabRemaps:
+    []
+  Name: Depth to Point Cloud VFX
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 83213230-55f3-4700-6abe-df5312fe358b
+- !<Camera/2805abdd-694b-410f-7107-2d05e33c75e5>
+  PrefabRemaps:
+    []
+  Name: Camera
+  Enabled: true
+  renderLayer: 1
+  MipmapLevel: 0
+  RenderOrder: 0
+  Size: 20.000000
+  Near: 1.000000
+  Far: 1000.000000
+  Fov: 60.000004
+  ClearColor: !<CameraClearColor>
+    Mode: Color
+    Color: {x: 0.000000, y: 0.000000, z: 0.000000, w: 0.000000}
+    InputTexture: !<reference> 00000000-0000-0000-0000-000000000000
+  ClearDepth: !<CameraClearDepth>
+    Mode: Value
+    Value: 1.000000
+    InputTexture: !<reference> 00000000-0000-0000-0000-000000000000
+  Aspect: 1.000000
+  CameraType: Perspective
+  DepthMode: Regular
+  DeviceProperty: All
+  AspectPreset: Custom
+  OitLayers: NoOit
+  RenderTarget: !<reference> 78b457e7-1760-4eab-96b7-8dbcaee8ebf1
+  DepthStencilRenderTarget: !<reference> 00000000-0000-0000-0000-000000000000
+  MaskTexture: !<reference> 00000000-0000-0000-0000-000000000000
+  RayTracing: !<reference> 00000000-0000-0000-0000-000000000000
+  DevicePropertiesSource: !<reference> 00000000-0000-0000-0000-000000000000
+- !<ScriptComponent/720ab396-ae42-4764-773c-3702e1257c10>
+  PrefabRemaps:
+    []
+  Name: README
+  Enabled: true
+  ScriptAsset: !<reference> ee548ba0-a528-4d43-a97d-04ce40f60ed1
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
+- !<ObjectPrefabAssetData/78505b41-dbe7-4980-8e7d-1aa8e999e18d>
+  Prototype: !<ObjectOwner/c8ab8e99-f300-4e69-9305-adb293978ab7>
+    PackagePath: ""
+    objects:
+      - !<own> c768cf6b-cb5f-4fd7-7134-6e888e4debc9
+- !<VFXComponent/83213230-55f3-4700-6abe-df5312fe358b>
+  PrefabRemaps:
+    []
+  Name: VFX
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  VFXAsset: !<reference> 1738c485-0c62-491d-9a87-2198c6b85891
+  SystemRenderLayerInfoMap:
+    0: !<VFXSystemRenderLayerInfo>
+      RenderLayerInfoMap:
+        render_0_0: !<VFXRenderLayerInfo>
+          Enabled: false
+          RenderLayers: 1
+- !<SceneObject/a111379b-8dda-42b7-4b10-51c36f76d748>
+  PrefabRemaps:
+    []
+  Name: _CHECK_README_IF_ISSUES_OCCURE
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 720ab396-ae42-4764-773c-3702e1257c10
+- !<SceneObject/ad40b178-52e0-4e7f-5eb3-68ef86189444>
+  PrefabRemaps:
+    []
+  Name: _THIS_SHOULD_BE_YOUR_ONLY_CAMERA
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 2805abdd-694b-410f-7107-2d05e33c75e5
+    - !<own> 1a53821d-6942-48c3-7058-2736b7ee27de
+- !<SceneObject/c768cf6b-cb5f-4fd7-7134-6e888e4debc9>
+  PrefabRemaps:
+    []
+  Name: DEPTH_TO_POINT_CLOUD__PLACE_IN_SCENE
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> ad40b178-52e0-4e7f-5eb3-68ef86189444
+    - !<own> 20326720-5797-48c6-403d-701992129201
+    - !<own> a111379b-8dda-42b7-4b10-51c36f76d748
+  Components:
+    []

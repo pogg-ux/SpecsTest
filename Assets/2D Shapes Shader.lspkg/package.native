@@ -1,0 +1,47 @@
+- !<NativePackageDescriptor/24614979-3646-4a54-ae85-3b33975a66cd>
+  PackagePath: ""
+  StudioVersion:
+    major: 5
+    minor: 23
+    patch: 2
+    build: 26081320
+    type: Unset
+    buildFlavor: ""
+    timestamp: 0
+    commit: ""
+  Description: |-
+    Allows you to create different type of 2D shapes for menus, buttons, placeholders, etc.
+    Settings:
+    • stroke
+    • shadow 
+    • glow 
+    • pin to the edges 
+    • rounded borders 
+    • circle 
+    • use texture, color or gradient
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  VersionMajor: 1
+  VersionMinor: 0
+  VersionPatch: 0
+  UpdateCheckpoint: 102
+  ExportUid: c90f69da-20d6-47de-bf40-46b838479f59
+  ComponentUid: e6966b7f-c22f-47eb-b6b0-3dbad418762e
+  PackagePolicy: CanBeUnpackedTransparent
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  VersionPrerelease: ""
+  Instantiable: !<reference> 00000000-0000-0000-0000-000000000000
+  AssetLibraryDependencyStructure: !<AssetLibraryDependencyStructure>
+    Name: ""
+    AssetId: ""
+    Hash: ""
+    Version:
+      major: 0
+      minor: 0
+      patch: 0
+      build: 0

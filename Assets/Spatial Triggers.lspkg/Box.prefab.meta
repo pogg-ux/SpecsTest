@@ -1,0 +1,75 @@
+- !<AssetImportMetadata/f2ee020e-726c-f88f-f15b-530d9fff859d>
+  ImportedAssetIds:
+    ObjectPrefab: !<reference> bbb5a49e-ffe8-4dbd-a7f3-3583171c3148
+  ImporterName: ObjectPrefabImporter
+  PrimaryAsset: !<reference> bbb5a49e-ffe8-4dbd-a7f3-3583171c3148
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    ObjectPrefab: !<own> 1ac379dc-faa1-403b-9f98-c617750705cb
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<ObjectPrefabAssetData/1ac379dc-faa1-403b-9f98-c617750705cb>
+  Prototype: !<ObjectOwner/26cbd45d-0f74-4298-a981-70bf354c1fe0>
+    PackagePath: ""
+    objects:
+      - !<own> 6719711a-ff87-4937-4e25-8c5b4cbf9ba4
+- !<SceneObject/6719711a-ff87-4937-4e25-8c5b4cbf9ba4>
+  PrefabRemaps:
+    []
+  Name: Box
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 3.000000, y: 3.000000, z: 3.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> f4b4b899-4618-45fd-6d02-327345864e1d
+- !<RenderMeshVisual/f4b4b899-4618-45fd-6d02-327345864e1d>
+  PrefabRemaps:
+    []
+  Name: Render Mesh Visual
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 46bb4338-9671-452a-9662-fd8fdea0a956
+  Mesh: !<reference> c8eb2aba-2142-40c5-93e5-99ccbdd9a69a
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+  RayTracing: !<RayTracingVisualSettings>
+    Reflections:
+      caster: false
+      receiver: false
+      receiverLayers: 1
+      planar:
+        enabled: true
+        roughHarden: 0.500000
+        roughCurve: 2.000000
+    GlobalIllumination:
+      caster: false
+      receiver: false
+      receiverLayers: 1
+    Shadows:
+      caster: false
+      receiver: false
+      receiverLayers: 1
+    Material: !<reference> 00000000-0000-0000-0000-000000000000
+    HideFromCamera: false
