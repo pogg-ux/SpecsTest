@@ -175,11 +175,36 @@ export interface CardBody {
   plate: BackPlate
 }
 
+/**
+ * Translucent smoke-gray card fill (premultiplied alpha: rgb = gray * alpha) so the panel and
+ * its wire traces stay visible behind cards that float in front of the cabinet.
+ */
+export const CARD_FILL_GRAY = 0.2
+export const CARD_FILL_ALPHA = 0.55
+const CARD_FILL = new vec4(CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_ALPHA)
+
+/** Applies the translucent fill once the plate's RoundedRectangle has initialized (BackPlate sets its own color on start). */
+function applyTranslucentFill(owner: SceneObject, plate: BackPlate): void {
+  const apply = (): boolean => {
+    const rr = (plate as any).roundedRectangle
+    if (!plate.initialized || !rr) return false
+    rr.backgroundColor = CARD_FILL
+    return true
+  }
+  if (apply()) return
+  const sc = owner.getComponent("Component.ScriptComponent") as ScriptComponent
+  const ev = sc.createEvent("UpdateEvent")
+  ev.bind(() => {
+    if (apply()) ev.enabled = false
+  })
+}
+
 /** A BackPlate card: body (plate) + content (column FlexLayout lifted +0.6). Plate hugs content. */
 export function makeCardBody(host: SceneObject, name: string, width: number, pad: number, gap: number): CardBody {
   const body = makeObj(host, name)
   const plate = body.createComponent(BackPlate.getTypeName()) as BackPlate
-  plate.style = "dark"
+  plate.style = "simple"
+  applyTranslucentFill(body, plate)
   const content = makeObj(body, "Content", new vec3(0, 0, CONTENT_Z))
   const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
   flex.autoDiscoverItemsOnStart = false // children are registered explicitly via addItems

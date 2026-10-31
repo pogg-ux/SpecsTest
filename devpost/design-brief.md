@@ -9,7 +9,7 @@ Seated at the bench in front of a 3D model of my MWNP 1.0 12 VDC trainer, I repo
 
 ## Why it belongs on glasses
 - Uses: draws in the world (guidance sits on the actual component being probed), leaves your body free (both hands stay on the meter leads; eyes stay on the cabinet).
-- Why it's better than the phone or laptop version: on a laptop I look away from the cabinet to find the schematic, then find the wire, then find the expected value. Here the expected voltage is at the part, the trace is drawn on the panel, and the step card is one glance to the right.
+- Why it's better than the phone or laptop version: on a laptop I look away from the cabinet to find the schematic, then find the wire, then find the expected value. Here the expected voltage is at the part, the trace is drawn on the panel, and the step card floats beside the active part in the same view.
 
 ## Product or overlay
 - Type: overlay. It responds to a real machine, demonstrated on a 3D model of my real bench trainer.
@@ -21,8 +21,8 @@ Seated at the bench in front of a 3D model of my MWNP 1.0 12 VDC trainer, I repo
   - The "agent" is rule-based and reads only `Assets/MWNP/netlist.json` (components, wires, functions, test_points with tolerances, faults with check_order). Every statement it makes is pulled from and cited to that file. No live AI decides anything, so the demo never depends on one, and nothing can be invented (see the optional phrasing stretch goal).
 
 ## Where things live
-- Where the user is looking during the main task: at the active test point on the panel, with a quick glance right to the step card.
-- Trainer cabinet model: upright backboard about 46 × 46 cm (18 × 18 in), cabinet-style junction box, on a virtual bench in front of the seated user, about 60–70 cm away (default), centered a little below eye level (default).
+- Where the user is looking during the main task: at the active test point on the panel; the step card and the cabinet are in view together, so no head turn is needed.
+- Trainer cabinet model: upright backboard about 46 × 46 cm (18 × 18 in), cabinet-style junction box, on a virtual bench in front of the seated user, about 100 cm away, centered horizontally and a little below eye level (about 9 cm, ~5°). At 100 cm the full 46 cm board spans about 26° of the SPECS view's ~32° width.
   - Top: PS1 power supply.
   - Below it: DIN rail with terminals TS-1 to TS-5 (TS-3 spare).
   - Below the rail: switch/lamp plate, smoke-gray plexi, about 5 × 25 cm (2 × 10 in), precut plugged holes. S1 on the left side with L1 (EXTEND) above it and L2 (RETRACT) below it. No other switches or lamps.
@@ -36,16 +36,16 @@ Seated at the bench in front of a 3D model of my MWNP 1.0 12 VDC trainer, I repo
   - After a reading, the tag shrinks to a small badge with the value and a green check or red X.
 - Component tags: every component has a small ID tag (PS1, TS-1…TS-5, S1, F1, F2, L1, L2), visible but dim until relevant.
 - Trace line: drawn along the wires of the active path (2a, 2b, 2c), thin, on the panel surface.
-- Step card: anchored to the cabinet (world-locked, not stuck to the view), off to the right side of the cabinet at eye level, about 30 × 25 cm (default). Shows the current step, the schematic citation, the number pad, the readout and buttons.
-- Schematic panel: opens just above the step card, about 30 × 21 cm (default), showing `MWNP_1.0_wiring.png` with the current wire highlighted.
-- The Job panel, Finding card and Findings summary all use the same spot as the step card (each one replaces the last).
+- Step card: world-locked (not stuck to the view), about 75 cm from the user, floating in front of the right third of the cabinet, top edge just below eye level, turned slightly toward the user. About 18 × 17 cm. Its left edge sits just right of center, so TS-4, F1, L1 and S1 (all on the left of the board) are never covered; only PS1's right edge, plugged holes, open fuse spots and the far-right runs of wires 2b/3b/0 are behind it. Translucent dark smoke-gray background (not solid), so wires and the 2b trace stay visible through it. Shows the current step, the schematic citation, the number pad, the readout and buttons.
+- Schematic panel: opens just above the step card (same distance, same translucent smoke-gray background), about 18 × 14 cm, showing `MWNP_1.0_wiring.png` with the current wire highlighted. Step card and schematic both fit in view with the cabinet.
+- The Job panel, Finding card and Findings summary all use the same spot, size and translucent background as the step card (each one replaces the last).
 - Safety notice: one line in front of the cabinet at start.
 
 ## Hands and input
 - Dismiss safety notice: pinch its button.
 - Report symptom: "Report symptom" button on the Job panel opens a short list built from the `faults` in the job files: "EXTEND doesn't work", "RETRACT doesn't work", "Neither works". Pinch one.
 - Open/close schematic: "Schematic" button on the step card toggles the schematic panel.
-- Log a reading: number pad on the step card (0–9, decimal point, backspace, Enter), keys about 3 cm across, with a readout like "Reading: 12.1 V". Pinch in the meter value, then Enter.
+- Log a reading: number pad on the step card (0–9, decimal point, backspace, Enter), keys about 2 cm across (at 75 cm, about the same visual size as 2.5 cm keys at 100 cm), with a readout like "Reading: 12.1 V". Pinch in the meter value, then Enter.
 - Fix: "Fuse replaced: retest" button on the Finding card.
 - Flip S1: pinch the S1 toggle on the model to switch it UP (EXTEND) or DOWN (RETRACT).
 - Save: "Save to job log" button on the Findings summary.
