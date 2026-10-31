@@ -10,3 +10,4 @@ ls-live-instance.json.tmp
 
 spk_debug_key.pem
 *.lock
+.context/
