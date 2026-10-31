@@ -1,0 +1,59 @@
+- !<AssetImportMetadata/1edce853-a761-413c-8467-7a006563961f>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 8b8107bd-d2e6-4625-b059-7874fab07f6d
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 8b8107bd-d2e6-4625-b059-7874fab07f6d
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> e50cacf2-ac9e-4d4c-a0d8-72401b760c61
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/e50cacf2-ac9e-4d4c-a0d8-72401b760c61>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 2b38205b-f53f-4ce9-b386-9a3f3f73a36e
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    dimAlpha: false
+    returnWireColor: false
+    supplyWireColor: false
+    viewDistanceCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - viewDistanceCm: !<float> 65.000000
+      dimAlpha: 0.450000
+      supplyWireColor: !<Vec4> {x: 1.000000, y: 0.500000, z: 0.450000, w: 1.000000}
+      returnWireColor: !<Vec4> {x: 0.550000, y: 0.700000, z: 1.000000, w: 1.000000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Part Tags – ID tags, wire labels, expected tags and badges</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float viewDistanceCm = 65 {"hint":"Viewing distance used to size tag text (cm)", "widget":"slider", "min":40, "max":110, "step":1}'
+    - '// @input float dimAlpha = 0.45 {"hint":"Opacity of tag labels that are not relevant yet", "widget":"slider", "min":0.1, "max":1, "step":0.05}'
+    - '// @input vec4 supplyWireColor = {1,0.5,0.45,1} {"hint":"Wire label color for +12 V conductors", "widget":"color"}'
+    - '// @input vec4 returnWireColor = {0.55,0.7,1,1} {"hint":"Wire label color for 0 V return conductors", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

@@ -1,0 +1,53 @@
+- !<AssetImportMetadata/a3ad1aac-4e1c-4ccc-8f85-d8059c84676c>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 0caf7091-5333-4011-a72e-24bb16154bfd
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 0caf7091-5333-4011-a72e-24bb16154bfd
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 588151c6-6683-4442-857e-b20b49c6a843
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/588151c6-6683-4442-857e-b20b49c6a843>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 37c65aba-dc95-4556-a389-fdec794056cb
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    nextActionHeading: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - widthCm: !<float> 30.000000
+      nextActionHeading: Next action
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Finding Card – flagged part and next action</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float widthCm = 30 {"hint":"Card width in cm", "widget":"slider", "min":26, "max":40, "step":0.5}'
+    - '// @input string nextActionHeading = "Next action" {"hint":"Heading above the next-action text"}'
+    - '// @ui {"widget":"group_end"}'

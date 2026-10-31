@@ -1,0 +1,59 @@
+- !<AssetImportMetadata/4ccbdfe3-7d5c-4ea2-a3f1-55b3ab7127ba>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 3c7f3175-1eaa-4496-b890-50feec6967b8
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 3c7f3175-1eaa-4496-b890-50feec6967b8
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 3edd3865-8405-4c1e-9b91-cd4bf74529f5
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/3edd3865-8405-4c1e-9b91-cd4bf74529f5>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 078170ae-5d19-4858-b1bc-b6bb41703b79
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    keyWidthCm: false
+    readoutPrefix: false
+    schematicLabel: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - widthCm: !<float> 30.000000
+      keyWidthCm: 3.200000
+      readoutPrefix: "Reading:"
+      schematicLabel: Schematic
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Step Card – guided check step with number pad</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float widthCm = 30 {"hint":"Card width in cm (brief default 30)", "widget":"slider", "min":26, "max":40, "step":0.5}'
+    - '// @input float keyWidthCm = 3.2 {"hint":"Number pad key width in cm (brief: about 3 cm)", "widget":"slider", "min":2.4, "max":4.5, "step":0.1}'
+    - '// @input string readoutPrefix = "Reading:" {"hint":"Readout prefix"}'
+    - '// @input string schematicLabel = "Schematic" {"hint":"Schematic toggle label"}'
+    - '// @ui {"widget":"group_end"}'

@@ -1,0 +1,83 @@
+// MWNPSafetyNoticeUI.ts — one-line safety notice in front of the cabinet at start.
+//
+// Owns: the notice card (warning icon + one line + Dismiss button).
+// API: show(), hide(), isVisible, onDismiss.
+// Must not: decide flow. Main hides it and opens the Job panel on onDismiss.
+// Test handle: button SceneObject "Btn_DismissSafety".
+
+import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
+import {FlexDirection} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
+import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
+import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
+import {addButton, addFlex, addText, COLOR, makeCardBody, makeObj} from "./MWNPSharedUI"
+
+const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
+
+@component
+export class MWNPSafetyNoticeUI extends BaseScriptComponent {
+  @ui.label('<span style="color: #60A5FA;">MWNP Safety Notice – one-line notice shown at start</span>')
+  @ui.separator
+  @ui.group_start("References")
+  @input
+  @hint("Warning icon shown left of the notice")
+  warningIcon: Texture
+  @ui.group_end
+  @ui.separator
+  @ui.group_start("Settings")
+  @input
+  @hint("Safety notice text (one line)")
+  noticeText: string = "Reference aid only. Verify with a meter. Follow lockout/tagout."
+  @input
+  @hint("Dismiss button label")
+  dismissLabel: string = "Dismiss"
+  @input
+  @widget(new SliderWidget(30, 70, 1))
+  @hint("Card width in cm")
+  widthCm: number = 32
+  @ui.group_end
+
+  private body: SceneObject | null = null
+  private _onDismiss = new Event<void>()
+  get onDismiss(): PublicApi<void> {
+    return this._onDismiss.publicApi()
+  }
+  get isVisible(): boolean {
+    return !!this.body && this.body.enabled
+  }
+
+  onAwake() {
+    this.sceneObject.createComponent("Component.Canvas")
+  }
+
+  show(): void {
+    if (!this.body) this.build()
+    ;(this.body as SceneObject).enabled = true
+  }
+
+  hide(): void {
+    if (this.body) this.body.enabled = false
+  }
+
+  private build(): void {
+    const card = makeCardBody(this.sceneObject, "SafetyNoticeCard", this.widthCm, 1.2, 0)
+    this.body = card.body
+    const row = addFlex(card.content, "Row", FlexDirection.Row, this.widthCm - 2.4, 4.2, 0.8)
+
+    // Warning icon
+    const iconSO = makeObj(row, "WarningIcon")
+    const img = iconSO.createComponent("Component.Image") as Image
+    const mat = imageMaterial.clone()
+    mat.mainPass.baseTex = this.warningIcon
+    mat.mainPass.depthTest = true
+    mat.mainPass.depthWrite = false
+    img.clearMaterials()
+    img.addMaterial(mat)
+    iconSO.getTransform().setLocalScale(new vec3(2.4, 2.4, 1))
+    const iconItem = iconSO.createComponent(FlexItem.getTypeName()) as FlexItem
+    ;(row.getComponent(FlexLayout.getTypeName()) as FlexLayout).addItems([iconItem])
+
+    const textW = this.widthCm - 2.4 - 2.4 - 7 - 1.6
+    addText(row, "NoticeText", this.noticeText, textW, 4, {role: "Body", color: COLOR.amber, distanceCm: 55, wrap: true})
+    addButton(row, "Btn_DismissSafety", this.dismissLabel, 7, 3.2, () => this._onDismiss.invoke(), {distanceCm: 55})
+  }
+}

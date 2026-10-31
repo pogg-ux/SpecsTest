@@ -15,7 +15,7 @@ metaInfo:
     []
   lensName: Untitled
   lensDescriptors:
-    []
+    - AI_MUTATED
   lensApplicableContext:
     - live_camera
     - reply_camera
@@ -24,8 +24,7 @@ metaInfo:
     - Front
     - Back
   lensClientCompatibilities:
-    - Mobile
-    - CameraKit
+    - Spectacles
   platformBundlesEnabled: false
   iconHash: ""
   videoPreviewHash: ""
@@ -51,4 +50,4 @@ metaInfo:
   packageVersion: ""
   spkPrivilegeLevel: Generic
   gluboEnabled: false
-targetPlatform: Snapchat
+targetPlatform: Spectacles

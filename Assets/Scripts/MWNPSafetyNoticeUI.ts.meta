@@ -1,0 +1,62 @@
+- !<AssetImportMetadata/b938fc69-39af-4249-9593-b851009fe521>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> f65d7525-9492-430e-9b35-dce5c3043379
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> f65d7525-9492-430e-9b35-dce5c3043379
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> f71db770-2188-4ea6-9b9a-c6fc848f8651
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/f71db770-2188-4ea6-9b9a-c6fc848f8651>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 344e77ad-83f9-49a1-b7cf-c62f8e980f12
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    dismissLabel: false
+    noticeText: false
+    warningIcon: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - warningIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      noticeText: Reference aid only. Verify with a meter. Follow lockout/tagout.
+      dismissLabel: Dismiss
+      widthCm: !<float> 46.000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Safety Notice – one-line notice shown at start</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input Asset.Texture warningIcon {"hint":"Warning icon shown left of the notice"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input string noticeText = "Reference aid only. Verify with a meter. Follow lockout/tagout." {"hint":"Safety notice text (one line)"}'
+    - '// @input string dismissLabel = "Dismiss" {"hint":"Dismiss button label"}'
+    - '// @input float widthCm = 46 {"hint":"Card width in cm", "widget":"slider", "min":30, "max":70, "step":1}'
+    - '// @ui {"widget":"group_end"}'

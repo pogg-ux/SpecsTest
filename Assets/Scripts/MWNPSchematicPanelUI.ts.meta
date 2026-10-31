@@ -1,0 +1,62 @@
+- !<AssetImportMetadata/bab51c18-c3c5-4dfd-aa5b-56fbf94cd9cb>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 68a9f65c-6b09-4fa4-a9c1-5f7d2041ec2a
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 68a9f65c-6b09-4fa4-a9c1-5f7d2041ec2a
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 022ec0b4-2bab-40ec-be3d-e4028ab84ba3
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/022ec0b4-2bab-40ec-be3d-e4028ab84ba3>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 5be0afbe-860e-453f-8b1e-fc6fdb5a9613
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    highlightColor: false
+    highlightIcon: false
+    schematicTexture: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - schematicTexture: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      highlightIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
+      widthCm: !<float> 30.000000
+      highlightColor: !<Vec4> {x: 1.000000, y: 0.850000, z: 0.200000, w: 1.000000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Schematic Panel – wiring diagram with wire highlight</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input Asset.Texture schematicTexture {"hint":"Schematic image (Assets/MWNP/MWNP_1.0_wiring.png)"}'
+    - '// @input Asset.Texture highlightIcon {"hint":"Highlight frame icon drawn over the current wire"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float widthCm = 30 {"hint":"Panel width in cm (brief default 30)", "widget":"slider", "min":20, "max":40, "step":0.5}'
+    - '// @input vec4 highlightColor = {1,0.85,0.2,1} {"hint":"Highlight frame color", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

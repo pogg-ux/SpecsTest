@@ -1,0 +1,104 @@
+- !<AssetImportMetadata/39c7e293-b3d7-40c3-a463-d0011cdd66ec>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 10bc35f1-a547-4cdf-be91-33b21c7c5912
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 10bc35f1-a547-4cdf-be91-33b21c7c5912
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 056072a3-e54c-4993-8f4c-fca24ab08959
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/056072a3-e54c-4993-8f4c-fca24ab08959>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 456556a1-d03b-4e4c-837a-e25a8939a0d8
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    amberTemplate: false
+    cabinet: false
+    clickSfx: false
+    faultSfx: false
+    filesLoadedText: false
+    findingCard: false
+    fuseActionTemplate: false
+    jobPanel: false
+    netlistAsset: false
+    partTags: false
+    passSfx: false
+    safetyNotice: false
+    schematicPanel: false
+    sfxVolume: false
+    simulatedFaultFunction: false
+    stepCard: false
+    summaryCard: false
+    summaryDelaySec: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - netlistAsset: !<reference.JsonAsset> 00000000-0000-0000-0000-000000000000
+      cabinet: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      partTags: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      safetyNotice: !<MappingBased.AssignableType_3> 00000000-0000-0000-0000-000000000000
+      jobPanel: !<MappingBased.AssignableType_4> 00000000-0000-0000-0000-000000000000
+      stepCard: !<MappingBased.AssignableType_5> 00000000-0000-0000-0000-000000000000
+      findingCard: !<MappingBased.AssignableType_6> 00000000-0000-0000-0000-000000000000
+      summaryCard: !<MappingBased.AssignableType_7> 00000000-0000-0000-0000-000000000000
+      schematicPanel: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
+      clickSfx: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      passSfx: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      faultSfx: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      simulatedFaultFunction: EXTEND
+      filesLoadedText: "Files loaded: wiring diagram, netlist"
+      amberTemplate: "{value} V doesn't match any fault in the job files. Recheck your meter leads and connection, then re-enter. I can't determine a cause from the files."
+      fuseActionTemplate: "Lockout/tagout, remove {part}, check continuity, replace with {rating}. Do not upsize. If the new fuse blows, check {downstream} and {load} for a short."
+      summaryDelaySec: 1.500000
+      sfxVolume: 0.700000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Field Assistant – rule-based agent driven by netlist.json</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input Asset.JsonAsset netlistAsset {"hint":"Job file: Assets/MWNP/netlist.json (the only source of circuit facts)"}'
+    - '// @input AssignableType_1 cabinet {"hint":"Stand-in trainer model"}'
+    - '// @input AssignableType_2 partTags {"hint":"Tags, labels and badges on the trainer"}'
+    - '// @input AssignableType_3 safetyNotice {"hint":"Safety notice shown at start"}'
+    - '// @input AssignableType_4 jobPanel {"hint":"Job panel / symptom list"}'
+    - '// @input AssignableType_5 stepCard {"hint":"Step card with number pad"}'
+    - '// @input AssignableType_6 findingCard {"hint":"Finding card"}'
+    - '// @input AssignableType_7 summaryCard {"hint":"Findings summary"}'
+    - '// @input AssignableType_8 schematicPanel {"hint":"Schematic panel above the step card"}'
+    - '// @input Asset.AudioTrackAsset clickSfx {"hint":"Number pad / button click sound"}'
+    - '// @input Asset.AudioTrackAsset passSfx {"hint":"Reading in spec sound"}'
+    - '// @input Asset.AudioTrackAsset faultSfx {"hint":"Reading out of spec / unexplained sound"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input string simulatedFaultFunction = "EXTEND" {"hint":"Demo stand-in: which function is broken on the model (lamp stays off until repaired)", "widget":"combobox", "values":[{"label":"EXTEND", "value":"EXTEND"}, {"label":"RETRACT", "value":"RETRACT"}, {"label":"None", "value":""}]}'
+    - '// @input string filesLoadedText = "Files loaded: wiring diagram, netlist" {"hint":"Files-loaded line on the Job panel"}'
+    - "// @input string amberTemplate = \"{value} V doesn't match any fault in the job files. Recheck your meter leads and connection, then re-enter. I can't determine a cause from the files.\" {\"hint\":\"Amber (unexplained) message. {value} = reading in V\"}"
+    - '// @input string fuseActionTemplate = "Lockout/tagout, remove {part}, check continuity, replace with {rating}. Do not upsize. If the new fuse blows, check {downstream} and {load} for a short." {"hint":"Next action for an open fuse. {part} {rating} {downstream} {load} come from netlist.json"}'
+    - '// @input float summaryDelaySec = 1.5 {"hint":"Seconds the green retest result stays before the summary replaces the card", "widget":"slider", "min":0, "max":5, "step":0.1}'
+    - '// @input float sfxVolume = 0.7 {"hint":"Sound effect volume", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - '// @ui {"widget":"group_end"}'

@@ -1,0 +1,565 @@
+// MWNPCabinet.ts — stand-in 3D model of the MWNP 1.0 bench trainer, built from primitives.
+//
+// Owns: bench, enclosure, backboard, PS1, DIN rail + TS-1..TS-5, switch/lamp plate (S1, L1, L2,
+// plugged holes), fuse plate (F1, F2, open spots), wires (red +12 V / blue 0 V), and the
+// visual state the agent drives: outlines, trace line, probe markers, lamp glow, S1 lever.
+// Also owns the S1 toggle interaction (SIK Interactable + collider on "S1_Toggle").
+//
+// Why script-built instead of authored: the wires, terminal colors and labels are derived
+// from netlist.json (which wires exist, which are 0 V returns, which terminal is spare), so
+// the model is data-driven. LAYOUT below is the physical stand-in geometry from
+// MWNP_1.0_panel_layout.png (cm, cabinet-local, +Y up, +Z toward the user) — positions only,
+// no circuit facts. Move the whole trainer by moving the authored "MWNPTrainer" SceneObject.
+//
+// Size note: long because LAYOUT/ROUTES tables + primitive builders live together; no logic here.
+// Must not: decide pass/fail or compose agent text. Text on the model lives in MWNPPartTagsUI.
+// Test handles: "S1_Toggle" (pinch to flip), "Outline_<ID>", "Trace_<wire>_<i>", "Lamp_L1",
+//               "Probe_Test", "Probe_Ref". Readable: s1Position, lampLit, outlineStates, traceStates.
+
+import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
+import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
+import {Netlist} from "./MWNPNetlist"
+
+type V2 = [number, number]
+
+interface PartBox {
+  c: V2 // center x,y
+  s: [number, number, number] // w,h,d
+  z: number // center z
+}
+
+// ── Physical stand-in layout (from MWNP_1.0_panel_layout.png, 18.85 px/cm) ──
+const LAYOUT = {
+  board: {w: 46, h: 46},
+  ps1: {c: [0, 15.3], s: [19.6, 8.5, 5], z: 2.5} as PartBox,
+  rail: {c: [-2, 4.9], s: [30, 3.5, 1], z: 0.5} as PartBox,
+  terminalX: {"TS-1": -14.2, "TS-2": -11.6, "TS-3": -9.0, "TS-4": -6.4, "TS-5": -3.8} as {[id: string]: number},
+  terminal: {y: 4.9, s: [2.0, 4.4, 3.0], z: 2.5},
+  switchPlate: {c: [0, -3.7], s: [24.5, 4.8, 0.8], z: 0.4} as PartBox,
+  holes: {x0: -3.1, dx: 2.44, cols: 6, rows: [-2.3, -3.7, -5.1]},
+  lamps: {L1: [-10.5, -2.3], L2: [-10.5, -5.1]} as {[id: string]: V2},
+  s1: [-10.5, -3.7] as V2,
+  fusePlate: {c: [0, -13.5], s: [28.2, 7.4, 0.8], z: 0.4} as PartBox,
+  fuses: {F1: [-11.8, -13.5], F2: [-8.5, -13.5]} as {[id: string]: V2},
+  fuseSize: [1.5, 4.4, 1.2],
+  openFuseX: [-5.25, -1.9, 1.4, 4.7, 8.0, 11.4],
+}
+
+// Terminal / connection points (cabinet-local x,y).
+const POINTS: {[id: string]: V2} = {
+  "PS1:+": [-7.2, 11.05], "PS1:-": [7.5, 11.05],
+  "S1:COM": [-11.2, -3.7], "S1:UP": [-9.8, -3.4], "S1:DOWN": [-9.8, -4.0],
+  "F1:IN": [-11.8, -11.3], "F1:OUT": [-11.8, -15.7],
+  "F2:IN": [-8.5, -11.3], "F2:OUT": [-8.5, -15.7],
+  "L1:+": [-11.1, -2.3], "L1:-": [-9.9, -1.7],
+  "L2:+": [-11.1, -5.1], "L2:-": [-9.9, -5.6],
+}
+
+// Wire routes keyed "<from>><to>" exactly as in netlist.json wires[]; label = where the number sits.
+const ROUTES: {[key: string]: {pts: V2[]; label: V2}} = {
+  "PS1:+>TS-1": {pts: [[-7.2, 11.05], [-7.2, 8.8], [-14.2, 8.8], [-14.2, 7.1]], label: [-7.9, 10.1]},
+  "TS-1>S1:COM": {pts: [[-14.2, 2.7], [-14.2, 0.4], [-16.0, 0.4], [-16.0, -3.7], [-11.2, -3.7]], label: [-16.8, -1.6]},
+  "S1:UP>TS-4": {pts: [[-9.8, -3.4], [-9.4, -3.4], [-9.4, 0.8], [-6.9, 0.8], [-6.9, 2.7]], label: [-10.1, 1.5]},
+  "TS-4>F1:IN": {pts: [[-5.9, 2.7], [-5.9, 1.4], [19.3, 1.4], [19.3, -8.3], [-11.8, -8.3], [-11.8, -11.3]], label: [18.4, -3.5]},
+  "F1:OUT>L1:+": {pts: [[-11.8, -15.7], [-11.8, -17.2], [-18.0, -17.2], [-18.0, -2.3], [-11.1, -2.3]], label: [-17.2, -7.0]},
+  "S1:DOWN>TS-5": {pts: [[-9.8, -4.0], [-8.6, -4.0], [-8.6, 0.0], [-4.3, 0.0], [-4.3, 2.7]], label: [-7.0, -0.6]},
+  "TS-5>F2:IN": {pts: [[-3.3, 2.7], [-3.3, 2.2], [20.4, 2.2], [20.4, -9.0], [-8.5, -9.0], [-8.5, -11.3]], label: [21.3, -3.5]},
+  "F2:OUT>L2:+": {pts: [[-8.5, -15.7], [-8.5, -18.2], [-19.2, -18.2], [-19.2, -5.1], [-11.1, -5.1]], label: [-20.1, -10.0]},
+  "PS1:->TS-2": {pts: [[7.5, 11.05], [7.5, 9.6], [-11.6, 9.6], [-11.6, 7.1]], label: [8.2, 10.4]},
+  "L1:->TS-2": {pts: [[-9.9, -1.7], [16.5, -1.7], [16.5, 8.0], [-11.2, 8.0], [-11.2, 7.1]], label: [17.3, 4.0]},
+  "L2:->TS-2": {pts: [[-9.9, -5.6], [16.5, -5.6], [16.5, -1.7]], label: [14.0, -6.3]},
+}
+
+const WIRE_Z = 1.0
+const TRACE_Z = 1.35
+
+function c4(r: number, g: number, b: number, a: number = 1): vec4 {
+  return new vec4(r, g, b, a)
+}
+
+// Additive display: nothing black — "black" parts are smoke-gray.
+const PALETTE = {
+  bench: c4(0.36, 0.27, 0.18),
+  enclosure: c4(0.42, 0.44, 0.48),
+  board: c4(0.26, 0.28, 0.31),
+  smoke: c4(0.36, 0.37, 0.4),
+  ps1: c4(0.6, 0.56, 0.4),
+  rail: c4(0.55, 0.57, 0.6),
+  endStop: c4(0.4, 0.41, 0.44),
+  termSupply: c4(0.85, 0.33, 0.33),
+  termReturn: c4(0.35, 0.5, 0.92),
+  termSpare: c4(0.7, 0.7, 0.72),
+  plexi: c4(0.33, 0.43, 0.52),
+  hole: c4(0.52, 0.53, 0.56),
+  fuse: c4(0.72, 0.62, 0.78),
+  openSpot: c4(0.5, 0.56, 0.62),
+  wireSupply: c4(0.95, 0.2, 0.18),
+  wireReturn: c4(0.22, 0.42, 1.0),
+  s1: c4(0.75, 0.76, 0.8),
+  l1Off: c4(0.18, 0.35, 0.18),
+  l1On: c4(0.45, 1.0, 0.45),
+  l2Off: c4(0.42, 0.3, 0.12),
+  l2On: c4(1.0, 0.68, 0.2),
+  outlineAmber: c4(1.0, 0.72, 0.15),
+  outlineActive: c4(0.45, 0.9, 1.0),
+  outlineGreen: c4(0.35, 1.0, 0.45),
+  outlineRed: c4(1.0, 0.25, 0.22),
+  traceActive: c4(1.0, 0.95, 0.6),
+  traceGreen: c4(0.35, 1.0, 0.45),
+  traceGray: c4(0.45, 0.45, 0.47),
+  traceRed: c4(1.0, 0.25, 0.22),
+  probeTest: c4(1.0, 0.3, 0.25),
+  probeRef: c4(0.85, 0.85, 0.9),
+}
+
+@component
+export class MWNPCabinet extends BaseScriptComponent {
+  @ui.label('<span style="color: #60A5FA;">MWNP Trainer Cabinet – stand-in model built from primitives</span>')
+  @ui.separator
+  @ui.group_start("References")
+  @input
+  @hint("Unit box mesh used for every panel part")
+  boxMesh: RenderMesh
+  @input
+  @hint("Unit sphere mesh for lamps, holes and probe markers")
+  sphereMesh: RenderMesh
+  @input
+  @hint("Unlit base material; cloned and tinted per part")
+  baseMaterial: Material
+  @ui.group_end
+  @ui.separator
+  @ui.group_start("Settings")
+  @input
+  @widget(new SliderWidget(0.1, 0.6, 0.05))
+  @hint("Wire thickness in cm")
+  wireThicknessCm: number = 0.3
+  @input
+  @widget(new SliderWidget(0.2, 0.8, 0.05))
+  @hint("Trace line thickness in cm")
+  traceThicknessCm: number = 0.42
+  @input
+  @widget(new SliderWidget(10, 60, 1))
+  @hint("S1 lever throw angle in degrees")
+  leverAngleDeg: number = 35
+  @ui.group_end
+  @ui.separator
+  @ui.group_start("Debug")
+  @input
+  @hint("Draw collider wireframes (S1 toggle)")
+  debugColliders: boolean = false
+  @ui.group_end
+
+  // Readable state for tests
+  s1Position: string = "UP"
+  lampLit: {[id: string]: boolean} = {}
+  outlineStates: {[id: string]: string} = {}
+  traceStates: {[wireKey: string]: string} = {}
+  activePointId: string = ""
+
+  private netlist: Netlist | null = null
+  private matCache: {[k: string]: Material} = {}
+  private outlines: {[id: string]: {so: SceneObject; mats: Material[]}} = {}
+  private partBoxes: {[id: string]: {c: V2; w: number; h: number; zFront: number}} = {}
+  private traces: {[wireIndex: number]: {so: SceneObject; mats: Material[]}} = {}
+  private lamps: {[id: string]: {mat: Material; glow: SceneObject}} = {}
+  private leverPivot: SceneObject | null = null
+  private probeTest: SceneObject | null = null
+  private probeRef: SceneObject | null = null
+  private _onS1Toggled = new Event<string>()
+  get onS1Toggled(): PublicApi<string> {
+    return this._onS1Toggled.publicApi()
+  }
+
+  /** Call once (from Main's OnStart) after netlist.json is parsed. */
+  build(netlist: Netlist): void {
+    this.netlist = netlist
+    const root = this.sceneObject
+    const bw = LAYOUT.board.w
+    const bh = LAYOUT.board.h
+
+    // Bench (top surface just below the enclosure) and enclosure frame
+    this.box(root, "Bench", [0, -bh / 2 - 3.5], [bw + 44, 3, 44], 14, PALETTE.bench)
+    this.box(root, "Backboard", [0, 0], [bw, bh, 1.5], -0.75, PALETTE.board)
+    this.box(root, "Enclosure_Top", [0, bh / 2 + 1], [bw + 4, 2, 12], 4.5, PALETTE.enclosure)
+    this.box(root, "Enclosure_Bottom", [0, -bh / 2 - 1], [bw + 4, 2, 12], 4.5, PALETTE.enclosure)
+    this.box(root, "Enclosure_Left", [-bw / 2 - 1, 0], [2, bh, 12], 4.5, PALETTE.enclosure)
+    this.box(root, "Enclosure_Right", [bw / 2 + 1, 0], [2, bh, 12], 4.5, PALETTE.enclosure)
+
+    // PS1
+    const ps = LAYOUT.ps1
+    this.part(root, "PS1", ps.c, ps.s, ps.z, PALETTE.ps1)
+    this.sphere(root, "PS1_TermPlus", POINTS["PS1:+"], 0.9, 1.0, PALETTE.wireSupply)
+    this.sphere(root, "PS1_TermMinus", POINTS["PS1:-"], 0.9, 1.0, PALETTE.wireReturn)
+
+    // DIN rail + terminals (color from netlist: 0 V return = blue, unwired = spare gray, else red)
+    this.box(root, "DIN_Rail", LAYOUT.rail.c, LAYOUT.rail.s, LAYOUT.rail.z, PALETTE.rail)
+    const tIds = Object.keys(LAYOUT.terminalX)
+    let minX = 999
+    let maxX = -999
+    for (const id of tIds) {
+      const x = LAYOUT.terminalX[id]
+      minX = Math.min(minX, x)
+      maxX = Math.max(maxX, x)
+      if (!netlist.component(id)) continue
+      this.part(root, id, [x, LAYOUT.terminal.y], LAYOUT.terminal.s as [number, number, number], LAYOUT.terminal.z, this.terminalColor(id))
+    }
+    this.box(root, "EndStop_L", [minX - 1.6, LAYOUT.terminal.y], [0.8, 4.6, 3.2], 2.5, PALETTE.endStop)
+    this.box(root, "EndStop_R", [maxX + 1.6, LAYOUT.terminal.y], [0.8, 4.6, 3.2], 2.5, PALETTE.endStop)
+
+    // Switch / lamp plate (smoke-gray plexi) with plugged holes
+    const sp = LAYOUT.switchPlate
+    this.box(root, "SwitchLampPlate", sp.c, sp.s, sp.z, PALETTE.smoke)
+    for (let col = 0; col < LAYOUT.holes.cols; col++) {
+      for (const y of LAYOUT.holes.rows) {
+        const h = this.sphere(root, "PluggedHole", [LAYOUT.holes.x0 + col * LAYOUT.holes.dx, y], 0.9, 0.85, PALETTE.hole)
+        h.getTransform().setLocalScale(new vec3(0.9, 0.9, 0.2))
+      }
+    }
+    this.buildLamp(root, "L1", PALETTE.l1Off)
+    this.buildLamp(root, "L2", PALETTE.l2Off)
+    this.buildS1(root)
+
+    // Fuse plate, fuses, open spots
+    const fp = LAYOUT.fusePlate
+    this.box(root, "FusePlate", fp.c, fp.s, fp.z, PALETTE.plexi)
+    for (const id of Object.keys(LAYOUT.fuses)) {
+      if (!netlist.component(id)) continue
+      this.part(root, id, LAYOUT.fuses[id], LAYOUT.fuseSize as [number, number, number], 1.4, PALETTE.fuse)
+    }
+    LAYOUT.openFuseX.forEach((x, i) => {
+      const spot = this.obj(root, "OpenFuseSpot_" + i)
+      this.rectFrame(spot, [x, fp.c[1]], LAYOUT.fuseSize[0], LAYOUT.fuseSize[1], 0.15, 0.95, PALETTE.openSpot, null)
+    })
+
+    // Wires from netlist.json
+    netlist.data.wires.forEach((w, i) => {
+      const r = ROUTES[w.from + ">" + w.to]
+      if (!r) {
+        print("[MWNPCabinet] No layout route for wire " + w.id + " " + w.from + " -> " + w.to)
+        return
+      }
+      const color = netlist.isReturnWire(i) ? PALETTE.wireReturn : PALETTE.wireSupply
+      const wso = this.obj(root, "Wire_" + w.id + "_" + i)
+      this.polyline(wso, r.pts, this.wireThicknessCm, WIRE_Z, [this.mat(color)])
+    })
+
+    // Probe markers (hidden until a point is active)
+    this.probeTest = this.sphere(root, "Probe_Test", [0, 0], 1.0, 2.0, PALETTE.probeTest, true)
+    this.probeRef = this.sphere(root, "Probe_Ref", [0, 0], 1.0, 2.0, PALETTE.probeRef, true)
+    this.probeTest.enabled = false
+    this.probeRef.enabled = false
+
+    this.setS1("UP")
+  }
+
+  // ── Queries used by Main / PartTags ───────────────────────────────────────
+
+  /** Local position of a test point / terminal (front surface). */
+  getPointPos(pointId: string): vec3 {
+    const p = POINTS[pointId]
+    if (p) return new vec3(p[0], p[1], 1.8)
+    const b = this.partBoxes[pointId]
+    if (b) return new vec3(b.c[0], b.c[1], b.zFront + 0.3)
+    return new vec3(0, 0, 2)
+  }
+
+  /** Where the "Expected …" tag goes for a point (beside it, never on the component). */
+  getExpectedTagPos(pointId: string): vec3 {
+    if (LAYOUT.terminalX[pointId] !== undefined) return new vec3(LAYOUT.terminalX[pointId], 9.4, 5.2)
+    const p = this.getPointPos(pointId)
+    if (pointId.indexOf("L") === 0) return new vec3(-17.5, p.y + (p.y > -3.7 ? 1.6 : -1.6), 3.0)
+    return new vec3(-18.6, p.y, 3.0)
+  }
+
+  /** Where the small result badge goes for a point. */
+  getBadgePos(pointId: string): vec3 {
+    if (LAYOUT.terminalX[pointId] !== undefined) return new vec3(LAYOUT.terminalX[pointId], 8.4, 5.0)
+    const p = this.getPointPos(pointId)
+    if (pointId.indexOf("L") === 0) return new vec3(-14.6, p.y + (p.y > -3.7 ? 1.4 : -1.4), 2.8)
+    return new vec3(-14.7, p.y, 2.8)
+  }
+
+  getTagAnchors(): {id: string; pos: vec3; width: number}[] {
+    const out: {id: string; pos: vec3; width: number}[] = []
+    if (!this.netlist) return out
+    for (const id of this.netlist.componentIds()) {
+      if (id === "PS1") out.push({id, pos: new vec3(0, 17.6, 5.3), width: 3.2})
+      else if (LAYOUT.terminalX[id] !== undefined) out.push({id, pos: new vec3(LAYOUT.terminalX[id], LAYOUT.terminal.y, 4.25), width: 2.0})
+      else if (LAYOUT.fuses[id]) out.push({id, pos: new vec3(LAYOUT.fuses[id][0], LAYOUT.fuses[id][1], 2.25), width: 1.9})
+      else if (id === "S1") out.push({id, pos: new vec3(-6.6, LAYOUT.s1[1], 1.1), width: 2.2})
+      else if (LAYOUT.lamps[id]) out.push({id, pos: new vec3(-6.6, LAYOUT.lamps[id][1] + (id === "L1" ? 0.1 : -0.1), 1.1), width: 2.2})
+    }
+    return out
+  }
+
+  getWireLabels(): {name: string; text: string; pos: vec3; isReturn: boolean}[] {
+    const out: {name: string; text: string; pos: vec3; isReturn: boolean}[] = []
+    if (!this.netlist) return out
+    const nl = this.netlist
+    nl.data.wires.forEach((w, i) => {
+      const r = ROUTES[w.from + ">" + w.to]
+      if (!r) return
+      out.push({name: "WireLabel_" + w.id + "_" + i, text: w.id, pos: new vec3(r.label[0], r.label[1], 1.6), isReturn: nl.isReturnWire(i)})
+    })
+    return out
+  }
+
+  // ── Visual state driven by Main ───────────────────────────────────────────
+
+  /** "none" | "amber" | "active" | "green" | "red" */
+  setOutline(id: string, state: string): void {
+    const b = this.partBoxes[id]
+    if (!b) return
+    let o = this.outlines[id]
+    if (!o) {
+      const so = this.obj(this.sceneObject, "Outline_" + id)
+      const mats: Material[] = []
+      this.rectFrame(so, b.c, b.w + 1.0, b.h + 1.0, 0.22, b.zFront + 0.15, PALETTE.outlineAmber, mats)
+      o = {so, mats}
+      this.outlines[id] = o
+    }
+    this.outlineStates[id] = state
+    if (state === "none") {
+      o.so.enabled = false
+      return
+    }
+    o.so.enabled = true
+    const col =
+      state === "active" ? PALETTE.outlineActive : state === "green" ? PALETTE.outlineGreen : state === "red" ? PALETTE.outlineRed : PALETTE.outlineAmber
+    for (const m of o.mats) m.mainPass.baseColor = col
+  }
+
+  clearOutlines(): void {
+    for (const id of Object.keys(this.outlines)) this.setOutline(id, "none")
+  }
+
+  /** Trace overlay for one netlist wire index: "hidden" | "active" | "green" | "gray" | "red" */
+  setTrace(wireIndex: number, state: string): void {
+    if (!this.netlist) return
+    const w = this.netlist.data.wires[wireIndex]
+    if (!w) return
+    let t = this.traces[wireIndex]
+    if (!t) {
+      const r = ROUTES[w.from + ">" + w.to]
+      if (!r) return
+      const so = this.obj(this.sceneObject, "Trace_" + w.id + "_" + wireIndex)
+      const mats: Material[] = []
+      const segMats: Material[] = []
+      for (let k = 0; k < r.pts.length - 1; k++) {
+        const m = this.baseMaterial.clone()
+        mats.push(m)
+        segMats.push(m)
+      }
+      this.polyline(so, r.pts, this.traceThicknessCm, TRACE_Z, segMats)
+      t = {so, mats}
+      this.traces[wireIndex] = t
+    }
+    this.traceStates[w.id] = state
+    if (state === "hidden") {
+      t.so.enabled = false
+      return
+    }
+    t.so.enabled = true
+    const col =
+      state === "green" ? PALETTE.traceGreen : state === "gray" ? PALETTE.traceGray : state === "red" ? PALETTE.traceRed : PALETTE.traceActive
+    for (const m of t.mats) m.mainPass.baseColor = col
+  }
+
+  hideTraces(): void {
+    for (const k of Object.keys(this.traces)) this.setTrace(parseInt(k), "hidden")
+  }
+
+  /** Probe markers on the active test point and on the meter reference (black lead). */
+  setActivePoint(pointId: string | null, refPointId: string | null): void {
+    this.activePointId = pointId ? pointId : ""
+    if (!this.probeTest || !this.probeRef) return
+    if (!pointId) {
+      this.probeTest.enabled = false
+      this.probeRef.enabled = false
+      return
+    }
+    this.probeTest.enabled = true
+    this.probeTest.getTransform().setLocalPosition(this.probeOffset(pointId))
+    if (refPointId) {
+      this.probeRef.enabled = true
+      this.probeRef.getTransform().setLocalPosition(this.probeOffset(refPointId))
+    } else {
+      this.probeRef.enabled = false
+    }
+  }
+
+  setLamp(id: string, lit: boolean): void {
+    const l = this.lamps[id]
+    if (!l) return
+    this.lampLit[id] = lit
+    const on = id === "L1" ? PALETTE.l1On : PALETTE.l2On
+    const off = id === "L1" ? PALETTE.l1Off : PALETTE.l2Off
+    l.mat.mainPass.baseColor = lit ? on : off
+    l.glow.enabled = lit
+  }
+
+  /** "UP" | "DOWN" — moves the lever only; Main decides what lights. */
+  setS1(position: string): void {
+    this.s1Position = position
+    if (!this.leverPivot) return
+    const a = ((position === "UP" ? -1 : 1) * this.leverAngleDeg * Math.PI) / 180
+    this.leverPivot.getTransform().setLocalRotation(quat.fromEulerAngles(a, 0, 0))
+  }
+
+  // ── Builders ──────────────────────────────────────────────────────────────
+
+  private terminalColor(id: string): vec4 {
+    const nl = this.netlist as Netlist
+    let wired = false
+    let ret = false
+    nl.data.wires.forEach((w, i) => {
+      if (nl.baseId(w.from) === id || nl.baseId(w.to) === id) {
+        wired = true
+        if (nl.isReturnWire(i)) ret = true
+      }
+    })
+    if (!wired) return PALETTE.termSpare
+    return ret ? PALETTE.termReturn : PALETTE.termSupply
+  }
+
+  private probeOffset(pointId: string): vec3 {
+    if (LAYOUT.terminalX[pointId] !== undefined) return new vec3(LAYOUT.terminalX[pointId], LAYOUT.terminal.y - 3.0, 2.2)
+    return this.getPointPos(pointId).add(new vec3(0, 0, 0.6))
+  }
+
+  private buildLamp(root: SceneObject, id: string, offColor: vec4): void {
+    if (!this.netlist || !this.netlist.component(id)) return
+    const p = LAYOUT.lamps[id]
+    const so = this.sphere(root, "Lamp_" + id, p, 1.3, 1.25, offColor, true)
+    const rmv = so.getComponent("Component.RenderMeshVisual") as RenderMeshVisual
+    const mat = rmv.mainMaterial
+    const glow = this.sphere(so, "Glow", [0, 0], 1.0, 0, id === "L1" ? c4(0.3, 0.8, 0.3) : c4(0.8, 0.5, 0.1), true)
+    glow.getTransform().setLocalPosition(new vec3(0, 0, 0))
+    glow.getTransform().setLocalScale(new vec3(2.0, 2.0, 1.2))
+    glow.enabled = false
+    this.lamps[id] = {mat, glow}
+    this.partBoxes[id] = {c: p, w: 1.3, h: 1.3, zFront: 1.9}
+    this.lampLit[id] = false
+  }
+
+  private buildS1(root: SceneObject): void {
+    if (!this.netlist || !this.netlist.component("S1")) return
+    const p = LAYOUT.s1
+    this.box(root, "S1_Base", p, [1.0, 1.0, 0.6], 1.1, PALETTE.s1)
+    // Collider wrapper: unit scale, identity rotation; big pinch target.
+    const toggle = this.obj(root, "S1_Toggle")
+    toggle.getTransform().setLocalPosition(new vec3(p[0], p[1], 1.9))
+    const col = toggle.createComponent("Physics.ColliderComponent") as ColliderComponent
+    const shape = Shape.createBoxShape()
+    shape.size = new vec3(2.6, 2.6, 3.0)
+    col.shape = shape
+    col.debugDrawEnabled = this.debugColliders
+    this.leverPivot = this.obj(toggle, "S1_LeverPivot")
+    this.leverPivot.getTransform().setLocalPosition(new vec3(0, 0, -0.5))
+    const lever = this.obj(this.leverPivot, "S1_Lever")
+    lever.getTransform().setLocalPosition(new vec3(0, 0, 0.9))
+    lever.getTransform().setLocalScale(new vec3(0.4, 0.4, 1.8))
+    this.addMesh(lever, this.boxMesh, this.mat(PALETTE.s1))
+    const tip = this.obj(this.leverPivot, "S1_LeverTip")
+    tip.getTransform().setLocalPosition(new vec3(0, 0, 1.85))
+    tip.getTransform().setLocalScale(new vec3(0.6, 0.6, 0.6))
+    this.addMesh(tip, this.sphereMesh, this.mat(c4(0.9, 0.9, 0.95)))
+    this.partBoxes["S1"] = {c: p, w: 1.6, h: 2.0, zFront: 1.6}
+
+    const interactable = toggle.createComponent(Interactable.getTypeName()) as Interactable
+    interactable.onTriggerEnd.add(() => {
+      const next = this.s1Position === "UP" ? "DOWN" : "UP"
+      this.setS1(next)
+      this._onS1Toggled.invoke(next)
+    })
+  }
+
+  /** A component body that can later get an outline. */
+  private part(parent: SceneObject, id: string, c: V2, s: [number, number, number], z: number, color: vec4): SceneObject {
+    const so = this.box(parent, "Part_" + id, c, s, z, color)
+    this.partBoxes[id] = {c, w: s[0], h: s[1], zFront: z + s[2] / 2}
+    return so
+  }
+
+  private obj(parent: SceneObject, name: string): SceneObject {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    return so
+  }
+
+  private mat(color: vec4): Material {
+    const key = color.x.toFixed(3) + "," + color.y.toFixed(3) + "," + color.z.toFixed(3) + "," + color.w.toFixed(3)
+    let m = this.matCache[key]
+    if (!m) {
+      m = this.baseMaterial.clone()
+      m.mainPass.baseColor = color
+      this.matCache[key] = m
+    }
+    return m
+  }
+
+  private addMesh(so: SceneObject, mesh: RenderMesh, mat: Material): RenderMeshVisual {
+    const rmv = so.createComponent("Component.RenderMeshVisual") as RenderMeshVisual
+    rmv.mesh = mesh
+    rmv.mainMaterial = mat
+    return rmv
+  }
+
+  private box(parent: SceneObject, name: string, c: V2, s: [number, number, number], z: number, color: vec4, ownMat?: Material): SceneObject {
+    const so = this.obj(parent, name)
+    so.getTransform().setLocalPosition(new vec3(c[0], c[1], z))
+    so.getTransform().setLocalScale(new vec3(s[0], s[1], s[2]))
+    this.addMesh(so, this.boxMesh, ownMat ? ownMat : this.mat(color))
+    return so
+  }
+
+  private sphere(parent: SceneObject, name: string, c: V2, d: number, z: number, color: vec4, ownMaterial: boolean = false): SceneObject {
+    const so = this.obj(parent, name)
+    so.getTransform().setLocalPosition(new vec3(c[0], c[1], z))
+    so.getTransform().setLocalScale(new vec3(d, d, d))
+    let m: Material
+    if (ownMaterial) {
+      m = this.baseMaterial.clone()
+      m.mainPass.baseColor = color
+    } else {
+      m = this.mat(color)
+    }
+    this.addMesh(so, this.sphereMesh, m)
+    return so
+  }
+
+  /** Axis-aligned polyline of thin boxes; one material per segment (or the first one reused). */
+  private polyline(parent: SceneObject, pts: V2[], t: number, z: number, mats: Material[]): void {
+    for (let k = 0; k < pts.length - 1; k++) {
+      const a = pts[k]
+      const b = pts[k + 1]
+      const cx = (a[0] + b[0]) / 2
+      const cy = (a[1] + b[1]) / 2
+      const w = Math.abs(b[0] - a[0]) + t
+      const h = Math.abs(b[1] - a[1]) + t
+      const m = mats.length > k ? mats[k] : mats[0]
+      this.box(parent, "Seg" + k, [cx, cy], [w, h, t], z, PALETTE.wireSupply, m)
+    }
+  }
+
+  /** Thin rectangular outline; collects per-bar materials into `mats` when given (for recoloring). */
+  private rectFrame(parent: SceneObject, c: V2, w: number, h: number, t: number, z: number, color: vec4, mats: Material[] | null): void {
+    const bars: [V2, [number, number, number]][] = [
+      [[c[0], c[1] + h / 2], [w + t, t, t]],
+      [[c[0], c[1] - h / 2], [w + t, t, t]],
+      [[c[0] - w / 2, c[1]], [t, h + t, t]],
+      [[c[0] + w / 2, c[1]], [t, h + t, t]],
+    ]
+    bars.forEach((bar, i) => {
+      let m: Material
+      if (mats) {
+        m = this.baseMaterial.clone()
+        m.mainPass.baseColor = color
+        mats.push(m)
+      } else {
+        m = this.mat(color)
+      }
+      this.box(parent, "Bar" + i, bar[0], bar[1], z, color, m)
+    })
+  }
+}

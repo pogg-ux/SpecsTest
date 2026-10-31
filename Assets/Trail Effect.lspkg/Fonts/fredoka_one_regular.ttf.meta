@@ -6,7 +6,7 @@
   PackageType: NotAPackage
   LegacyPackagePolicy: ~
   ExtraData:
-    {}
+    AssetLibraryId: 71jC5duIjk24U1PVAq9zv
   AssetDataMap:
     Font: !<own> c18b2680-d645-4719-8257-d0d4989b44a9
   DependentFiles:

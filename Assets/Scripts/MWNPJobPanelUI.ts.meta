@@ -1,0 +1,56 @@
+- !<AssetImportMetadata/39de2e31-66ca-4386-b6c7-a59c5c0ad910>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> a378e7c2-a8d1-4e1c-be90-6209a35ca711
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> a378e7c2-a8d1-4e1c-be90-6209a35ca711
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> a519fb02-ba0f-49ca-bd6a-e5dd041aa9a5
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/a519fb02-ba0f-49ca-bd6a-e5dd041aa9a5>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 8737276c-ea94-4ced-b4f7-60b8f677998d
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    reportLabel: false
+    symptomHeading: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - widthCm: !<float> 30.000000
+      reportLabel: Report symptom
+      symptomHeading: "What's the symptom?"
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Job Panel – job info and symptom picker</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float widthCm = 30 {"hint":"Card width in cm", "widget":"slider", "min":20, "max":40, "step":1}'
+    - '// @input string reportLabel = "Report symptom" {"hint":"Report symptom button label"}'
+    - "// @input string symptomHeading = \"What's the symptom?\" {\"hint\":\"Heading shown above the symptom list\"}"
+    - '// @ui {"widget":"group_end"}'

@@ -1,0 +1,74 @@
+- !<AssetImportMetadata/1af20edd-d5c8-4ee3-a6dc-c4cce4906b6a>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> f22136c7-fc5f-4dfc-92c6-dfa9f6afd6c3
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> f22136c7-fc5f-4dfc-92c6-dfa9f6afd6c3
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 79a0f360-30d3-4a02-b50c-1d43600b8749
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/79a0f360-30d3-4a02-b50c-1d43600b8749>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 06af230b-e289-42a5-b8f1-a21883acb345
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    baseMaterial: false
+    boxMesh: false
+    debugColliders: false
+    leverAngleDeg: false
+    sphereMesh: false
+    traceThicknessCm: false
+    wireThicknessCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - boxMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
+      sphereMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
+      baseMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      wireThicknessCm: 0.300000
+      traceThicknessCm: 0.420000
+      leverAngleDeg: !<float> 35.000000
+      debugColliders: false
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Trainer Cabinet – stand-in model built from primitives</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input Asset.RenderMesh boxMesh {"hint":"Unit box mesh used for every panel part"}'
+    - '// @input Asset.RenderMesh sphereMesh {"hint":"Unit sphere mesh for lamps, holes and probe markers"}'
+    - '// @input Asset.Material baseMaterial {"hint":"Unlit base material; cloned and tinted per part"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float wireThicknessCm = 0.3 {"hint":"Wire thickness in cm", "widget":"slider", "min":0.1, "max":0.6, "step":0.05}'
+    - '// @input float traceThicknessCm = 0.42 {"hint":"Trace line thickness in cm", "widget":"slider", "min":0.2, "max":0.8, "step":0.05}'
+    - '// @input float leverAngleDeg = 35 {"hint":"S1 lever throw angle in degrees", "widget":"slider", "min":10, "max":60, "step":1}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Debug"}'
+    - '// @input bool debugColliders {"hint":"Draw collider wireframes (S1 toggle)"}'
+    - '// @ui {"widget":"group_end"}'
