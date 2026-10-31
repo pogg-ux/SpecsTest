@@ -28,46 +28,51 @@ interface PartBox {
   z: number // center z
 }
 
-// ── Physical stand-in layout (from MWNP_1.0_panel_layout.png, 18.85 px/cm) ──
+// ── Physical stand-in layout (from MWNP_1.0_panel_layout.png, 18.85 px/cm, origin = board center) ──
+// Matches the image's plate/panel sizes and positions. One deliberate deviation: terminal pitch is
+// 2.0 cm (image ≈1.5 cm) so the ≥1.5 cm ID labels fit on the terminals, centered on the image's group.
 const LAYOUT = {
-  board: {w: 46, h: 46},
+  board: {w: 46, h: 46, frame: 1.0, wallDepth: 6},
   ps1: {c: [0, 15.3], s: [19.6, 8.5, 5], z: 2.5} as PartBox,
-  rail: {c: [-2, 4.9], s: [30, 3.5, 1], z: 0.5} as PartBox,
-  terminalX: {"TS-1": -14.2, "TS-2": -11.6, "TS-3": -9.0, "TS-4": -6.4, "TS-5": -3.8} as {[id: string]: number},
-  terminal: {y: 4.9, s: [2.0, 4.4, 3.0], z: 2.5},
-  switchPlate: {c: [0, -3.7], s: [24.5, 4.8, 0.8], z: 0.4} as PartBox,
-  holes: {x0: -3.1, dx: 2.44, cols: 6, rows: [-2.3, -3.7, -5.1]},
-  lamps: {L1: [-10.5, -2.3], L2: [-10.5, -5.1]} as {[id: string]: V2},
-  s1: [-10.5, -3.7] as V2,
-  fusePlate: {c: [0, -13.5], s: [28.2, 7.4, 0.8], z: 0.4} as PartBox,
-  fuses: {F1: [-11.8, -13.5], F2: [-8.5, -13.5]} as {[id: string]: V2},
+  rail: {c: [0, 4.9], s: [34.3, 1.7, 1], z: 0.5} as PartBox,
+  terminalX: {"TS-1": -13.3, "TS-2": -11.3, "TS-3": -9.3, "TS-4": -7.3, "TS-5": -5.3} as {[id: string]: number},
+  terminal: {y: 4.9, s: [1.8, 4.4, 3.0], z: 2.5},
+  switchPlate: {c: [0, -3.7], s: [25, 5, 0.8], z: 0.4} as PartBox,
+  holes: {x0: -3.2, dx: 2.44, cols: 6, y: -3.6},
+  lamps: {L1: [-10.5, -2.3], L2: [-10.5, -5.0]} as {[id: string]: V2},
+  s1: [-10.5, -3.6] as V2,
+  fusePlate: {c: [0, -13.5], s: [29, 7.5, 0.8], z: 0.4} as PartBox,
+  fuses: {F1: [-11.85, -13.5], F2: [-8.6, -13.5]} as {[id: string]: V2},
   fuseSize: [1.5, 4.4, 1.2],
-  openFuseX: [-5.25, -1.9, 1.4, 4.7, 8.0, 11.4],
+  openFuseX: [-5.3, -2.0, 1.4, 4.6, 7.9, 11.2],
+  // Tag placement (cabinet-local). ID tags: em 1.5 cm. Overlays (expected/badge/info): em 1.0 cm.
+  tagZ: {ps1: 5.3, terminal: 4.25, fuse: 2.3, plate: 1.8},
+  switchTagX: {L1: -8.0, L2: -8.0, S1: -5.0} as {[id: string]: number},
 }
 
 // Terminal / connection points (cabinet-local x,y).
 const POINTS: {[id: string]: V2} = {
   "PS1:+": [-7.2, 11.05], "PS1:-": [7.5, 11.05],
-  "S1:COM": [-11.2, -3.7], "S1:UP": [-9.8, -3.4], "S1:DOWN": [-9.8, -4.0],
-  "F1:IN": [-11.8, -11.3], "F1:OUT": [-11.8, -15.7],
-  "F2:IN": [-8.5, -11.3], "F2:OUT": [-8.5, -15.7],
-  "L1:+": [-11.1, -2.3], "L1:-": [-9.9, -1.7],
-  "L2:+": [-11.1, -5.1], "L2:-": [-9.9, -5.6],
+  "S1:COM": [-11.2, -3.6], "S1:UP": [-10.4, -3.1], "S1:DOWN": [-10.4, -4.1],
+  "F1:IN": [-11.85, -11.3], "F1:OUT": [-11.85, -15.7],
+  "F2:IN": [-8.6, -11.3], "F2:OUT": [-8.6, -15.7],
+  "L1:+": [-11.15, -2.3], "L1:-": [-9.85, -2.3],
+  "L2:+": [-11.15, -5.0], "L2:-": [-9.85, -5.0],
 }
 
 // Wire routes keyed "<from>><to>" exactly as in netlist.json wires[]; label = where the number sits.
+// Routed like the panel image, all inside the 46 × 46 board (|x| ≤ 20.3, -20 ≤ y ≤ 11).
+// As in the image, wires with no route here (S1 DOWN → TS-5 and the lamp returns) are not drawn;
+// the board footnote lists them from the netlist.
 const ROUTES: {[key: string]: {pts: V2[]; label: V2}} = {
-  "PS1:+>TS-1": {pts: [[-7.2, 11.05], [-7.2, 8.8], [-14.2, 8.8], [-14.2, 7.1]], label: [-7.9, 10.1]},
-  "TS-1>S1:COM": {pts: [[-14.2, 2.7], [-14.2, 0.4], [-16.0, 0.4], [-16.0, -3.7], [-11.2, -3.7]], label: [-16.8, -1.6]},
-  "S1:UP>TS-4": {pts: [[-9.8, -3.4], [-9.4, -3.4], [-9.4, 0.8], [-6.9, 0.8], [-6.9, 2.7]], label: [-10.1, 1.5]},
-  "TS-4>F1:IN": {pts: [[-5.9, 2.7], [-5.9, 1.4], [19.3, 1.4], [19.3, -8.3], [-11.8, -8.3], [-11.8, -11.3]], label: [18.4, -3.5]},
-  "F1:OUT>L1:+": {pts: [[-11.8, -15.7], [-11.8, -17.2], [-18.0, -17.2], [-18.0, -2.3], [-11.1, -2.3]], label: [-17.2, -7.0]},
-  "S1:DOWN>TS-5": {pts: [[-9.8, -4.0], [-8.6, -4.0], [-8.6, 0.0], [-4.3, 0.0], [-4.3, 2.7]], label: [-7.0, -0.6]},
-  "TS-5>F2:IN": {pts: [[-3.3, 2.7], [-3.3, 2.2], [20.4, 2.2], [20.4, -9.0], [-8.5, -9.0], [-8.5, -11.3]], label: [21.3, -3.5]},
-  "F2:OUT>L2:+": {pts: [[-8.5, -15.7], [-8.5, -18.2], [-19.2, -18.2], [-19.2, -5.1], [-11.1, -5.1]], label: [-20.1, -10.0]},
-  "PS1:->TS-2": {pts: [[7.5, 11.05], [7.5, 9.6], [-11.6, 9.6], [-11.6, 7.1]], label: [8.2, 10.4]},
-  "L1:->TS-2": {pts: [[-9.9, -1.7], [16.5, -1.7], [16.5, 8.0], [-11.2, 8.0], [-11.2, 7.1]], label: [17.3, 4.0]},
-  "L2:->TS-2": {pts: [[-9.9, -5.6], [16.5, -5.6], [16.5, -1.7]], label: [14.0, -6.3]},
+  "PS1:+>TS-1": {pts: [[-7.2, 11.05], [-7.2, 8.8], [-13.3, 8.8], [-13.3, 7.1]], label: [-12.6, 9.75]},
+  "PS1:->TS-2": {pts: [[7.5, 11.05], [7.5, 9.45], [-11.3, 9.45], [-11.3, 7.1]], label: [-9.8, 10.35]},
+  "TS-1>S1:COM": {pts: [[-13.3, 2.7], [-13.3, 0.45], [-15.6, 0.45], [-15.6, -3.6], [-11.2, -3.6]], label: [-16.4, -1.2]},
+  "S1:UP>TS-4": {pts: [[-10.4, -3.1], [-10.4, 0.2], [-7.6, 0.2], [-7.6, 2.7]], label: [-8.9, 1.0]},
+  "TS-4>F1:IN": {pts: [[-6.9, 2.7], [-6.9, 1.45], [19.2, 1.45], [19.2, -8.3], [-11.85, -8.3], [-11.85, -11.3]], label: [17.9, -6.0]},
+  "TS-5>F2:IN": {pts: [[-5.3, 2.7], [-5.3, 2.2], [20.3, 2.2], [20.3, -9.1], [-8.6, -9.1], [-8.6, -11.3]], label: [21.3, -6.0]},
+  "F1:OUT>L1:+": {pts: [[-11.85, -15.7], [-11.85, -19.1], [-18.1, -19.1], [-18.1, -2.3], [-11.15, -2.3]], label: [-16.6, -18.4]},
+  "F2:OUT>L2:+": {pts: [[-8.6, -15.7], [-8.6, -20.0], [-19.0, -20.0], [-19.0, -5.0], [-11.15, -5.0]], label: [-16.6, -20.75]},
 }
 
 const WIRE_Z = 1.0
@@ -77,37 +82,37 @@ function c4(r: number, g: number, b: number, a: number = 1): vec4 {
   return new vec4(r, g, b, a)
 }
 
-// Additive display: nothing black — "black" parts are smoke-gray.
+// Colors follow the panel image; anything black there is smoke-gray here (additive display).
 const PALETTE = {
   bench: c4(0.36, 0.27, 0.18),
-  enclosure: c4(0.42, 0.44, 0.48),
-  board: c4(0.26, 0.28, 0.31),
-  smoke: c4(0.36, 0.37, 0.4),
-  ps1: c4(0.6, 0.56, 0.4),
-  rail: c4(0.55, 0.57, 0.6),
-  endStop: c4(0.4, 0.41, 0.44),
-  termSupply: c4(0.85, 0.33, 0.33),
-  termReturn: c4(0.35, 0.5, 0.92),
-  termSpare: c4(0.7, 0.7, 0.72),
-  plexi: c4(0.33, 0.43, 0.52),
-  hole: c4(0.52, 0.53, 0.56),
-  fuse: c4(0.72, 0.62, 0.78),
-  openSpot: c4(0.5, 0.56, 0.62),
-  wireSupply: c4(0.95, 0.2, 0.18),
-  wireReturn: c4(0.22, 0.42, 1.0),
+  frame: c4(0.56, 0.59, 0.63),
+  board: c4(0.82, 0.84, 0.86),
+  smoke: c4(0.3, 0.31, 0.34),
+  ps1: c4(0.95, 0.9, 0.7),
+  rail: c4(0.72, 0.72, 0.73),
+  endStop: c4(0.35, 0.35, 0.38),
+  termSupply: c4(0.88, 0.4, 0.4),
+  termReturn: c4(0.4, 0.6, 0.95),
+  termSpare: c4(0.92, 0.92, 0.92),
+  plexi: c4(0.72, 0.82, 0.9),
+  hole: c4(0.45, 0.46, 0.5),
+  fuse: c4(0.85, 0.78, 0.88),
+  openSpot: c4(0.45, 0.48, 0.52),
+  wireSupply: c4(0.85, 0.12, 0.12),
+  wireReturn: c4(0.15, 0.3, 0.85),
   s1: c4(0.75, 0.76, 0.8),
   l1Off: c4(0.18, 0.35, 0.18),
   l1On: c4(0.45, 1.0, 0.45),
   l2Off: c4(0.42, 0.3, 0.12),
   l2On: c4(1.0, 0.68, 0.2),
-  outlineAmber: c4(1.0, 0.72, 0.15),
-  outlineActive: c4(0.45, 0.9, 1.0),
-  outlineGreen: c4(0.35, 1.0, 0.45),
-  outlineRed: c4(1.0, 0.25, 0.22),
-  traceActive: c4(1.0, 0.95, 0.6),
-  traceGreen: c4(0.35, 1.0, 0.45),
-  traceGray: c4(0.45, 0.45, 0.47),
-  traceRed: c4(1.0, 0.25, 0.22),
+  outlineAmber: c4(1.0, 0.6, 0.05),
+  outlineActive: c4(0.2, 0.75, 1.0),
+  outlineGreen: c4(0.1, 0.8, 0.25),
+  outlineRed: c4(1.0, 0.15, 0.12),
+  traceActive: c4(1.0, 0.6, 0.05),
+  traceGreen: c4(0.1, 0.8, 0.25),
+  traceGray: c4(0.5, 0.5, 0.52),
+  traceRed: c4(1.0, 0.15, 0.12),
   probeTest: c4(1.0, 0.3, 0.25),
   probeRef: c4(0.85, 0.85, 0.9),
 }
@@ -178,12 +183,17 @@ export class MWNPCabinet extends BaseScriptComponent {
     const bh = LAYOUT.board.h
 
     // Bench (top surface just below the enclosure) and enclosure frame
-    this.box(root, "Bench", [0, -bh / 2 - 3.5], [bw + 44, 3, 44], 14, PALETTE.bench)
-    this.box(root, "Backboard", [0, 0], [bw, bh, 1.5], -0.75, PALETTE.board)
-    this.box(root, "Enclosure_Top", [0, bh / 2 + 1], [bw + 4, 2, 12], 4.5, PALETTE.enclosure)
-    this.box(root, "Enclosure_Bottom", [0, -bh / 2 - 1], [bw + 4, 2, 12], 4.5, PALETTE.enclosure)
-    this.box(root, "Enclosure_Left", [-bw / 2 - 1, 0], [2, bh, 12], 4.5, PALETTE.enclosure)
-    this.box(root, "Enclosure_Right", [bw / 2 + 1, 0], [2, bh, 12], 4.5, PALETTE.enclosure)
+    // Everything stays inside the 46 × 46 board: gray 1 cm frame (as in the image) whose walls
+    // give the cabinet depth, and a light-gray mounting panel inside it.
+    const fr = LAYOUT.board.frame
+    const wd = LAYOUT.board.wallDepth
+    this.box(root, "Bench", [0, -bh / 2 - 1.5], [bw + 44, 3, 44], 14, PALETTE.bench)
+    this.box(root, "Backboard", [0, 0], [bw, bh, 1.5], -0.85, PALETTE.frame)
+    this.box(root, "MountingPanel", [0, 0], [bw - 2 * fr, bh - 2 * fr, 0.1], -0.05, PALETTE.board)
+    this.box(root, "Wall_Top", [0, bh / 2 - fr / 2], [bw, fr, wd], wd / 2 - 1, PALETTE.frame)
+    this.box(root, "Wall_Bottom", [0, -bh / 2 + fr / 2], [bw, fr, wd], wd / 2 - 1, PALETTE.frame)
+    this.box(root, "Wall_Left", [-bw / 2 + fr / 2, 0], [fr, bh, wd], wd / 2 - 1, PALETTE.frame)
+    this.box(root, "Wall_Right", [bw / 2 - fr / 2, 0], [fr, bh, wd], wd / 2 - 1, PALETTE.frame)
 
     // PS1
     const ps = LAYOUT.ps1
@@ -203,17 +213,15 @@ export class MWNPCabinet extends BaseScriptComponent {
       if (!netlist.component(id)) continue
       this.part(root, id, [x, LAYOUT.terminal.y], LAYOUT.terminal.s as [number, number, number], LAYOUT.terminal.z, this.terminalColor(id))
     }
-    this.box(root, "EndStop_L", [minX - 1.6, LAYOUT.terminal.y], [0.8, 4.6, 3.2], 2.5, PALETTE.endStop)
-    this.box(root, "EndStop_R", [maxX + 1.6, LAYOUT.terminal.y], [0.8, 4.6, 3.2], 2.5, PALETTE.endStop)
+    this.box(root, "EndStop_L", [minX - 1.4, LAYOUT.terminal.y], [0.7, 4.6, 3.2], 2.5, PALETTE.endStop)
+    this.box(root, "EndStop_R", [maxX + 1.4, LAYOUT.terminal.y], [0.7, 4.6, 3.2], 2.5, PALETTE.endStop)
 
-    // Switch / lamp plate (smoke-gray plexi) with plugged holes
+    // Switch / lamp plate: one narrow smoke-gray strip, single row of plugged spare holes right of S1/L1/L2
     const sp = LAYOUT.switchPlate
     this.box(root, "SwitchLampPlate", sp.c, sp.s, sp.z, PALETTE.smoke)
     for (let col = 0; col < LAYOUT.holes.cols; col++) {
-      for (const y of LAYOUT.holes.rows) {
-        const h = this.sphere(root, "PluggedHole", [LAYOUT.holes.x0 + col * LAYOUT.holes.dx, y], 0.9, 0.85, PALETTE.hole)
-        h.getTransform().setLocalScale(new vec3(0.9, 0.9, 0.2))
-      }
+      const h = this.sphere(root, "PluggedHole_" + col, [LAYOUT.holes.x0 + col * LAYOUT.holes.dx, LAYOUT.holes.y], 0.9, 0.85, PALETTE.hole)
+      h.getTransform().setLocalScale(new vec3(0.9, 0.9, 0.2))
     }
     this.buildLamp(root, "L1", PALETTE.l1Off)
     this.buildLamp(root, "L2", PALETTE.l2Off)
@@ -228,16 +236,13 @@ export class MWNPCabinet extends BaseScriptComponent {
     }
     LAYOUT.openFuseX.forEach((x, i) => {
       const spot = this.obj(root, "OpenFuseSpot_" + i)
-      this.rectFrame(spot, [x, fp.c[1]], LAYOUT.fuseSize[0], LAYOUT.fuseSize[1], 0.15, 0.95, PALETTE.openSpot, null)
+      this.dashedRect(spot, [x, fp.c[1]], LAYOUT.fuseSize[0], LAYOUT.fuseSize[1], 0.12, 0.85, PALETTE.openSpot)
     })
 
-    // Wires from netlist.json
+    // Wires from netlist.json (those without a panel route are listed in the board footnote)
     netlist.data.wires.forEach((w, i) => {
       const r = ROUTES[w.from + ">" + w.to]
-      if (!r) {
-        print("[MWNPCabinet] No layout route for wire " + w.id + " " + w.from + " -> " + w.to)
-        return
-      }
+      if (!r) return
       const color = netlist.isReturnWire(i) ? PALETTE.wireReturn : PALETTE.wireSupply
       const wso = this.obj(root, "Wire_" + w.id + "_" + i)
       this.polyline(wso, r.pts, this.wireThicknessCm, WIRE_Z, [this.mat(color)])
@@ -263,31 +268,41 @@ export class MWNPCabinet extends BaseScriptComponent {
     return new vec3(0, 0, 2)
   }
 
-  /** Where the "Expected …" tag goes for a point (beside it, never on the component). */
+  /**
+   * Where the "Expected …" tag goes for a point: beside it, never on the component, inside the
+   * board, and left of the step card (which floats over the board's right third).
+   */
   getExpectedTagPos(pointId: string): vec3 {
-    if (LAYOUT.terminalX[pointId] !== undefined) return new vec3(LAYOUT.terminalX[pointId], 9.4, 5.2)
+    const tx = LAYOUT.terminalX[pointId]
+    if (tx !== undefined) return new vec3(Math.min(tx + 3.8, -3.5), 9.6, 5.6) // above the rail, below PS1
     const p = this.getPointPos(pointId)
-    if (pointId.indexOf("L") === 0) return new vec3(-17.5, p.y + (p.y > -3.7 ? 1.6 : -1.6), 3.0)
-    return new vec3(-18.6, p.y, 3.0)
+    if (pointId.indexOf("F") === 0) return new vec3(-17.0, p.y, 3.0) // left of the fuse row
+    return new vec3(-16.5, p.y, 3.0) // left of the switch/lamp strip
   }
 
-  /** Where the small result badge goes for a point. */
+  /** Where the small result badge goes for a point (same side as its expected tag). */
   getBadgePos(pointId: string): vec3 {
-    if (LAYOUT.terminalX[pointId] !== undefined) return new vec3(LAYOUT.terminalX[pointId], 8.4, 5.0)
+    const tx = LAYOUT.terminalX[pointId]
+    if (tx !== undefined) return new vec3(tx, 8.9, 5.4)
     const p = this.getPointPos(pointId)
-    if (pointId.indexOf("L") === 0) return new vec3(-14.6, p.y + (p.y > -3.7 ? 1.4 : -1.4), 2.8)
-    return new vec3(-14.7, p.y, 2.8)
+    if (pointId.indexOf("F") === 0) return new vec3(-15.9, p.y, 3.0)
+    return new vec3(-15.4, p.y, 3.0)
   }
 
-  getTagAnchors(): {id: string; pos: vec3; width: number}[] {
-    const out: {id: string; pos: vec3; width: number}[] = []
+  /** ID tag per component: position, rotation (terminals are labeled vertically, as on the panel), info bubble spot. */
+  getTagAnchors(): {id: string; pos: vec3; rotDeg: number; infoPos: vec3}[] {
+    const out: {id: string; pos: vec3; rotDeg: number; infoPos: vec3}[] = []
     if (!this.netlist) return out
+    const z = LAYOUT.tagZ
     for (const id of this.netlist.componentIds()) {
-      if (id === "PS1") out.push({id, pos: new vec3(0, 17.6, 5.3), width: 3.2})
-      else if (LAYOUT.terminalX[id] !== undefined) out.push({id, pos: new vec3(LAYOUT.terminalX[id], LAYOUT.terminal.y, 4.25), width: 2.0})
-      else if (LAYOUT.fuses[id]) out.push({id, pos: new vec3(LAYOUT.fuses[id][0], LAYOUT.fuses[id][1], 2.25), width: 1.9})
-      else if (id === "S1") out.push({id, pos: new vec3(-6.6, LAYOUT.s1[1], 1.1), width: 2.2})
-      else if (LAYOUT.lamps[id]) out.push({id, pos: new vec3(-6.6, LAYOUT.lamps[id][1] + (id === "L1" ? 0.1 : -0.1), 1.1), width: 2.2})
+      const tx = LAYOUT.terminalX[id]
+      if (id === "PS1") out.push({id, pos: new vec3(LAYOUT.ps1.c[0], LAYOUT.ps1.c[1] + 0.7, z.ps1), rotDeg: 0, infoPos: new vec3(0, 12.3, 6.0)})
+      else if (tx !== undefined) out.push({id, pos: new vec3(tx, LAYOUT.terminal.y, z.terminal), rotDeg: 90, infoPos: new vec3(-6.0, 0.75, 5.0)})
+      else if (LAYOUT.fuses[id]) out.push({id, pos: new vec3(LAYOUT.fuses[id][0], LAYOUT.fuses[id][1], z.fuse), rotDeg: 0, infoPos: new vec3(-12.0, -18.3, 3.0)})
+      else if (LAYOUT.switchTagX[id] !== undefined) {
+        const y = id === "S1" ? LAYOUT.s1[1] : LAYOUT.lamps[id][1]
+        out.push({id, pos: new vec3(LAYOUT.switchTagX[id], y, z.plate), rotDeg: 0, infoPos: new vec3(-6.0, -7.4, 3.0)})
+      }
     }
     return out
   }
@@ -302,6 +317,23 @@ export class MWNPCabinet extends BaseScriptComponent {
       out.push({name: "WireLabel_" + w.id + "_" + i, text: w.id, pos: new vec3(r.label[0], r.label[1], 1.6), isReturn: nl.isReturnWire(i)})
     })
     return out
+  }
+
+  /** Footnote along the board's bottom edge listing netlist wires not drawn on the panel (as in the image). */
+  getBoardNote(): {text: string; pos: vec3} | null {
+    if (!this.netlist) return null
+    const nl = this.netlist
+    const missing: string[] = []
+    nl.data.wires.forEach((w) => {
+      if (!ROUTES[w.from + ">" + w.to]) missing.push(nl.display(w.from) + " → " + w.id + " → " + nl.display(w.to))
+    })
+    if (missing.length === 0) return null
+    return {text: "Not drawn: " + missing.join(", ") + " (see schematic)", pos: new vec3(2.0, -21.35, 0.3)}
+  }
+
+  /** Board extents in cabinet-local cm (for tests). */
+  getBoardHalfSize(): vec2 {
+    return new vec2(LAYOUT.board.w / 2, LAYOUT.board.h / 2)
   }
 
   // ── Visual state driven by Main ───────────────────────────────────────────
@@ -539,6 +571,31 @@ export class MWNPCabinet extends BaseScriptComponent {
       const h = Math.abs(b[1] - a[1]) + t
       const m = mats.length > k ? mats[k] : mats[0]
       this.box(parent, "Seg" + k, [cx, cy], [w, h, t], z, PALETTE.wireSupply, m)
+    }
+  }
+
+  /** Dashed rectangular outline (open fuse positions, as drawn on the panel). */
+  private dashedRect(parent: SceneObject, c: V2, w: number, h: number, t: number, z: number, color: vec4): void {
+    const dash = 0.45
+    const gap = 0.3
+    const sides: [V2, V2][] = [
+      [[c[0] - w / 2, c[1] + h / 2], [c[0] + w / 2, c[1] + h / 2]],
+      [[c[0] - w / 2, c[1] - h / 2], [c[0] + w / 2, c[1] - h / 2]],
+      [[c[0] - w / 2, c[1] - h / 2], [c[0] - w / 2, c[1] + h / 2]],
+      [[c[0] + w / 2, c[1] - h / 2], [c[0] + w / 2, c[1] + h / 2]],
+    ]
+    let k = 0
+    for (const [a, b] of sides) {
+      const len = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1])
+      const n = Math.max(1, Math.floor((len + gap) / (dash + gap)))
+      const step = len / n
+      const horiz = a[1] === b[1]
+      for (let i = 0; i < n; i++) {
+        const mid = -len / 2 + step * (i + 0.5)
+        const pos: V2 = horiz ? [(a[0] + b[0]) / 2 + mid, a[1]] : [a[0], (a[1] + b[1]) / 2 + mid]
+        const size: [number, number, number] = horiz ? [Math.min(dash, step), t, t] : [t, Math.min(dash, step), t]
+        this.box(parent, "Dash" + k++, pos, size, z, color)
+      }
     }
   }
 

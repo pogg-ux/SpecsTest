@@ -1,0 +1,45 @@
+# MWNP Lens — Handoff (2026-10-31, 4:15 PM)
+
+## Where we are
+- Lens Studio 5.23.2, project `C:\Users\Phestes\Documents\SpecsLens\SpecsTest`, repo github.com/pogg-ux/SpecsTest
+- CLAD (ls-clad) installed, lens-studio MCP connected, design brief approved: `devpost/design-brief.md`
+- Build done: all 5 LEAF done criteria PASS + layout test. Cabinet at 100 cm, translucent cards.
+- Job data: `Assets/MWNP/netlist.json` (tolerances, reading rules), `MWNP_1.0_wiring.png`, `MWNP_1.0_panel_layout.png`
+
+## UPDATE 4:18 PM — layout fix DONE (matches panel image, 6/6 LEAF pass, preview env = Plane, head-anchored)
+Next prompt for Claude Code:
+
+> Three fixes:
+> 1. Step card text (step line, schematic citation, reasoning, readout) must be readable in a 1080p screen recording: at least 1.0 cm text, fewer words per line. Make the card taller if needed rather than shrinking text. Keep the number pad as is.
+> 2. Schematic panel: crop/zoom the image to the active path (TS-4 → F1 → L1) and make the highlighted wire thick and bright.
+> 3. Hide all LEAF on-screen output unless a test is running, so a normal Preview shows no test banners.
+> Also: switch the spare holes to 3 rows to match MWNP_1.0_panel_layout.png.
+> Re-run all 6 LEAF tests and screenshot the step card state.
+
+## Earlier problem (resolved)
+Preview looks wrong: cabinet doesn't match `MWNP_1.0_panel_layout.png` (plates render as big hole grids), wires hang off the board, tags/safety text unreadable, washed out in Sunlit Room.
+Fix prompt for Claude Code (if not already sent / finished):
+
+> The cabinet model doesn't match my layout. Rebuild it to match Assets/MWNP/MWNP_1.0_panel_layout.png exactly:
+> - Switch/lamp plate: ONE narrow strip, 25 × 5 cm, single row of ~6 plugged spare holes right of S1/L1/L2. Not a large perforated panel.
+> - Fuse plate: ONE strip, 29 × 7.5 cm, F1 and F2 on the left, 6 empty dashed fuse spots. Not a grid.
+> - PS1 at top, DIN rail with TS-1 to TS-5 below it, as in the image.
+> - All wires stay inside the 46 × 46 cm backboard, routed along the edges. Nothing hangs off the board.
+> - Part tags readable from 100 cm (≥1.5 cm text). Safety notice centered, fully in view, readable, translucent smoke-gray card.
+> Then screenshot the preview, compare side by side with MWNP_1.0_panel_layout.png, and re-run all LEAF tests.
+
+Also: switch Preview environment from "Sunlit Room" to a darker room.
+
+## After that
+1. Review in Interactive Preview (dismiss → Report symptom → EXTEND → 12.1 → 12.0 → 0.0 → retest → summary)
+2. If text hard to read: raise card opacity 0.55 → 0.75, enlarge tags
+3. Extras if time: AI phrasing via Remote Service Gateway (fallback to rules), Offscreen Locator arrow
+4. Video (<3 min, Lens working in first 10 s), Devpost description, final push
+5. Post in Discord #devpost-learn-feedback before Thu Nov 5 12:00 PM ET (tags: Will It Ship, Learn AR with SPECS)
+6. Round 1 deadline: Mon Nov 9, 5:00 PM ET
+
+## Notes
+- Use Sonnet in Claude Code for builds (saves usage). Auto mode on.
+- If Lens Studio hangs: quit without saving, reopen SpecsTest.esproj, tell Claude Code "it's started".
+- `.agents/skills/plan-lens` keeps getting removed by Lens Studio — ignore; `.claude/skills/plan-lens` is the one used.
+- Physical MWNP build is optional, last priority (closing video clip).

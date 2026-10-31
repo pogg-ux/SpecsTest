@@ -26,7 +26,7 @@ import {MWNPSummaryUI, SummaryRow} from "./MWNPSummaryUI"
 import {MWNPSchematicPanelUI} from "./MWNPSchematicPanelUI"
 
 const CHECK = "✓"
-const CROSS = "✗"
+const CROSS = "×" // U+00D7: the Lens font has no U+2717 ✗ glyph
 
 function fill(template: string, vars: {[k: string]: string}): string {
   return template.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m))
@@ -108,6 +108,12 @@ export class MWNPMain extends BaseScriptComponent {
   @widget(new SliderWidget(0, 1, 0.05))
   @hint("Sound effect volume")
   sfxVolume: number = 0.7
+  @input
+  @hint("At start, move the whole assistant so the authored layout sits relative to the user's head (heading only)")
+  anchorToUserAtStart: boolean = true
+  @input
+  @hint("Eye position the authored layout was designed around (cabinet 100 cm, cards 75 cm from here)")
+  authoredEyePos: vec3 = new vec3(0, 0, 18)
   @ui.group_end
 
   // ── Readable state (see getState) ──
@@ -138,7 +144,49 @@ export class MWNPMain extends BaseScriptComponent {
 
   // ── Startup ───────────────────────────────────────────────────────────────
 
+  /** First enabled camera that has device tracking (the user's head), else the first enabled camera. */
+  private findUserCamera(): SceneObject | null {
+    let any: SceneObject | null = null
+    let tracked: SceneObject | null = null
+    const scan = (o: SceneObject) => {
+      if (tracked) return
+      if (o.isEnabledInHierarchy && o.getComponent("Component.Camera")) {
+        if (!any) any = o
+        if (o.getComponent("Component.DeviceTracking")) tracked = o
+      }
+      for (let i = 0; i < o.getChildrenCount(); i++) scan(o.getChild(i))
+    }
+    for (let i = 0; i < global.scene.getRootObjectsCount(); i++) scan(global.scene.getRootObject(i))
+    return tracked ?? any
+  }
+
+  /**
+   * World-locks the layout relative to where the user is when the Lens starts: the authored eye
+   * (authoredEyePos, facing -Z) is moved onto the camera, keeping only its heading so the cabinet
+   * stays upright. Same result in every preview environment and on device.
+   */
+  private placeRelativeToUser(): void {
+    if (!this.anchorToUserAtStart) return
+    const camSO = this.findUserCamera()
+    if (!camSO) return
+    const ct = camSO.getTransform()
+    const camPos = ct.getWorldPosition()
+    const look = ct.getWorldRotation().multiplyVec3(new vec3(0, 0, -1))
+    const yaw = Math.atan2(-look.x, -look.z)
+    const rot = quat.angleAxis(yaw, vec3.up())
+    const t = this.sceneObject.getTransform()
+    t.setWorldRotation(rot)
+    t.setWorldPosition(camPos.sub(rot.multiplyVec3(this.authoredEyePos)))
+    print("[MWNP] placed relative to user: camera " + camPos + " yaw " + ((yaw * 180) / Math.PI).toFixed(1) + "°")
+  }
+
   private start(): void {
+    this.placeRelativeToUser()
+    // Tracking can settle a frame or two after start; re-anchor once more shortly after.
+    const settle = this.createEvent("DelayedCallbackEvent") as DelayedCallbackEvent
+    settle.bind(() => this.placeRelativeToUser())
+    settle.reset(0.25)
+
     const missing = ["cabinet", "partTags", "safetyNotice", "jobPanel", "stepCard", "findingCard", "summaryCard", "schematicPanel"].filter(
       (k) => !(this as any)[k]
     )
@@ -148,7 +196,7 @@ export class MWNPMain extends BaseScriptComponent {
     }
     const nl = this.nl
     this.cabinet.build(nl)
-    this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels())
+    this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels(), this.cabinet.getBoardNote())
 
     this.safetyNotice.onDismiss.add(() => this.onDismissNotice())
     this.jobPanel.onReportSymptom.add(() => this.onReportSymptom())

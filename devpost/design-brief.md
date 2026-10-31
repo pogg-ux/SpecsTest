@@ -22,24 +22,24 @@ Seated at the bench in front of a 3D model of my MWNP 1.0 12 VDC trainer, I repo
 
 ## Where things live
 - Where the user is looking during the main task: at the active test point on the panel; the step card and the cabinet are in view together, so no head turn is needed.
-- Trainer cabinet model: upright backboard about 46 × 46 cm (18 × 18 in), cabinet-style junction box, on a virtual bench in front of the seated user, about 100 cm away, centered horizontally and a little below eye level (about 9 cm, ~5°). At 100 cm the full 46 cm board spans about 26° of the SPECS view's ~32° width.
+- Trainer cabinet model: upright backboard about 46 × 46 cm (18 × 18 in), cabinet-style junction box, on a virtual bench in front of the seated user, about 100 cm away, centered horizontally and a little below eye level (about 9 cm, ~5°). At 100 cm the full 46 cm board spans about 26° of the SPECS view's ~32° width. Layout matches `Assets/MWNP/MWNP_1.0_panel_layout.png`: light-gray mounting panel inside a 1 cm gray frame, everything inside the 46 × 46 cm board. The whole layout is placed relative to the user's head when the Lens starts, so these distances hold in any preview environment and on device.
   - Top: PS1 power supply.
-  - Below it: DIN rail with terminals TS-1 to TS-5 (TS-3 spare).
-  - Below the rail: switch/lamp plate, smoke-gray plexi, about 5 × 25 cm (2 × 10 in), precut plugged holes. S1 on the left side with L1 (EXTEND) above it and L2 (RETRACT) below it. No other switches or lamps.
-  - Below that: fuse board, smoke-gray plexi, about 7.5 × 29 cm (3 × 11.5 in), F1 and F2 plus open spots for more fuses.
+  - Below it: DIN rail with terminals TS-1 to TS-5 (TS-3 spare), labeled vertically on the terminals as in the layout image (terminal pitch 2 cm so the labels fit).
+  - Below the rail: switch/lamp plate, ONE narrow smoke-gray plexi strip, 25 × 5 cm (2 × 10 in), with a single row of 6 plugged spare holes to the right of S1/L1/L2. S1 on the left side with L1 (EXTEND) above it and L2 (RETRACT) below it. No other switches or lamps.
+  - Below that: fuse plate, ONE light plexi strip, 29 × 7.5 cm (11.5 × 3 in), F1 and F2 on the left plus 6 empty dashed fuse spots.
   - Anything meant to be black is smoke-gray instead (additive display).
-  - Wires follow the schematic in `Assets/MWNP/MWNP_1.0_wiring.png`: red for +12 V conductors, blue for 0 V return, labeled with their wire numbers.
+  - Wires follow the schematic in `Assets/MWNP/MWNP_1.0_wiring.png` and are routed like the layout image, neatly along the edges and all inside the board: red for +12 V conductors, blue for 0 V return, labeled with their wire numbers. As in the layout image, S1 DOWN → 3a → TS-5 and the lamp returns (wire 0) are not drawn; a footnote along the bottom edge lists them.
 - At the part (small things only, never covering components):
   - Thin outline around the active component.
   - Probe markers on the active test point's terminals (e.g. F1 IN and OUT).
   - A short tag right beside the test point: "Expected 12 V (S1 UP)".
   - After a reading, the tag shrinks to a small badge with the value and a green check or red X.
-- Component tags: every component has a small ID tag (PS1, TS-1…TS-5, S1, F1, F2, L1, L2), visible but dim until relevant.
+- Component tags: every component has an ID tag (PS1, TS-1…TS-5, S1, F1, F2, L1, L2) printed on or right beside the part, text at least 1.5 cm tall (font size) so it reads from 100 cm, light with a dark outline, visible but dim until relevant, highlighting when aimed at. Expected tags, badges and info bubbles use 1.0 cm text and stay inside the board, left of the step card.
 - Trace line: drawn along the wires of the active path (2a, 2b, 2c), thin, on the panel surface.
 - Step card: world-locked (not stuck to the view), about 75 cm from the user, floating in front of the right third of the cabinet, top edge just below eye level, turned slightly toward the user. About 18 × 17 cm. Its left edge sits just right of center, so TS-4, F1, L1 and S1 (all on the left of the board) are never covered; only PS1's right edge, plugged holes, open fuse spots and the far-right runs of wires 2b/3b/0 are behind it. Translucent dark smoke-gray background (not solid), so wires and the 2b trace stay visible through it. Shows the current step, the schematic citation, the number pad, the readout and buttons.
 - Schematic panel: opens just above the step card (same distance, same translucent smoke-gray background), about 18 × 14 cm, showing `MWNP_1.0_wiring.png` with the current wire highlighted. Step card and schematic both fit in view with the cabinet.
 - The Job panel, Finding card and Findings summary all use the same spot, size and translucent background as the step card (each one replaces the last).
-- Safety notice: one line in front of the cabinet at start.
+- Safety notice: in front of the cabinet at start, centered and fully in view (32 cm wide at 70 cm), 1.0 cm text (wraps to two lines), on the same translucent smoke-gray card style.
 
 ## Hands and input
 - Dismiss safety notice: pinch its button.

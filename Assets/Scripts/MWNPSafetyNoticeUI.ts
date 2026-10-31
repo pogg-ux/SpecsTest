@@ -34,6 +34,10 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
   @widget(new SliderWidget(30, 70, 1))
   @hint("Card width in cm")
   widthCm: number = 32
+  @input
+  @widget(new SliderWidget(0.5, 1.6, 0.05))
+  @hint("Notice text size: em height in cm (1.0 reads well at ~70 cm)")
+  textEmCm: number = 1.0
   @ui.group_end
 
   private body: SceneObject | null = null
@@ -77,7 +81,7 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
     ;(row.getComponent(FlexLayout.getTypeName()) as FlexLayout).addItems([iconItem])
 
     const textW = this.widthCm - 2.4 - 2.4 - 7 - 1.6
-    addText(row, "NoticeText", this.noticeText, textW, 4, {role: "Body", color: COLOR.amber, distanceCm: 55, wrap: true})
-    addButton(row, "Btn_DismissSafety", this.dismissLabel, 7, 3.2, () => this._onDismiss.invoke(), {distanceCm: 55})
+    addText(row, "NoticeText", this.noticeText, textW, 4, {role: "Body", color: COLOR.amber, emCm: this.textEmCm, wrap: true})
+    addButton(row, "Btn_DismissSafety", this.dismissLabel, 7, 3.2, () => this._onDismiss.invoke(), {emCm: this.textEmCm})
   }
 }

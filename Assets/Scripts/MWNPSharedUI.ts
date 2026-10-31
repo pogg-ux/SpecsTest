@@ -28,6 +28,11 @@ const TYPE_SCALE: Record<TextRole, {size: number; weight: number}> = {
 export function roleSize(role: TextRole, distanceCm: number): number {
   return TYPE_SCALE[role].size * FONT_SIZE_SCALE * (distanceCm / 110)
 }
+/** World-space Text: em-square height in cm = size / 43.886 (StudioLib Text.size docs). */
+export const TEXT_SIZE_PER_CM = 43.886
+export function sizeForEmCm(emCm: number): number {
+  return emCm * TEXT_SIZE_PER_CM
+}
 export function applyTextRole(t: Text, role: TextRole, distanceCm: number): void {
   t.size = roleSize(role, distanceCm)
   ;(t as Text & {weight?: number}).weight = TYPE_SCALE[role].weight
@@ -75,6 +80,8 @@ export interface TextOpts {
   align?: "left" | "center" | "right"
   wrap?: boolean
   distanceCm?: number
+  /** Overrides role sizing: em height in cm. */
+  emCm?: number
 }
 
 /** A Text cell of fixed w×h registered as a FlexItem of `parent`. */
@@ -84,6 +91,7 @@ export function addText(parent: SceneObject, name: string, text: string, w: numb
   t.text = text
   t.depthTest = true
   applyTextRole(t, opts?.role ?? "Body", opts?.distanceCm ?? 75)
+  if (opts?.emCm) t.size = sizeForEmCm(opts.emCm)
   const a = opts?.align ?? "left"
   t.horizontalAlignment =
     a === "left" ? HorizontalAlignment.Left : a === "right" ? HorizontalAlignment.Right : HorizontalAlignment.Center
@@ -114,7 +122,7 @@ export function addButton(
   w: number,
   h: number,
   onClick: () => void,
-  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean}
+  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number}
 ): ButtonHandle {
   const so = makeObj(parent, name)
   const btn = so.createComponent(Button.getTypeName()) as Button
@@ -124,6 +132,7 @@ export function addButton(
   t.text = label
   t.depthTest = true
   applyTextRole(t, opts?.role ?? "Button", opts?.distanceCm ?? 75)
+  if (opts?.emCm) t.size = sizeForEmCm(opts.emCm)
   t.horizontalAlignment = HorizontalAlignment.Center
   t.verticalAlignment = VerticalAlignment.Center
   t.horizontalOverflow = HorizontalOverflow.Overflow
@@ -179,8 +188,8 @@ export interface CardBody {
  * Translucent smoke-gray card fill (premultiplied alpha: rgb = gray * alpha) so the panel and
  * its wire traces stay visible behind cards that float in front of the cabinet.
  */
-export const CARD_FILL_GRAY = 0.2
-export const CARD_FILL_ALPHA = 0.55
+export const CARD_FILL_GRAY = 0.16
+export const CARD_FILL_ALPHA = 0.72
 const CARD_FILL = new vec4(CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_ALPHA)
 
 /** Applies the translucent fill once the plate's RoundedRectangle has initialized (BackPlate sets its own color on start). */

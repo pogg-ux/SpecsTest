@@ -30,6 +30,7 @@
   ScriptInputsHidden:
     dismissLabel: false
     noticeText: false
+    textEmCm: false
     warningIcon: false
     widthCm: false
   ScriptTypesHidden:
@@ -45,6 +46,7 @@
       noticeText: Reference aid only. Verify with a meter. Follow lockout/tagout.
       dismissLabel: Dismiss
       widthCm: !<float> 46.000000
+      textEmCm: !<float> 1.000000
   ScriptTypes:
     -
       {}
@@ -59,4 +61,5 @@
     - '// @input string noticeText = "Reference aid only. Verify with a meter. Follow lockout/tagout." {"hint":"Safety notice text (one line)"}'
     - '// @input string dismissLabel = "Dismiss" {"hint":"Dismiss button label"}'
     - '// @input float widthCm = 32 {"hint":"Card width in cm", "widget":"slider", "min":30, "max":70, "step":1}'
+    - '// @input float textEmCm = 1 {"hint":"Notice text size: em height in cm (1.0 reads well at ~70 cm)", "widget":"slider", "min":0.5, "max":1.6, "step":0.05}'
     - '// @ui {"widget":"group_end"}'

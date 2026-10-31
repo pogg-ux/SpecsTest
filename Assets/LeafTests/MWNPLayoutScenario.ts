@@ -5,7 +5,7 @@
 
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
-import {findSceneObjectByName} from "Leaf.lspkg/Utils/common/Utils"
+import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {MWNPLeafInteractor, ev, waitFor} from "./MWNPLeafInteractor"
 
 type R = {x0: number; x1: number; y0: number; y1: number}
@@ -49,7 +49,61 @@ function fmt(r: R): string {
 export class MWNPLayoutScenario extends Scenario {
   async run(): Promise<void> {
     const ui = new MWNPLeafInteractor()
+    await waitFor((s) => s.initialized === true && s.visibleCard === "safety", 10000, "safety card")
+    await sleep(600) // let the start-pose anchoring (re-run at 0.25 s) settle
+    const cam0 = findCamera()
+
+    // Safety notice: fully in view and roughly centered horizontally.
+    {
+      const so = findSceneObjectByName("SafetyNoticeCard")
+      expect(!!so && so.isEnabledInHierarchy, "safety notice visible").toBe(true)
+      const size: vec2 = (so.getComponent("Component.ScriptComponent") as any).size
+      const r = screenRect(cam0, so, size.x, size.y)
+      ev("layout notice", {size: [size.x, size.y], rect: fmt(r)})
+      expect(r.x0 >= 0.02 && r.x1 <= 0.98 && r.y0 >= 0.02 && r.y1 <= 0.98, "safety notice inside view " + fmt(r)).toBe(true)
+      expect(Math.abs((r.x0 + r.x1) / 2 - 0.5) < 0.05, "safety notice centered " + fmt(r)).toBe(true)
+    }
+
+    // ID tags: text em height ≥ 1.5 cm in world space.
+    {
+      const tags = findSceneObjectByName("PartTags")
+      for (let i = 0; i < tags.getChildrenCount(); i++) {
+        const t = tags.getChild(i)
+        if (t.name.indexOf("Tag_") !== 0) continue
+        let label: Text | null = null
+        for (let c = 0; c < t.getChildrenCount(); c++) {
+          if (t.getChild(c).name === "Label") label = t.getChild(c).getComponent("Component.Text") as Text
+        }
+        expect(!!label, t.name + " has a label").toBe(true)
+        if (!label) continue
+        const emCm = (label.size / 43.886) * t.getTransform().getWorldScale().y
+        expect(emCm >= 1.5 - 1e-3, t.name + " text " + emCm.toFixed(2) + " cm").toBe(true)
+      }
+      ev("layout tags", {checked: tags.getChildrenCount()})
+    }
+
     await ui.startExtendDiagnosis()
+
+    // Wires and traces: every segment inside the 46 × 46 backboard (cabinet-local).
+    {
+      const trainer = findSceneObjectByName("MWNPTrainer")
+      const half = (trainer.getComponent("Component.ScriptComponent") as any).getBoardHalfSize() as vec2
+      let segs = 0
+      for (let i = 0; i < trainer.getChildrenCount(); i++) {
+        const w = trainer.getChild(i)
+        if (w.name.indexOf("Wire_") !== 0 && w.name.indexOf("Trace_") !== 0) continue
+        for (let k = 0; k < w.getChildrenCount(); k++) {
+          const seg = w.getChild(k).getTransform()
+          const p = seg.getLocalPosition()
+          const s = seg.getLocalScale()
+          segs++
+          const inside = Math.abs(p.x) + s.x / 2 <= half.x && Math.abs(p.y) + s.y / 2 <= half.y
+          expect(inside, w.name + "/" + w.getChild(k).name + " inside board").toBe(true)
+        }
+      }
+      ev("layout wires", {segments: segs})
+      expect(segs > 0, "wire segments found").toBe(true)
+    }
     await ui.tap("Btn_Schematic")
     await waitFor((s) => s.schematicOpen === true, 3000, "schematic open")
 

@@ -3939,7 +3939,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: -1.000000, z: -52.000000}
+    Position: {x: 0.000000, y: -3.000000, z: -52.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
     Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
     HasSegmentScaleCompensation: false
@@ -9968,7 +9968,7 @@
   ScriptInputsDefault:
     noticeText: true
     dismissLabel: true
-    widthCm: true
+    textEmCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -9976,7 +9976,8 @@
       warningIcon: !<reference.Texture> 7c474fc3-0c3d-41e0-b6c5-1ebdd4324865
       noticeText: Reference aid only. Verify with a meter. Follow lockout/tagout.
       dismissLabel: Dismiss
-      widthCm: !<float> 46.000000
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
   ScriptTypes:
     "":
       {}
@@ -16511,6 +16512,8 @@
     fuseActionTemplate: true
     summaryDelaySec: true
     sfxVolume: true
+    anchorToUserAtStart: true
+    authoredEyePos: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -16533,6 +16536,8 @@
       fuseActionTemplate: "Lockout/tagout, remove {part}, check continuity, replace with {rating}. Do not upsize. If the new fuse blows, check {downstream} and {load} for a short."
       summaryDelaySec: 1.500000
       sfxVolume: 0.700000
+      anchorToUserAtStart: true
+      authoredEyePos: !<Vec3> {x: 0.000000, y: 0.000000, z: 18.000000}
   ScriptTypes:
     "":
       {}
@@ -22321,18 +22326,26 @@
   Enabled: true
   ScriptAsset: !<reference> 8b8107bd-d2e6-4625-b059-7874fab07f6d
   ScriptInputsDefault:
-    viewDistanceCm: true
-    dimAlpha: true
-    supplyWireColor: true
-    returnWireColor: true
+    tagEmCm: true
+    tagOutline: true
+    overlayEmCm: true
+    wireEmCm: true
+    noteEmCm: true
+    noteColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      viewDistanceCm: !<float> 65.000000
-      dimAlpha: 0.450000
-      supplyWireColor: !<Vec4> {x: 1.000000, y: 0.500000, z: 0.450000, w: 1.000000}
-      returnWireColor: !<Vec4> {x: 0.550000, y: 0.700000, z: 1.000000, w: 1.000000}
+      tagEmCm: 1.500000
+      tagOutline: 0.220000
+      overlayEmCm: !<float> 1.000000
+      wireEmCm: !<float> 1.000000
+      noteEmCm: 0.600000
+      overlayMaxWidthCm: 8.600000
+      dimAlpha: 0.550000
+      supplyWireColor: !<Vec4> {x: 0.800000, y: 0.100000, z: 0.100000, w: 1.000000}
+      returnWireColor: !<Vec4> {x: 0.150000, y: 0.300000, z: 0.850000, w: 1.000000}
+      noteColor: !<Vec4> {x: 0.300000, y: 0.320000, z: 0.360000, w: 1.000000}
   ScriptTypes:
     "":
       {}
