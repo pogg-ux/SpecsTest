@@ -1,12 +1,14 @@
 // MWNPSummaryUI.ts — Findings summary (replaces the step card at the end of the job).
 //
-// Owns: job/symptom header, one line per logged reading, finding, action, result, Save button.
+// Owns: job/symptom header, one wrapped row per logged reading, finding, action, result, Save button.
+// Text is sized in real cm (textEmCm 1.0), every cell is sized to its words, and the card grows DOWNWARD
+// from its host's origin (host = card's top-center).
 // API: show(data), setSaved(label), hide(), readable fields, onSave.
 // Must not: compute results — Main passes finished strings.
 // Test handle: "Btn_SaveJobLog"; reading rows are named "ReadingRow_<n>".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {addButton, addText, COLOR, colorForWord, deferDestroy, makeCardBody, ButtonHandle} from "./MWNPSharedUI"
+import {addButton, addFitText, cardEm, COLOR, colorForWord, deferDestroy, makeCardBody, TEXT_BODY, TEXT_SOFT, ButtonHandle} from "./MWNPSharedUI"
 
 export interface SummaryRow {
   text: string
@@ -32,8 +34,16 @@ export class MWNPSummaryUI extends BaseScriptComponent {
   @ui.group_start("Settings")
   @input
   @widget(new SliderWidget(26, 44, 0.5))
-  @hint("Card width in cm")
-  widthCm: number = 34
+  @hint("Card width in card units (cm before scaling)")
+  widthCm: number = 32
+  @input
+  @widget(new SliderWidget(0.6, 2.0, 0.05))
+  @hint("Card text size: em height in real cm (1.0 reads in a 1080p recording)")
+  textEmCm: number = 1.0
+  @input
+  @widget(new SliderWidget(1.0, 3.0, 0.05))
+  @hint("Title text size: em height in real cm")
+  titleEmCm: number = 1.4
   @ui.group_end
 
   rowTexts: string[] = []
@@ -60,21 +70,23 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     this.findingText = d.findingLine
     this.resultText = d.resultLine
     const w = this.widthCm
-    const inner = w - 3.2
-    const card = makeCardBody(this.sceneObject, "SummaryCardCard", w, 1.6, 0.4)
+    const inner = w - 2.8
+    const em = cardEm(this.sceneObject, this.textEmCm)
+    const big = cardEm(this.sceneObject, Math.max(this.titleEmCm, this.textEmCm * 1.3))
+    const card = makeCardBody(this.sceneObject, "SummaryCardCard", w, 1.4, 0.5, "top")
     this.body = card.body
     const c = card.content
-    addText(c, "SummaryTitle", d.title, inner, 2.2, {role: "Headline2"})
-    addText(c, "SummaryJob", d.jobLine, inner, 1.4, {role: "Caption", color: COLOR.dim})
-    addText(c, "SummarySymptom", d.symptomLine, inner, 1.4, {role: "Body"})
-    addText(c, "ReadingsHeading", d.readingsHeading, inner, 1.5, {role: "Subheadline", color: COLOR.cyan})
+    addFitText(c, "SummaryTitle", d.title, inner, big, {bold: true})
+    addFitText(c, "SummaryJob", d.jobLine, inner, em, {color: TEXT_SOFT})
+    addFitText(c, "SummarySymptom", d.symptomLine, inner, em, {color: TEXT_BODY})
+    addFitText(c, "ReadingsHeading", d.readingsHeading, inner, em, {color: COLOR.cyan, bold: true})
     d.rows.forEach((r, i) => {
-      addText(c, "ReadingRow_" + i, r.text, inner, 1.3, {role: "Caption", color: colorForWord(r.colorWord)})
+      addFitText(c, "ReadingRow_" + i, r.text, inner, em, {color: colorForWord(r.colorWord)})
     })
-    addText(c, "SummaryFinding", d.findingLine, inner, 1.5, {role: "Body", color: COLOR.red, wrap: true})
-    addText(c, "SummaryAction", d.actionLine, inner, 1.5, {role: "Body", wrap: true})
-    addText(c, "SummaryResult", d.resultLine, inner, 1.6, {role: "Subheadline", color: COLOR.green})
-    this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, 16, 3.2, () => this._onSave.invoke())
+    addFitText(c, "SummaryFinding", d.findingLine, inner, em, {color: COLOR.red})
+    addFitText(c, "SummaryAction", d.actionLine, inner, em, {color: TEXT_BODY})
+    addFitText(c, "SummaryResult", d.resultLine, inner, em, {color: COLOR.green, bold: true})
+    this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, inner - 6, 3.6, () => this._onSave.invoke(), {emCm: em})
   }
 
   setSaved(label: string): void {

@@ -3810,7 +3810,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.600000, y: 2.000000, z: -56.200001}
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
     Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
@@ -6042,9 +6042,9 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.600000, y: 2.000000, z: -56.200001}
+    Position: {x: 10.600000, y: 20.000000, z: -56.200001}
     Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
-    Scale: {x: 0.530000, y: 0.530000, z: 0.530000}
+    Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
   Children:
     []
@@ -9118,6 +9118,7 @@
   ScriptInputsDefault:
     highlightThicknessCm: true
     titleEmCm: true
+    labelEmCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -9127,6 +9128,7 @@
       widthCm: !<float> 42.000000
       highlightThicknessCm: 0.500000
       titleEmCm: 0.800000
+      labelEmCm: 0.900000
   ScriptTypes:
     "":
       {}
@@ -12918,14 +12920,15 @@
   Enabled: true
   ScriptAsset: !<reference> a378e7c2-a8d1-4e1c-be90-6209a35ca711
   ScriptInputsDefault:
-    widthCm: true
+    textEmCm: true
     reportLabel: true
     symptomHeading: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 30.000000
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
       reportLabel: Report symptom
       symptomHeading: "What's the symptom?"
   ScriptTypes:
@@ -14395,12 +14398,15 @@
   Enabled: true
   ScriptAsset: !<reference> c21ddb45-13a1-495c-b53c-38d9cd3d7719
   ScriptInputsDefault:
-    widthCm: true
+    textEmCm: true
+    titleEmCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 34.000000
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+      titleEmCm: 1.400000
   ScriptTypes:
     "":
       {}
@@ -15259,7 +15265,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.600000, y: 2.000000, z: -56.200001}
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
     Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
@@ -21900,13 +21906,16 @@
   Enabled: true
   ScriptAsset: !<reference> 0caf7091-5333-4011-a72e-24bb16154bfd
   ScriptInputsDefault:
-    widthCm: true
+    textEmCm: true
+    headlineEmCm: true
     nextActionHeading: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 30.000000
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+      headlineEmCm: 1.800000
       nextActionHeading: Next action
   ScriptTypes:
     "":

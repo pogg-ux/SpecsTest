@@ -30,6 +30,7 @@
   ScriptInputsHidden:
     highlightIcon: false
     highlightThicknessCm: false
+    labelEmCm: false
     schematicTexture: false
     titleEmCm: false
     widthCm: false
@@ -47,6 +48,7 @@
       widthCm: !<float> 30.000000
       highlightThicknessCm: 0.500000
       titleEmCm: 0.800000
+      labelEmCm: 0.900000
   ScriptTypes:
     -
       {}
@@ -62,4 +64,5 @@
     - '// @input float widthCm = 32 {"hint":"Panel width in card units (cm before scaling)", "widget":"slider", "min":20, "max":40, "step":0.5}'
     - '// @input float highlightThicknessCm = 0.5 {"hint":"Highlighted wire thickness in real cm (the drawn wire is about 0.12 cm)", "widget":"slider", "min":0.2, "max":1, "step":0.05}'
     - '// @input float titleEmCm = 0.8 {"hint":"Panel title text size: em height in real cm", "widget":"slider", "min":0.5, "max":1.5, "step":0.05}'
+    - '// @input float labelEmCm = 0.9 {"hint":"Labels drawn over the schematic (part IDs, wire numbers): em height in real cm, at least 0.8", "widget":"slider", "min":0.6, "max":1.6, "step":0.05}'
     - '// @ui {"widget":"group_end"}'

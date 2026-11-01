@@ -153,6 +153,21 @@ export class MWNPLayoutScenario extends Scenario {
       expect(sp.highlightThickCm >= 0.4, "highlight >= 0.4 cm thick: " + sp.highlightThickCm).toBe(true)
       const c = sp.highlightColor
       expect(Math.max(c.x, c.y, c.z) >= 0.99 && c.w >= 0.99, "highlight is full-brightness").toBe(true)
+      // Large labels over the drawing: >= 0.8 cm, not stretched by the image's scale, shown for this crop.
+      for (const text of ["TS-4", "F1 0.5 A FB", "L1", "2a", "2b", "2c"]) {
+        const lso = findSceneObjectByName("SchematicLabel_" + text)
+        expect(!!lso && lso.isEnabledInHierarchy, "schematic label " + text + " shown").toBe(true)
+        const lt = lso.getComponent("Component.Text") as Text
+        const ws = lso.getTransform().getWorldScale()
+        const emCm = (lt.size / 43.886) * ws.y
+        ev("layout label", {text, emCm: +emCm.toFixed(2), scale: [+ws.x.toFixed(3), +ws.y.toFixed(3)]})
+        const imgW = findSceneObjectByName("SchematicImage").getTransform().getWorldScale()
+        const rootS = findSceneObjectByName("SchematicLabels").getTransform().getLocalScale()
+        const imgL = findSceneObjectByName("SchematicImage").getTransform().getLocalScale()
+        ev("layout label chain", {imgWorld: [+imgW.x.toFixed(3), +imgW.y.toFixed(3)], imgLocal: [+imgL.x.toFixed(3), +imgL.y.toFixed(3)], rootLocal: [+rootS.x.toFixed(4), +rootS.y.toFixed(4)]})
+        expect(emCm >= 0.8 - 1e-3, "label " + text + " is " + emCm.toFixed(2) + " cm (need >= 0.8)").toBe(true)
+        expect(Math.abs(ws.x - ws.y) <= 0.03 * ws.y, "label " + text + " is stretched: " + ws.x + " x " + ws.y).toBe(true)
+      }
       const original = sp.highlightedWire
       for (const w of ["2a", "2b", "2c"]) {
         sp.highlight(w)
@@ -176,6 +191,13 @@ export class MWNPLayoutScenario extends Scenario {
       ev("layout card", {name, size: [size.x, size.y], rect: fmt(cards[name])})
       const r = cards[name]
       expect(r.x0 >= 0 && r.x1 <= 1 && r.y0 >= 0 && r.y1 <= 1, name + " inside view " + fmt(r)).toBe(true)
+    }
+    // Every large label sits inside the schematic card on screen.
+    for (const text of ["TS-4", "F1 0.5 A FB", "L1", "2a", "2b", "2c"]) {
+      const lso = findSceneObjectByName("SchematicLabel_" + text)
+      const sp2 = cam.worldSpaceToScreenSpace(lso.getTransform().getWorldPosition())
+      const sc = cards.SchematicCard
+      expect(sp2.x > sc.x0 && sp2.x < sc.x1 && sp2.y > sc.y0 && sp2.y < sc.y1, "label " + text + " inside the schematic card").toBe(true)
     }
     expect(cards.SchematicCard.y1 <= cards.StepCardCard.y0, "schematic above step card").toBe(true)
     expect(overlaps(cards.SchematicCard, cards.StepCardCard), "schematic overlaps step card").toBe(false)

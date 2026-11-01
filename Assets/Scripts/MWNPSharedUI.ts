@@ -124,7 +124,7 @@ export function addButton(
   w: number,
   h: number,
   onClick: () => void,
-  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number}
+  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number; wrap?: boolean}
 ): ButtonHandle {
   const so = makeObj(parent, name)
   const btn = so.createComponent(Button.getTypeName()) as Button
@@ -137,7 +137,7 @@ export function addButton(
   if (opts?.emCm) t.size = sizeForEmCm(opts.emCm)
   t.horizontalAlignment = HorizontalAlignment.Center
   t.verticalAlignment = VerticalAlignment.Center
-  t.horizontalOverflow = HorizontalOverflow.Overflow
+  t.horizontalOverflow = opts?.wrap ? HorizontalOverflow.Wrap : HorizontalOverflow.Overflow
   t.verticalOverflow = VerticalOverflow.Overflow
   t.layoutRect = Rect.create(-(w - 0.5) / 2, (w - 0.5) / 2, -h / 2, h / 2)
   t.textFill.color = COLOR.white
@@ -271,7 +271,7 @@ function charAdvance(c: string): number {
   if (c >= "A" && c <= "Z") return 0.62
   if (c >= "0" && c <= "9") return 0.55
   if (c >= "a" && c <= "z") return 0.48
-  if (".,:;'|!()ilItfj".indexOf(c) >= 0) return 0.3
+  if (".,:;'|!()ilItfj-".indexOf(c) >= 0) return 0.3
   return 0.9 // arrows, check marks, dashes, symbols
 }
 
@@ -310,4 +310,39 @@ export function fitText(t: Text, text: string, widthCm: number, emCm: number, mi
   const item = t.getSceneObject().getComponent(FlexItem.getTypeName()) as FlexItem
   if (item) item.overrideHeight = h
   return lines
+}
+
+/** Width in cm of a single line of `text` at `emCm` text height (same estimate fitText uses). */
+export function textWidthCm(text: string, emCm: number, bold: boolean = false): number {
+  const k = emCm * (bold ? 1.05 : 1.0)
+  let w = 0
+  for (const ch of text) w += charAdvance(ch) * k
+  return w
+}
+
+/** Body text colors for cards: bright enough to read over a translucent plate in a screen recording. */
+export const TEXT_BODY = new vec4(1, 1, 1, 0.92)
+export const TEXT_SOFT = new vec4(1, 1, 1, 0.78)
+
+/**
+ * Converts a real-world text height (cm) into card units for a card hosted on `host`
+ * (card units are cm before the host's scale), so text keeps its physical size if the card is rescaled.
+ */
+export function cardEm(host: SceneObject, realCm: number): number {
+  return realCm / Math.max(0.05, host.getTransform().getWorldScale().y)
+}
+
+/** A wrapped text cell sized to its words (emLocal in card units). */
+export function addFitText(
+  parent: SceneObject,
+  name: string,
+  text: string,
+  widthCm: number,
+  emLocal: number,
+  opts?: {color?: vec4; bold?: boolean; minLines?: number}
+): Text {
+  const t = addText(parent, name, "", widthCm, emLocal * LINE_H, {emCm: emLocal, color: opts?.color ?? TEXT_BODY, wrap: true, valign: "top"})
+  if (opts?.bold) (t as Text & {weight?: number}).weight = 700
+  fitText(t, text, widthCm, emLocal, opts?.minLines ?? 1, !!opts?.bold)
+  return t
 }

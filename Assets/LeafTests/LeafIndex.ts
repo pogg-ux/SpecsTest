@@ -8,6 +8,7 @@ import {MWNPC3FaultFlaggedScenario} from "./MWNPC3FaultFlaggedScenario"
 import {MWNPC4NoGuessScenario} from "./MWNPC4NoGuessScenario"
 import {MWNPC5FixAndSummaryScenario} from "./MWNPC5FixAndSummaryScenario"
 import {MWNPLayoutScenario} from "./MWNPLayoutScenario"
+import {MWNPLayoutCardsScenario} from "./MWNPLayoutCardsScenario"
 
 /** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
 const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
@@ -24,6 +25,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-c4-no-guess", typename: MWNPC4NoGuessScenario.getTypeName()},
     {id: "mwnp-c5-fix-and-summary", typename: MWNPC5FixAndSummaryScenario.getTypeName()},
     {id: "mwnp-layout-clear-view", typename: MWNPLayoutScenario.getTypeName()},
+    {id: "mwnp-layout-cards", typename: MWNPLayoutCardsScenario.getTypeName(), parameters: {stop_at: "summary"}},
   ]
 
   private overlays: {[name: string]: SceneObject} = {}

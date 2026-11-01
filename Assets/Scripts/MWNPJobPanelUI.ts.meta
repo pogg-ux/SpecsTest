@@ -30,6 +30,7 @@
   ScriptInputsHidden:
     reportLabel: false
     symptomHeading: false
+    textEmCm: false
     widthCm: false
   ScriptTypesHidden:
     {}
@@ -41,6 +42,7 @@
     []
   DefaultScriptInputs:
     - widthCm: !<float> 30.000000
+      textEmCm: !<float> 1.000000
       reportLabel: Report symptom
       symptomHeading: "What's the symptom?"
   ScriptTypes:
@@ -50,7 +52,8 @@
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Job Panel – job info and symptom picker</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - '// @input float widthCm = 30 {"hint":"Card width in cm", "widget":"slider", "min":20, "max":40, "step":1}'
+    - '// @input float widthCm = 32 {"hint":"Card width in card units (cm before scaling)", "widget":"slider", "min":20, "max":40, "step":1}'
+    - '// @input float textEmCm = 1 {"hint":"Card text size: em height in real cm (1.0 reads in a 1080p recording)", "widget":"slider", "min":0.6, "max":2, "step":0.05}'
     - '// @input string reportLabel = "Report symptom" {"hint":"Report symptom button label"}'
     - "// @input string symptomHeading = \"What's the symptom?\" {\"hint\":\"Heading shown above the symptom list\"}"
     - '// @ui {"widget":"group_end"}'

@@ -2,13 +2,16 @@
 //
 // Owns: two views — job summary + "Report symptom", then the symptom list built
 // from netlist faults (labels passed in by Main). Rebuilds its card per view.
+// Text is sized in real centimetres (textEmCm, default 1.0 cm), every cell is sized to its words,
+// and the card grows DOWNWARD from its host's origin (host = card's top-center, as for the step card).
 // API: showJob(jobLine, filesLine), showSymptoms(items), hide(), currentView,
 //      onReportSymptom, onSymptomPicked(index).
 // Must not: read the netlist or decide anything.
-// Test handles: "Btn_ReportSymptom", "Btn_Symptom_<KEY>" (EXTEND / RETRACT / Neither).
+// Test handles: "Btn_ReportSymptom", "Btn_Symptom_<KEY>" (EXTEND / RETRACT / Neither),
+//               cards "JobCard" / "SymptomCard", texts "JobTitle", "FilesLoaded", "SymptomHeading".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {addButton, addText, COLOR, deferDestroy, makeCardBody} from "./MWNPSharedUI"
+import {addButton, addFitText, cardEm, deferDestroy, estimateLines, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 export interface SymptomItem {
   key: string
@@ -22,8 +25,12 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   @ui.group_start("Settings")
   @input
   @widget(new SliderWidget(20, 40, 1))
-  @hint("Card width in cm")
-  widthCm: number = 30
+  @hint("Card width in card units (cm before scaling)")
+  widthCm: number = 32
+  @input
+  @widget(new SliderWidget(0.6, 2.0, 0.05))
+  @hint("Card text size: em height in real cm (1.0 reads in a 1080p recording)")
+  textEmCm: number = 1.0
   @input
   @hint("Report symptom button label")
   reportLabel: string = "Report symptom"
@@ -52,22 +59,30 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   showJob(jobLine: string, filesLine: string): void {
     this.clear()
     const w = this.widthCm
-    const card = makeCardBody(this.sceneObject, "JobCard", w, 1.6, 0.9)
+    const inner = w - 2.8
+    const em = cardEm(this.sceneObject, this.textEmCm)
+    const card = makeCardBody(this.sceneObject, "JobCard", w, 1.4, 0.8, "top")
     this.body = card.body
-    addText(card.content, "JobTitle", jobLine, w - 3.2, 2.0, {role: "Subheadline"})
-    addText(card.content, "FilesLoaded", filesLine, w - 3.2, 2.6, {role: "Caption", color: COLOR.dim, wrap: true})
-    addButton(card.content, "Btn_ReportSymptom", this.reportLabel, 16, 3.4, () => this._onReportSymptom.invoke())
+    addFitText(card.content, "JobTitle", jobLine, inner, em, {bold: true})
+    addFitText(card.content, "FilesLoaded", filesLine, inner, em, {color: TEXT_SOFT})
+    addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em})
     this.currentView = "job"
   }
 
   showSymptoms(items: SymptomItem[]): void {
     this.clear()
     const w = this.widthCm
-    const card = makeCardBody(this.sceneObject, "SymptomCard", w, 1.6, 0.8)
+    const inner = w - 2.8
+    const em = cardEm(this.sceneObject, this.textEmCm)
+    const card = makeCardBody(this.sceneObject, "SymptomCard", w, 1.4, 0.8, "top")
     this.body = card.body
-    addText(card.content, "SymptomHeading", this.symptomHeading, w - 3.2, 2.0, {role: "Subheadline"})
+    addFitText(card.content, "SymptomHeading", this.symptomHeading, inner, em, {bold: true, color: TEXT_BODY})
     items.forEach((it, i) => {
-      addButton(card.content, "Btn_Symptom_" + it.key, it.label, w - 4, 3.4, () => this._onSymptomPicked.invoke(i))
+      // Long labels wrap onto a second line and the button grows with them.
+      const bw = inner - 2
+      const lines = estimateLines(it.label, bw - 1.5, em, false)
+      const bh = Math.max(3.6, lines * em * LINE_H + 1.6)
+      addButton(card.content, "Btn_Symptom_" + it.key, it.label, bw, bh, () => this._onSymptomPicked.invoke(i), {emCm: em, wrap: true})
     })
     this.currentView = "symptoms"
   }

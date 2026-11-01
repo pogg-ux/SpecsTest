@@ -433,7 +433,7 @@ export class MWNPMain extends BaseScriptComponent {
       })
       btn = "Fuse replaced: retest"
     }
-    this.findingCard.show("Finding: " + f.head + ".", evidence, action, btn)
+    this.findingCard.show("Finding: " + f.head + ".", evidence, action, btn, f.head, "Finding")
     this.visibleCard = "finding"
     void pointId
   }

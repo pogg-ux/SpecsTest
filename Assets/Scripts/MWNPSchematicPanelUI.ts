@@ -8,11 +8,12 @@
 // Must not: decide which wire is current — Main passes it.
 // Note: CROPS, WIRE_PATH_PX and WIRE_LABEL_PX are image metadata (where things sit on the PNG, in
 // pixels of MWNP_1.0_wiring.png, 1335 × 926), not circuit data; the circuit itself comes from netlist.json.
-// Test handles: card "SchematicCard", image "SchematicImage", overlay "SchematicHighlight".
+// Test handles: card "SchematicCard", image "SchematicImage", overlay "SchematicHighlight",
+//               large labels "SchematicLabel_<text>" (TS-4, F1 0.5 A FB, L1, 2a, 2b, 2c; TS-5 ... for RETRACT).
 
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addText, COLOR, makeCardBody, makeObj} from "./MWNPSharedUI"
+import {addText, COLOR, makeCardBody, makeObj, sizeForEmCm, textWidthCm} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -29,8 +30,8 @@ type P = [number, number]
 
 /** Image windows. Each shows one branch from its switch contact to its lamp. */
 const CROPS: {[name: string]: CropPx} = {
-  extend: {x0: 598, y0: 104, x1: 1244, y1: 262}, // S1 UP → 2a → TS-4 → 2b → F1 → 2c → L1
-  retract: {x0: 598, y0: 307, x1: 1244, y1: 465}, // S1 DOWN → 3a → TS-5 → 3b → F2 → 3c → L2
+  extend: {x0: 598, y0: 98, x1: 1244, y1: 262}, // S1 UP → 2a → TS-4 → 2b → F1 → 2c → L1
+  retract: {x0: 598, y0: 301, x1: 1244, y1: 465}, // S1 DOWN → 3a → TS-5 → 3b → F2 → 3c → L2
   full: {x0: 0, y0: 0, x1: IMG_W_PX, y1: IMG_H_PX},
 }
 
@@ -51,6 +52,43 @@ const WIRE_PATH_PX: {[wire: string]: P[]} = {
 const WIRE_LABEL_PX: {[wire: string]: P} = {
   "1": [300, 250],
   "0": [800, 658],
+}
+
+/**
+ * Large labels drawn over the cropped drawing (its own text is only ~0.4 cm tall). Each transcribes a label
+ * printed on the drawing: part labels sit above their shape on a plate in the shape's fill color; wire numbers
+ * replace the small red originals (a white patch hides the original).
+ */
+interface LabelSpec {
+  text: string
+  at: P // center, in PNG pixels
+  kind: "part" | "wire"
+  fill?: vec4 // plate color for parts
+  cover?: CropPx // PNG pixels of the original small label to hide
+}
+const FILL_BLUE = new vec4(0.86, 0.92, 0.98, 1)
+const FILL_PURPLE = new vec4(0.88, 0.83, 0.91, 1)
+const FILL_GREEN = new vec4(0.84, 0.92, 0.82, 1)
+const WHITE = new vec4(1, 1, 1, 1)
+const PART_TEXT = new vec4(0.05, 0.05, 0.12, 1)
+const WIRE_TEXT = new vec4(0.78, 0.05, 0.05, 1)
+const LABELS: {[crop: string]: LabelSpec[]} = {
+  extend: [
+    {text: "TS-4", at: [748, 138], kind: "part", fill: FILL_BLUE},
+    {text: "F1 0.5 A FB", at: [933, 138], kind: "part", fill: FILL_PURPLE},
+    {text: "L1", at: [1145, 116], kind: "part", fill: FILL_GREEN},
+    {text: "2a", at: [684, 163], kind: "wire", cover: {x0: 651, y0: 181, x1: 672, y1: 200}},
+    {text: "2b", at: [828, 163], kind: "wire", cover: {x0: 814, y0: 168, x1: 846, y1: 185}},
+    {text: "2c", at: [1038, 163], kind: "wire", cover: {x0: 1022, y0: 168, x1: 1054, y1: 185}},
+  ],
+  retract: [
+    {text: "TS-5", at: [748, 341], kind: "part", fill: FILL_BLUE},
+    {text: "F2 0.5 A FB", at: [933, 341], kind: "part", fill: FILL_PURPLE},
+    {text: "L2", at: [1145, 319], kind: "part", fill: FILL_GREEN},
+    {text: "3a", at: [632, 328], kind: "wire", cover: {x0: 651, y0: 316, x1: 672, y1: 340}},
+    {text: "3b", at: [828, 366], kind: "wire", cover: {x0: 814, y0: 371, x1: 846, y1: 388}},
+    {text: "3c", at: [1038, 366], kind: "wire", cover: {x0: 1022, y0: 371, x1: 1054, y1: 388}},
+  ],
 }
 
 const HI_CORE = new vec4(1.0, 0.6, 0.05, 1) // bright orange, same as the active-path outline on the model
@@ -82,6 +120,10 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
   @widget(new SliderWidget(0.5, 1.5, 0.05))
   @hint("Panel title text size: em height in real cm")
   titleEmCm: number = 0.8
+  @input
+  @widget(new SliderWidget(0.6, 1.6, 0.05))
+  @hint("Labels drawn over the schematic (part IDs, wire numbers): em height in real cm, at least 0.8")
+  labelEmCm: number = 0.9
   @ui.group_end
 
   isOpen: boolean = false
@@ -96,12 +138,18 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
   highlightColor: vec4 = HI_CORE
 
   private body: SceneObject | null = null
+  private holder: SceneObject | null = null
   private imgSO: SceneObject | null = null
   private imgItem: FlexItem | null = null
   private builder: MeshBuilder | null = null
   private hiRoot: SceneObject | null = null
   private segs: {casing: SceneObject; core: SceneObject}[] = []
   private marker: SceneObject | null = null
+  private coversRoot: SceneObject | null = null
+  private coverSets: {[crop: string]: SceneObject} = {}
+  private labelsRoot: SceneObject | null = null
+  private labelSets: {[crop: string]: SceneObject} = {}
+  private solidMats: {[key: string]: Material} = {}
   private whiteTex: Texture | null = null
   private coreMat: Material | null = null
   private casingMat: Material | null = null
@@ -186,7 +234,12 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
     const imageH = this.imageW * (ch / cw)
     const t = (this.imgSO as SceneObject).getTransform()
     t.setLocalScale(new vec3(this.imageW, imageH, 1))
+    // The highlight bars use image-normalized coordinates, so their root shares the image's scale.
+    ;(this.hiRoot as SceneObject).getTransform().setLocalScale(new vec3(this.imageW, imageH, 1))
     ;(this.imgItem as FlexItem).overrideHeight = imageH
+    // (Labels sit under labelsRoot at scale 1, in card units, so text is never stretched.)
+    for (const k of Object.keys(this.labelSets)) this.labelSets[k].enabled = k === name
+    for (const k of Object.keys(this.coverSets)) this.coverSets[k].enabled = k === name
     // Quad UVs = the crop window (texture v runs bottom → top).
     const u0 = rect.x0 / IMG_W_PX
     const u1 = rect.x1 / IMG_W_PX
@@ -230,6 +283,56 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
     return m
   }
 
+  /** Solid rectangle (card units, centered at x,y) for label plates and cover patches. */
+  private rect(parent: SceneObject, name: string, x: number, y: number, w: number, h: number, color: vec4, z: number): SceneObject {
+    const key = color.x + "," + color.y + "," + color.z
+    if (!this.solidMats[key]) this.solidMats[key] = this.solidMaterial(color)
+    const so = makeObj(parent, name, new vec3(x, y, z))
+    so.getTransform().setLocalScale(new vec3(w, h, 1))
+    const img = so.createComponent("Component.Image") as Image
+    img.clearMaterials()
+    img.addMaterial(this.solidMats[key])
+    return so
+  }
+
+  /** Builds the large labels for each crop under labelsRoot (card units, image center = origin). */
+  private buildLabels(): void {
+    const em = this.labelEmCm / this.scaleY
+    for (const crop of Object.keys(LABELS)) {
+      const r = CROPS[crop]
+      const kx = this.imageW / (r.x1 - r.x0) // card units per PNG pixel
+      const loc = (x: number, y: number): [number, number] => [(x - (r.x0 + r.x1) / 2) * kx, -(y - (r.y0 + r.y1) / 2) * kx]
+      const set = makeObj(this.labelsRoot as SceneObject, "Labels_" + crop)
+      this.labelSets[crop] = set
+      // White patches that hide the drawing's small original labels live in their own layer under the highlight.
+      const covers = makeObj(this.coversRoot as SceneObject, "Covers_" + crop)
+      this.coverSets[crop] = covers
+      for (const spec of LABELS[crop]) {
+        if (spec.cover) {
+          const c = spec.cover
+          const [cx, cy] = loc((c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2)
+          this.rect(covers, "LabelCover_" + spec.text, cx, cy, (c.x1 - c.x0) * kx, (c.y1 - c.y0) * kx, WHITE, 0.015)
+        }
+        const [x, y] = loc(spec.at[0], spec.at[1])
+        const tw = textWidthCm(spec.text, em, true)
+        const h = em * 1.5
+        if (spec.kind === "part") this.rect(set, "LabelPlate_" + spec.text, x, y, tw + em * 0.9, h, spec.fill as vec4, 0.09)
+        const so = makeObj(set, "SchematicLabel_" + spec.text, new vec3(x, y, 0.12))
+        const t = so.createComponent("Component.Text") as Text
+        t.text = spec.text
+        t.size = sizeForEmCm(em)
+        ;(t as Text & {weight?: number}).weight = 700
+        t.depthTest = true
+        t.horizontalAlignment = HorizontalAlignment.Center
+        t.verticalAlignment = VerticalAlignment.Center
+        t.horizontalOverflow = HorizontalOverflow.Overflow
+        t.verticalOverflow = VerticalOverflow.Overflow
+        t.layoutRect = Rect.create(-(tw + 2 * em) / 2, (tw + 2 * em) / 2, -h / 2, h / 2)
+        t.textFill.color = spec.kind === "wire" ? WIRE_TEXT : PART_TEXT
+      }
+    }
+  }
+
   private build(): void {
     const w = this.widthCm
     const inner = w - 2.4
@@ -243,7 +346,10 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
 
     // Image: a quad whose UVs select the crop window; same ImageMaterial as UI images.
     this.imageW = inner
-    this.imgSO = makeObj(card.content, "SchematicImage")
+    // The layout engine rescales any object that has a mesh to fit its slot, so the layout item is a plain
+    // holder; the image quad, the highlight and the labels are its children (the image itself has none).
+    this.holder = makeObj(card.content, "SchematicImageHolder")
+    this.imgSO = makeObj(this.holder, "SchematicImage")
     const rmv = this.imgSO.createComponent("Component.RenderMeshVisual") as RenderMeshVisual
     const b = new MeshBuilder([
       {name: "position", components: 3},
@@ -261,7 +367,7 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
     mat.mainPass.depthTest = true
     mat.mainPass.depthWrite = false
     rmv.mainMaterial = mat
-    this.imgItem = this.imgSO.createComponent(FlexItem.getTypeName()) as FlexItem
+    this.imgItem = this.holder.createComponent(FlexItem.getTypeName()) as FlexItem
     this.imgItem.overrideWidth = this.imageW
     this.imgItem.overrideHeight = this.imageW * (IMG_H_PX / IMG_W_PX)
     this.imgItem.flexShrink = 0
@@ -271,7 +377,8 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
     this.whiteTex = whitePixel()
     this.coreMat = this.solidMaterial(HI_CORE)
     this.casingMat = this.solidMaterial(HI_CASING)
-    this.hiRoot = makeObj(this.imgSO, "SchematicHighlight")
+    this.coversRoot = makeObj(this.holder, "SchematicCovers") // before the highlight so it draws under it
+    this.hiRoot = makeObj(this.holder, "SchematicHighlight")
     this.marker = makeObj(this.hiRoot, "WireMarker")
     const mi = this.marker.createComponent("Component.Image") as Image
     const hmat = imageMaterial.clone()
@@ -282,6 +389,8 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
     mi.clearMaterials()
     mi.addMaterial(hmat)
     this.marker.enabled = false
+    this.labelsRoot = makeObj(this.holder, "SchematicLabels")
+    this.buildLabels()
     this.setCrop("extend")
   }
 }
