@@ -28,9 +28,10 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    highlightColor: false
     highlightIcon: false
+    highlightThicknessCm: false
     schematicTexture: false
+    titleEmCm: false
     widthCm: false
   ScriptTypesHidden:
     {}
@@ -44,19 +45,21 @@
     - schematicTexture: !<reference.Texture> 00000000-0000-0000-0000-000000000000
       highlightIcon: !<reference.Texture> 00000000-0000-0000-0000-000000000000
       widthCm: !<float> 30.000000
-      highlightColor: !<Vec4> {x: 1.000000, y: 0.850000, z: 0.200000, w: 1.000000}
+      highlightThicknessCm: 0.500000
+      titleEmCm: 0.800000
   ScriptTypes:
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Schematic Panel – wiring diagram with wire highlight</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Schematic Panel – wiring diagram cropped to the active path</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"References"}'
     - '// @input Asset.Texture schematicTexture {"hint":"Schematic image (Assets/MWNP/MWNP_1.0_wiring.png)"}'
-    - '// @input Asset.Texture highlightIcon {"hint":"Highlight frame icon drawn over the current wire"}'
+    - '// @input Asset.Texture highlightIcon {"hint":"Frame icon used to mark wires that have no drawn path (wire 1, wire 0)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - '// @input float widthCm = 30 {"hint":"Panel width in cm (brief default 30)", "widget":"slider", "min":20, "max":40, "step":0.5}'
-    - '// @input vec4 highlightColor = {1,0.85,0.2,1} {"hint":"Highlight frame color", "widget":"color"}'
+    - '// @input float widthCm = 32 {"hint":"Panel width in card units (cm before scaling)", "widget":"slider", "min":20, "max":40, "step":0.5}'
+    - '// @input float highlightThicknessCm = 0.5 {"hint":"Highlighted wire thickness in real cm (the drawn wire is about 0.12 cm)", "widget":"slider", "min":0.2, "max":1, "step":0.05}'
+    - '// @input float titleEmCm = 0.8 {"hint":"Panel title text size: em height in real cm", "widget":"slider", "min":0.5, "max":1.5, "step":0.05}'
     - '// @ui {"widget":"group_end"}'

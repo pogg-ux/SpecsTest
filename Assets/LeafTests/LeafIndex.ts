@@ -9,6 +9,11 @@ import {MWNPC4NoGuessScenario} from "./MWNPC4NoGuessScenario"
 import {MWNPC5FixAndSummaryScenario} from "./MWNPC5FixAndSummaryScenario"
 import {MWNPLayoutScenario} from "./MWNPLayoutScenario"
 
+/** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
+const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
+/** LEAF creates one child of this object per running scenario and destroys it when the scenario ends. */
+const LEAF_SCENARIO_OWNER = "LeafScenarioManager"
+
 @component
 export class LeafIndex extends BaseScriptComponent {
   @scenariosIndex
@@ -20,4 +25,33 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-c5-fix-and-summary", typename: MWNPC5FixAndSummaryScenario.getTypeName()},
     {id: "mwnp-layout-clear-view", typename: MWNPLayoutScenario.getTypeName()},
   ]
+
+  private overlays: {[name: string]: SceneObject} = {}
+
+  onAwake() {
+    // Test banners and reports show only while a scenario is running, so a normal Preview is clean.
+    this.createEvent("UpdateEvent").bind(() => this.gateLeafOverlays())
+  }
+
+  private findRoot(name: string): SceneObject | null {
+    const cached = this.overlays[name]
+    if (cached && !isNull(cached)) return cached
+    for (let i = 0; i < global.scene.getRootObjectsCount(); i++) {
+      const o = global.scene.getRootObject(i)
+      if (o.name === name) {
+        this.overlays[name] = o
+        return o
+      }
+    }
+    return null
+  }
+
+  private gateLeafOverlays(): void {
+    const owner = this.findRoot(LEAF_SCENARIO_OWNER)
+    const running = !!owner && owner.getChildrenCount() > 0
+    for (const name of LEAF_OVERLAY_ROOTS) {
+      const so = this.findRoot(name)
+      if (so && so.enabled !== running) so.enabled = running
+    }
+  }
 }

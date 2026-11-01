@@ -38,7 +38,7 @@ const LAYOUT = {
   terminalX: {"TS-1": -13.3, "TS-2": -11.3, "TS-3": -9.3, "TS-4": -7.3, "TS-5": -5.3} as {[id: string]: number},
   terminal: {y: 4.9, s: [1.8, 4.4, 3.0], z: 2.5},
   switchPlate: {c: [0, -3.7], s: [25, 5, 0.8], z: 0.4} as PartBox,
-  holes: {x0: -3.2, dx: 2.44, cols: 6, y: -3.6},
+  holes: {x0: -3.2, dx: 2.44, cols: 6, rows: [-2.3, -3.6, -5.0]}, // 3 rows × 6, level with L1 / S1 / L2
   lamps: {L1: [-10.5, -2.3], L2: [-10.5, -5.0]} as {[id: string]: V2},
   s1: [-10.5, -3.6] as V2,
   fusePlate: {c: [0, -13.5], s: [29, 7.5, 0.8], z: 0.4} as PartBox,
@@ -216,13 +216,15 @@ export class MWNPCabinet extends BaseScriptComponent {
     this.box(root, "EndStop_L", [minX - 1.4, LAYOUT.terminal.y], [0.7, 4.6, 3.2], 2.5, PALETTE.endStop)
     this.box(root, "EndStop_R", [maxX + 1.4, LAYOUT.terminal.y], [0.7, 4.6, 3.2], 2.5, PALETTE.endStop)
 
-    // Switch / lamp plate: one narrow smoke-gray strip, single row of plugged spare holes right of S1/L1/L2
+    // Switch / lamp plate: one narrow smoke-gray strip, 3 rows × 6 plugged spare holes right of S1/L1/L2
     const sp = LAYOUT.switchPlate
     this.box(root, "SwitchLampPlate", sp.c, sp.s, sp.z, PALETTE.smoke)
-    for (let col = 0; col < LAYOUT.holes.cols; col++) {
-      const h = this.sphere(root, "PluggedHole_" + col, [LAYOUT.holes.x0 + col * LAYOUT.holes.dx, LAYOUT.holes.y], 0.9, 0.85, PALETTE.hole)
-      h.getTransform().setLocalScale(new vec3(0.9, 0.9, 0.2))
-    }
+    LAYOUT.holes.rows.forEach((y, row) => {
+      for (let col = 0; col < LAYOUT.holes.cols; col++) {
+        const h = this.sphere(root, "PluggedHole_" + row + "_" + col, [LAYOUT.holes.x0 + col * LAYOUT.holes.dx, y], 0.9, 0.85, PALETTE.hole)
+        h.getTransform().setLocalScale(new vec3(0.9, 0.9, 0.2))
+      }
+    })
     this.buildLamp(root, "L1", PALETTE.l1Off)
     this.buildLamp(root, "L2", PALETTE.l2Off)
     this.buildS1(root)

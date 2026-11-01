@@ -1,15 +1,25 @@
 // MWNPStepCardUI.ts — the step card: reasoning, current step, citation, result, readout, number pad.
 //
 // Owns: card layout and the number pad (0–9, ".", Del, Enter) plus the Schematic toggle.
+// Text is sized in real centimetres (textEmCm, default 1.0 cm text height) whatever the card's scale,
+// so it stays readable in a 1080p recording. Each text cell is sized to its words (fitText) and the
+// card grows DOWNWARD from its host's origin: the host sits at the card's top-center.
+// The number pad is unchanged (key size, layout).
 // API: show(), hide(), setReasoning(), setPathCitation(), setStep(), setResult(), setReadout(),
 //      readable text fields (stepTitleText, resultText, readoutText, resultColorWord),
 //      events onKey(key: "0".."9" | "." | "back"), onEnter, onSchematic.
 // Must not: parse readings, classify, or advance steps — Main/agent own that.
-// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "StepCardCard".
+// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "StepCardCard",
+//               text cells "Reasoning", "PathCitation", "StepTitle", "StepQuestion", "StepCitation",
+//               "Expected", "Result", "Readout".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection, FlexJustify, FlexAlign} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
-import {addButton, addFlex, addText, COLOR, colorForWord, makeCardBody} from "./MWNPSharedUI"
+import {addButton, addFlex, addText, COLOR, colorForWord, fitText, makeCardBody} from "./MWNPSharedUI"
+
+/** Body text on the card: bright enough to read over the translucent plate in a screen recording. */
+const BODY = new vec4(1, 1, 1, 0.92)
+const SOFT = new vec4(1, 1, 1, 0.78)
 
 @component
 export class MWNPStepCardUI extends BaseScriptComponent {
@@ -18,12 +28,20 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   @ui.group_start("Settings")
   @input
   @widget(new SliderWidget(26, 40, 0.5))
-  @hint("Card width in cm (brief default 30)")
-  widthCm: number = 30
+  @hint("Card width in card units (cm before scaling)")
+  widthCm: number = 32
   @input
   @widget(new SliderWidget(2.4, 4.5, 0.1))
-  @hint("Number pad key width in cm (brief: about 3 cm)")
+  @hint("Number pad key width in card units (unchanged: about 3 cm before scaling)")
   keyWidthCm: number = 3.2
+  @input
+  @widget(new SliderWidget(0.6, 2.0, 0.05))
+  @hint("Card text size: em height in real cm (1.0 reads in a 1080p recording)")
+  textEmCm: number = 1.0
+  @input
+  @widget(new SliderWidget(0.6, 2.4, 0.05))
+  @hint("Readout text size: em height in real cm")
+  readoutEmCm: number = 1.2
   @input
   @hint("Readout prefix")
   readoutPrefix: string = "Reading:"
@@ -37,11 +55,14 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   resultText: string = ""
   resultColorWord: string = ""
   readoutText: string = ""
+  /** Text height in card units (cm before scaling) actually used; times the card's world scale = real cm. */
+  textEmLocal: number = 0
   get isVisible(): boolean {
     return !!this.body && this.body.enabled
   }
 
   private body: SceneObject | null = null
+  private inner = 0
   private tReasoning: Text | null = null
   private tPathCite: Text | null = null
   private tTitle: Text | null = null
@@ -78,26 +99,27 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   }
 
   setReasoning(text: string): void {
-    if (this.tReasoning) this.tReasoning.text = text
+    if (this.tReasoning) fitText(this.tReasoning, text, this.inner, this.textEmLocal)
   }
 
   setPathCitation(text: string): void {
-    if (this.tPathCite) this.tPathCite.text = text
+    if (this.tPathCite) fitText(this.tPathCite, text, this.inner, this.textEmLocal)
   }
 
   setStep(title: string, question: string, citation: string, expected: string): void {
     this.stepTitleText = title
-    if (this.tTitle) this.tTitle.text = title
-    if (this.tQuestion) this.tQuestion.text = question
-    if (this.tCite) this.tCite.text = citation
-    if (this.tExpected) this.tExpected.text = expected
+    const em = this.textEmLocal
+    if (this.tTitle) fitText(this.tTitle, title, this.inner, em, 1, true)
+    if (this.tQuestion) fitText(this.tQuestion, question, this.inner, em)
+    if (this.tCite) fitText(this.tCite, citation, this.inner, em)
+    if (this.tExpected) fitText(this.tExpected, expected, this.inner, em)
   }
 
   setResult(text: string, colorWord: string): void {
     this.resultText = text
     this.resultColorWord = colorWord
     if (this.tResult) {
-      this.tResult.text = text
+      fitText(this.tResult, text, this.inner, this.textEmLocal)
       this.tResult.textFill.color = colorForWord(colorWord)
     }
     // The step title itself turns amber/red while that step stays active (not advanced).
@@ -112,18 +134,28 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   private build(): void {
     const w = this.widthCm
     const inner = w - 2.8
-    const card = makeCardBody(this.sceneObject, "StepCardCard", w, 1.4, 0.45)
+    this.inner = inner
+    // Real-cm text size → card units, so the text stays the same physical size if the card is rescaled.
+    const scale = Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
+    const em = this.textEmCm / scale
+    this.textEmLocal = em
+    const card = makeCardBody(this.sceneObject, "StepCardCard", w, 1.4, 0.5, "top")
     this.body = card.body
     const c = card.content
-    this.tReasoning = addText(c, "Reasoning", "", inner, 2.6, {role: "Caption", color: COLOR.dim, wrap: true})
-    this.tPathCite = addText(c, "PathCitation", "", inner, 1.3, {role: "Caption", color: COLOR.amber, wrap: true})
-    this.tTitle = addText(c, "StepTitle", "", inner, 1.7, {role: "Subheadline"})
-    this.tQuestion = addText(c, "StepQuestion", "", inner, 1.4, {role: "Body", wrap: true})
-    this.tCite = addText(c, "StepCitation", "", inner, 1.3, {role: "Caption", color: COLOR.dim, wrap: true})
-    this.tExpected = addText(c, "Expected", "", inner, 1.4, {role: "Body", color: COLOR.cyan})
-    this.tResult = addText(c, "Result", "", inner, 3.4, {role: "Body", wrap: true})
+    const cell = (name: string, color: vec4): Text => addText(c, name, "", inner, 0.01, {emCm: em, color, wrap: true, valign: "top"})
+    this.tReasoning = cell("Reasoning", SOFT)
+    this.tPathCite = cell("PathCitation", COLOR.amber)
+    this.tTitle = cell("StepTitle", COLOR.white)
+    this.tQuestion = cell("StepQuestion", BODY)
+    this.tCite = cell("StepCitation", SOFT)
+    this.tExpected = cell("Expected", COLOR.cyan)
+    this.tResult = cell("Result", BODY)
+    for (const t of [this.tReasoning, this.tPathCite, this.tTitle, this.tQuestion, this.tCite, this.tExpected, this.tResult]) {
+      fitText(t, "", inner, em, 0)
+    }
+    ;(this.tTitle as Text & {weight?: number}).weight = 700
 
-    // Bottom row: number pad (left) + readout / Enter / Schematic (right)
+    // Bottom row: number pad (left) + readout / Enter / Schematic (right). Number pad unchanged.
     const kw = this.keyWidthCm
     const kh = 2.2
     const kg = 0.35
@@ -147,8 +179,9 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     })
     const sideW = inner - padW - 1.0
     const side = addFlex(row, "PadSide", FlexDirection.Column, sideW, padH, 0.8, {justify: FlexJustify.Center})
-    this.tReadout = addText(side, "Readout", this.readoutPrefix + " — V", sideW, 2.6, {role: "Headline2", align: "center"})
-    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke())
-    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 2.6, () => this._onSchematic.invoke())
+    const rem = this.readoutEmCm / scale
+    this.tReadout = addText(side, "Readout", this.readoutPrefix + " — V", sideW, rem * 1.4, {emCm: rem, align: "center"})
+    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: em})
+    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 2.6, () => this._onSchematic.invoke(), {emCm: em})
   }
 }

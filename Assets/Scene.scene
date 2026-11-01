@@ -32,7 +32,7 @@
     - !<own> 72039524-7c48-4755-9126-a77864d6349b
     - !<own> 713050e2-4b4e-4763-b472-1b4b4a997121
     - !<own> d34b2e8a-e335-4be8-bdea-486c0ffe857a
-    - !<own> 8e167b80-4a73-4e93-a099-d704a97a9e39
+    - !<own> a80020df-ae53-4ab6-a7fe-a0fb85238ba0
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 17
@@ -3810,8 +3810,8 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.890000, y: -12.500000, z: -56.200001}
-    Rotation: {x: 0.000000, y: -8.350000, z: 0.000000}
+    Position: {x: 10.600000, y: 2.000000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
   Children:
@@ -6042,8 +6042,8 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.890000, y: -12.500000, z: -56.200001}
-    Rotation: {x: 0.000000, y: -8.350000, z: 0.000000}
+    Position: {x: 10.600000, y: 2.000000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.530000, y: 0.530000, z: 0.530000}
     HasSegmentScaleCompensation: false
   Children:
@@ -9116,16 +9116,17 @@
   Enabled: true
   ScriptAsset: !<reference> 68a9f65c-6b09-4fa4-a9c1-5f7d2041ec2a
   ScriptInputsDefault:
-    widthCm: true
-    highlightColor: true
+    highlightThicknessCm: true
+    titleEmCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       schematicTexture: !<reference.Texture> f58014af-bdce-45c1-8064-0647d707f45b
       highlightIcon: !<reference.Texture> 1e5379ba-4a3a-4bed-9128-9cf16c6e395d
-      widthCm: !<float> 30.000000
-      highlightColor: !<Vec4> {x: 1.000000, y: 0.850000, z: 0.200000, w: 1.000000}
+      widthCm: !<float> 42.000000
+      highlightThicknessCm: 0.500000
+      titleEmCm: 0.800000
   ScriptTypes:
     "":
       {}
@@ -14637,21 +14638,6 @@
   ScriptTypes:
     "":
       {}
-- !<SceneObject/8e167b80-4a73-4e93-a099-d704a97a9e39>
-  PrefabRemaps:
-    []
-  Name: LEAF Plugin Bridge
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 9099594e-40f4-42ca-b813-4c3416b16353
 - !<SceneObject/8e2770c7-0994-4125-92b5-a03f733bb169>
   PrefabRemaps:
     []
@@ -14923,22 +14909,6 @@
     - !<own> 93136b4c-3a8d-435d-9598-63d32d7ffbfd
     - !<own> 5bd0a925-2a38-4951-b8f2-74db3a509063
     - !<own> e8923324-b6a9-408e-b370-12464862c573
-- !<ScriptComponent/9099594e-40f4-42ca-b813-4c3416b16353>
-  PrefabRemaps:
-    []
-  Name: MessagingBridge
-  Enabled: true
-  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/90cdcc73-509e-47c5-b694-58ff82e1aba0>
   PrefabRemaps:
     []
@@ -15289,8 +15259,8 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.890000, y: -12.500000, z: -56.200001}
-    Rotation: {x: 0.000000, y: -8.350000, z: 0.000000}
+    Position: {x: 10.600000, y: 2.000000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
   Children:
@@ -15501,8 +15471,8 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.890000, y: 3.800000, z: -56.200001}
-    Rotation: {x: 0.000000, y: -8.350000, z: 0.000000}
+    Position: {x: 7.600000, y: 10.900000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
   Children:
@@ -16695,6 +16665,21 @@
     []
   Components:
     - !<own> d5194b94-e10e-48b0-8671-eaa1cc559cb9
+- !<SceneObject/a80020df-ae53-4ab6-a7fe-a0fb85238ba0>
+  PrefabRemaps:
+    []
+  Name: LEAF Plugin Bridge
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> b85b3935-111c-4a64-a4ec-e3a49082773a
 - !<ScriptComponent/a83210c9-84d2-4c4b-bc5f-ed2e08698b20>
   PrefabRemaps:
     []
@@ -17697,6 +17682,22 @@
   MaskTexture: !<reference> 00000000-0000-0000-0000-000000000000
   RayTracing: !<reference> 00000000-0000-0000-0000-000000000000
   DevicePropertiesSource: !<reference> 00000000-0000-0000-0000-000000000000
+- !<ScriptComponent/b85b3935-111c-4a64-a4ec-e3a49082773a>
+  PrefabRemaps:
+    []
+  Name: MessagingBridge
+  Enabled: true
+  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/b8a0deaa-76b8-4a8a-a279-0980ddb33f3a>
   PrefabRemaps:
     []
@@ -19969,8 +19970,8 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.890000, y: -12.500000, z: -56.200001}
-    Rotation: {x: 0.000000, y: -8.350000, z: 0.000000}
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
   Children:
@@ -22753,16 +22754,19 @@
   Enabled: true
   ScriptAsset: !<reference> 3c7f3175-1eaa-4496-b890-50feec6967b8
   ScriptInputsDefault:
-    widthCm: true
     keyWidthCm: true
+    textEmCm: true
+    readoutEmCm: true
     readoutPrefix: true
     schematicLabel: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 30.000000
+      widthCm: !<float> 32.000000
       keyWidthCm: 3.200000
+      textEmCm: !<float> 1.000000
+      readoutEmCm: 1.200000
       readoutPrefix: "Reading:"
       schematicLabel: Schematic
   ScriptTypes:

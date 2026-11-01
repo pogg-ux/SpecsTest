@@ -260,7 +260,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.applyTrace()
 
     this.stepCard.show()
-    this.stepCard.setReasoning(nl.reasoning(i) + " " + nl.pathChain(i))
+    this.stepCard.setReasoning(nl.reasoning(i) + "\n" + nl.pathChain(i))
     this.stepCard.setPathCitation(nl.pathCitation(i))
     this.stepCard.setResult("", "")
     this.stepCard.setReadout("— V")
@@ -543,7 +543,7 @@ export class MWNPMain extends BaseScriptComponent {
       title,
       question,
       nl.stepCitation(pointId),
-      exp ? exp + (range ? " · range " + range : "") : "No tolerance defined in the job files."
+      exp ? exp + (range ? "\nrange " + range : "") : "No tolerance defined in the job files."
     )
     this.cabinet.setActivePoint(pointId, ref)
     this.partTags.setTagState(nl.baseId(pointId), "active")

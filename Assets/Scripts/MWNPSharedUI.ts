@@ -82,6 +82,8 @@ export interface TextOpts {
   distanceCm?: number
   /** Overrides role sizing: em height in cm. */
   emCm?: number
+  /** Vertical alignment inside the cell (default center). */
+  valign?: "top" | "center"
 }
 
 /** A Text cell of fixed w×h registered as a FlexItem of `parent`. */
@@ -95,7 +97,7 @@ export function addText(parent: SceneObject, name: string, text: string, w: numb
   const a = opts?.align ?? "left"
   t.horizontalAlignment =
     a === "left" ? HorizontalAlignment.Left : a === "right" ? HorizontalAlignment.Right : HorizontalAlignment.Center
-  t.verticalAlignment = VerticalAlignment.Center
+  t.verticalAlignment = opts?.valign === "top" ? VerticalAlignment.Top : VerticalAlignment.Center
   t.horizontalOverflow = opts?.wrap ? HorizontalOverflow.Wrap : HorizontalOverflow.Overflow
   t.verticalOverflow = VerticalOverflow.Overflow
   t.layoutRect = Rect.create(-w / 2, w / 2, -h / 2, h / 2)
@@ -185,6 +187,12 @@ export interface CardBody {
 }
 
 /**
+ * Which edge of a card stays at its host's origin when the card's height changes with its text:
+ * "center" (default), "top" (card grows downward), "bottom" (card grows upward).
+ */
+export type CardAnchor = "center" | "top" | "bottom"
+
+/**
  * Translucent smoke-gray card fill (premultiplied alpha: rgb = gray * alpha) so the panel and
  * its wire traces stay visible behind cards that float in front of the cabinet.
  */
@@ -209,7 +217,7 @@ function applyTranslucentFill(owner: SceneObject, plate: BackPlate): void {
 }
 
 /** A BackPlate card: body (plate) + content (column FlexLayout lifted +0.6). Plate hugs content. */
-export function makeCardBody(host: SceneObject, name: string, width: number, pad: number, gap: number): CardBody {
+export function makeCardBody(host: SceneObject, name: string, width: number, pad: number, gap: number, anchor: CardAnchor = "center"): CardBody {
   const body = makeObj(host, name)
   const plate = body.createComponent(BackPlate.getTypeName()) as BackPlate
   plate.style = "simple"
@@ -229,6 +237,8 @@ export function makeCardBody(host: SceneObject, name: string, width: number, pad
   flex.paddingRight = pad
   flex.onLayoutComplete.add((r) => {
     plate.size = new vec2(r.containerWidth, r.containerHeight)
+    const y = anchor === "top" ? -r.containerHeight / 2 : anchor === "bottom" ? r.containerHeight / 2 : 0
+    body.getTransform().setLocalPosition(new vec3(0, y, 0))
   })
   return {body, content, plate}
 }
@@ -248,4 +258,56 @@ export function clockTime(): string {
   const d = new Date()
   const p = (n: number) => (n < 10 ? "0" + n : "" + n)
   return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds())
+}
+
+// ── Text fitting: size a wrapped text cell from its actual words ──
+
+/** Line height as a multiple of the em height. */
+export const LINE_H = 1.25
+
+/** Rough per-character advance (fraction of em) for the Lens default font, deliberately a little wide. */
+function charAdvance(c: string): number {
+  if (c === " ") return 0.28
+  if (c >= "A" && c <= "Z") return 0.62
+  if (c >= "0" && c <= "9") return 0.55
+  if (c >= "a" && c <= "z") return 0.48
+  if (".,:;'|!()ilItfj".indexOf(c) >= 0) return 0.3
+  return 0.9 // arrows, check marks, dashes, symbols
+}
+
+/** Greedy word-wrap line count for `text` in a cell `widthCm` wide at `emCm` text height. */
+export function estimateLines(text: string, widthCm: number, emCm: number, bold: boolean = false): number {
+  const k = emCm * (bold ? 1.05 : 1.0)
+  let lines = 0
+  for (const para of text.split("\n")) {
+    let lineW = 0
+    let n = 1
+    for (const word of para.split(" ")) {
+      let ww = 0
+      for (const ch of word) ww += charAdvance(ch) * k
+      const sp = 0.3 * k
+      if (lineW > 0 && lineW + sp + ww > widthCm) {
+        n++
+        lineW = ww
+      } else {
+        lineW += (lineW > 0 ? sp : 0) + ww
+      }
+    }
+    lines += n
+  }
+  return lines
+}
+
+/**
+ * Sets `text` on a cell made by addText(... wrap: true) and resizes the cell (and its FlexItem, so the
+ * card re-lays out) to exactly the lines the text needs, never fewer than `minLines`.
+ */
+export function fitText(t: Text, text: string, widthCm: number, emCm: number, minLines: number = 1, bold: boolean = false): number {
+  const lines = Math.max(minLines, text.length === 0 ? 0 : estimateLines(text, widthCm, emCm, bold))
+  const h = Math.max(lines, 0.0001) * emCm * LINE_H
+  t.text = text
+  t.layoutRect = Rect.create(-widthCm / 2, widthCm / 2, -h / 2, h / 2)
+  const item = t.getSceneObject().getComponent(FlexItem.getTypeName()) as FlexItem
+  if (item) item.overrideHeight = h
+  return lines
 }
