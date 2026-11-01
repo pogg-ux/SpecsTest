@@ -41,9 +41,11 @@
     jobPanel: false
     libraryCard: false
     netlistAsset: false
+    notesCard: false
     optionsCard: false
     partTags: false
     passSfx: false
+    photoViewer: false
     safetyNotice: false
     schematicPanel: false
     sfxVolume: false
@@ -71,7 +73,9 @@
       cameraCard: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
       libraryCard: !<MappingBased.AssignableType_9> 00000000-0000-0000-0000-000000000000
       optionsCard: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
-      schematicPanel: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
+      notesCard: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
+      photoViewer: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
+      schematicPanel: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
       clickSfx: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
       passSfx: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
       faultSfx: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
@@ -101,7 +105,9 @@
     - "// @input AssignableType_8 cameraCard {\"hint\":\"Camera card (opens in the step card's place)\"}"
     - '// @input AssignableType_9 libraryCard {"hint":"Library card (home)"}'
     - '// @input AssignableType_10 optionsCard {"hint":"Options card"}'
-    - '// @input AssignableType_11 schematicPanel {"hint":"Schematic panel above the step card"}'
+    - '// @input AssignableType_11 notesCard {"hint":"Notes card"}'
+    - '// @input AssignableType_12 photoViewer {"hint":"Photo viewer card"}'
+    - '// @input AssignableType_13 schematicPanel {"hint":"Schematic panel above the step card"}'
     - '// @input Asset.AudioTrackAsset clickSfx {"hint":"Number pad / button click sound"}'
     - '// @input Asset.AudioTrackAsset passSfx {"hint":"Reading in spec sound"}'
     - '// @input Asset.AudioTrackAsset faultSfx {"hint":"Reading out of spec / unexplained sound"}'

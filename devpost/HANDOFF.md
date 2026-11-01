@@ -6,6 +6,24 @@
 - Build done: all 5 LEAF done criteria PASS + layout test. Cabinet at 100 cm, translucent cards.
 - Job data: `Assets/MWNP/netlist.json` (tolerances, reading rules), `MWNP_1.0_wiring.png`, `MWNP_1.0_panel_layout.png`
 
+## UPDATE Nov 1, 4:30 PM — WHERE WE ARE
+v1 tagged `v1.0-submission` (move it after final fixes: `git tag -f v1.0-submission` then `git push -f origin v1.0-submission`).
+Done: docked Library (Job, Job report, Camera, Notes, Options), matching Hide/Show, polish pass, End/New job, Notes, 12 LEAF tests. README, VIDEO_SCRIPT, DEVPOST_DESCRIPTION in repo.
+Monday mid-review: could not confirm it exists. Real one = SPECS Live Review Thu Nov 5, 12 PM ET (registered on Luma).
+
+### Next prompts for Claude Code (in order)
+A) (if not done) New job → fresh report immediately, old one to "Previous jobs"; Notes "Other" free text (Expanding Text Input in Preview, else labeled placeholder); Photo viewer (tap thumbnail → large, Prev/Next, Delete w/ confirm, Close).
+B) Final workflow check — walk every path by mouse, no dead ends, placeholders labeled, button feedback, Hide/Show + Options at every step, hide Lens bench slab, "Save (this session)" + "Export report — coming in v2" placeholder. Re-run LEAF, re-capture ALL screenshots to devpost/screenshots.
+Then: save.bat → move tag → FEATURE FREEZE.
+
+### Discord how-to (for the Nov 5 review — post by Wed)
+1. Join Devpost Discord (link on the hackathon page / Resources tab), accept rules.
+2. Left sidebar → find channel #devpost-learn-feedback (it may be a Forum channel).
+3. Click "New Post", title "MWNP No-Guess Field Assistant", paste the drafted text, drag in 2–3 screenshots, add tags "Will It Ship" + "Learn AR with SPECS", Post.
+
+### Then
+OBS (Window Capture, crop to Preview, 1080p/30) → silent takes → Clipchamp narration per VIDEO_SCRIPT → YouTube Public → Devpost submit before Mon Nov 9, 5 PM ET (video, repo URL, description).
+
 ## UPDATE Nov 1, 11:35 AM — NEXT PROMPT (paste into Claude Code)
 Done since last: readable cards, labeled schematic, vivid colors, 3 cm keypad, S1 UP/DOWN retest buttons, Hide/Show, bench backdrop (Multimedia mode, Media/bench_backdrop.jpg, lowered 10%), brighter labels. 9 LEAF tests passing. save.bat in project root commits+pushes.
 

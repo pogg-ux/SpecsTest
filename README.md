@@ -7,7 +7,9 @@ The tech reports a symptom. The assistant answers **only from the machine's own 
 Demo machine: the **MWNP 1.0**, a 12 VDC bench trainer I designed (SPDT toggle, two fused branches, EXTEND / RETRACT lamps standing in for an actuator).
 
 ## What it does (v1)
-- **Library menu** docked upper left (collapsible, always reachable) → Job, Job report, Camera, Options
+- **Library menu** docked upper left (collapsible, always reachable) → Job, Job report, Camera, Notes, Options
+- **Job lifecycle:** End job (stamps time, marks the report Complete, locks readings) and New job (clears the board, keeps the previous report viewable), each with a confirm
+- **Notes:** time-stamped tech notes (quick picks in preview, keyboard on device) plus automatic "Agent" notes at key moments, all included in the Job report
 - **Symptom → path:** "EXTEND doesn't work" → outlines TS-4, F1, L1; draws the 2a/2b/2c trace; cites the schematic
 - **Guided check order** with a number pad for real meter readings (not pass/fail)
 - **Tolerance from the files:** each test point carries its own nominal, min/max and source; green / red / amber decided by rules in `netlist.json`
@@ -41,6 +43,13 @@ No SPECS glasses needed — everything runs in the Lens Studio preview.
 - The 3D trainer stands in for a real cabinet; the tech marks parts by pinching (no live recognition in preview).
 - Voice commands, grab gesture and camera photos are device-only; every voice action has a button.
 - The agent is rule-based by design — no live AI decides anything, so it can't invent an answer.
+
+## Where the data goes
+v1 keeps job reports, readings, notes and pictures **for the session only** ("Save (this session)"); nothing leaves the glasses. The planned v2 path:
+1. **On the glasses** — Persistent Cloud Storage so reports survive between sessions.
+2. **To the tech's phone** — Spectacles Mobile Kit to save or share the report as a PDF.
+3. **To job history** — Snap Cloud storage per machine, feeding a dashboard, printable reports, or a maintenance system (e.g. a completed work order).
+Reports with photos sent online will use SPECS' transparent permission prompt.
 
 ## What's next (v2)
 Live part recognition and label reading → component manual lookup (with permission), per-machine job history and printable reports, magnified view and camera filters, voice notes, AI-phrased answers grounded only in the job files, pneumatic and hydraulic schematics. Work in progress on the `v2-dev` branch.

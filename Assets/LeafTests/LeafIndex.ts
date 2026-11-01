@@ -15,6 +15,9 @@ import {MWNPDisplayToggleScenario} from "./MWNPDisplayToggleScenario"
 import {MWNPCameraCardScenario} from "./MWNPCameraCardScenario"
 import {MWNPLibraryOptionsScenario} from "./MWNPLibraryOptionsScenario"
 import {MWNPGalleryScenario} from "./MWNPGalleryScenario"
+import {MWNPJobNotesScenario} from "./MWNPJobNotesScenario"
+import {MWNPPhotoViewerScenario} from "./MWNPPhotoViewerScenario"
+import {MWNPWorkflowScenario} from "./MWNPWorkflowScenario"
 
 /** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
 const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
@@ -36,6 +39,9 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-display-toggle", typename: MWNPDisplayToggleScenario.getTypeName()},
     {id: "mwnp-camera-card", typename: MWNPCameraCardScenario.getTypeName(), parameters: {stop_at: ""}},
     {id: "mwnp-library-options", typename: MWNPLibraryOptionsScenario.getTypeName(), parameters: {stop_at: ""}},
+    {id: "mwnp-job-notes", typename: MWNPJobNotesScenario.getTypeName()},
+    {id: "mwnp-photo-viewer", typename: MWNPPhotoViewerScenario.getTypeName()},
+    {id: "mwnp-workflow", typename: MWNPWorkflowScenario.getTypeName()},
     {id: "mwnp-gallery", typename: MWNPGalleryScenario.getTypeName(), parameters: {shot: "start"}},
   ]
 

@@ -1,7 +1,7 @@
 # MWNP No-Guess Field Assistant
 
 ## What it does
-A hands-free troubleshooting assistant for industrial machine technicians. The tech reports a symptom ("EXTEND doesn't work") and the Lens answers **only from the machine's own job files**: it cites the schematic, outlines the parts in the circuit, traces the wire run on the machine, shows the expected voltage right at each test point, and walks the tech through the check order while they log real meter readings. It flags the fault ("F1 open"), gives the next action, supports a retest, and builds a job report.
+A hands-free troubleshooting assistant for industrial machine technicians. The tech reports a symptom ("EXTEND doesn't work") and the Lens answers **only from the machine's own job files**: it cites the schematic, outlines the parts in the circuit, traces the wire run on the machine, shows the expected voltage right at each test point, and walks the tech through the check order while they log real meter readings. It flags the fault ("F1 open"), gives the next action, supports a retest, keeps tech and agent notes, and builds a job report when the job is ended.
 
 It's a **no-guess** system. Every pass/fail decision comes from tolerances stored in the job file, per test point and based on what that point feeds. If a reading doesn't match anything in the files, it turns amber and says so — it never invents a cause.
 
@@ -23,7 +23,7 @@ I'm a service technician with limited programming background. I planned the Lens
 - Preview stand-ins: pinch-to-mark instead of live recognition, a button for every voice command.
 
 ## What's next
-Live component recognition and label reading → manual lookup (with permission), per-machine job history and printable reports, magnified view and camera filters, voice notes, AI-phrased answers grounded only in the job files, pneumatic and hydraulic schematics. v2 work in progress on the `v2-dev` branch.
+Reports are session-only in v1. Next they'll save on the glasses, send to the tech's phone as a PDF, and upload to a per-machine job history that can feed a maintenance system. Also: live component recognition and label reading → manual lookup (with permission), per-machine job history and printable reports, magnified view and camera filters, voice notes, AI-phrased answers grounded only in the job files, pneumatic and hydraulic schematics. v2 work in progress on the `v2-dev` branch.
 
 ## Safety
 Reference aid only. Verify with a meter and follow lockout/tagout.

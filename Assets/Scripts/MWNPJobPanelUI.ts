@@ -45,6 +45,19 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   private body: SceneObject | null = null
   private jobArgs: [string, string] = ["", ""]
   private symptomItems: SymptomItem[] = []
+  private auxBody: SceneObject | null = null
+  private _onEndRequest = new Event<void>()
+  private _onNewRequest = new Event<void>()
+  private _onConfirm = new Event<{kind: string; yes: boolean}>()
+  get onEndRequest(): PublicApi<void> {
+    return this._onEndRequest.publicApi()
+  }
+  get onNewRequest(): PublicApi<void> {
+    return this._onNewRequest.publicApi()
+  }
+  get onConfirm(): PublicApi<{kind: string; yes: boolean}> {
+    return this._onConfirm.publicApi()
+  }
   private _onReportSymptom = new Event<void>()
   private _onSymptomPicked = new Event<number>()
   get onReportSymptom(): PublicApi<void> {
@@ -69,7 +82,9 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     addCardHeader(card.content, "JobHeader", "Job", inner, this.sceneObject)
     addFitText(card.content, "JobTitle", jobLine, inner, em, {bold: true})
     addFitText(card.content, "FilesLoaded", filesLine, inner, em, {color: TEXT_SOFT})
-    addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em})
+    addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em, primary: true})
+    addButton(card.content, "Btn_EndJob", "End job", inner - 4, 3.6, () => this._onEndRequest.invoke(), {emCm: em})
+    addButton(card.content, "Btn_NewJob", "New job", inner - 4, 3.6, () => this._onNewRequest.invoke(), {emCm: em})
     this.currentView = "job"
   }
 
@@ -93,6 +108,42 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     this.currentView = "symptoms"
   }
 
+  /** The Job overview (reachable any time from the Library): job line, status, End job / New job. */
+  showOverview(jobLine: string, status: string): void {
+    this.hideAux()
+    const w = this.widthCm
+    const inner = w - 2.8
+    const em = cardEm(this.sceneObject, this.textEmCm)
+    const card = makeCardBody(this.sceneObject, "JobOverviewCard", w, 1.4, 0.8, "top")
+    this.auxBody = card.body
+    addCardHeader(card.content, "JobOverviewHeader", "Job", inner, this.sceneObject)
+    addFitText(card.content, "JobOverviewTitle", jobLine, inner, em, {bold: true})
+    addFitText(card.content, "JobOverviewStatus", status, inner, em, {color: TEXT_SOFT})
+    addButton(card.content, "Btn_EndJob", "End job", inner - 4, 3.6, () => this._onEndRequest.invoke(), {emCm: em})
+    addButton(card.content, "Btn_NewJob", "New job", inner - 4, 3.6, () => this._onNewRequest.invoke(), {emCm: em})
+  }
+
+  /** Yes / No confirmation for End job / New job. */
+  showConfirm(kind: string, message: string): void {
+    this.hideAux()
+    const w = this.widthCm
+    const inner = w - 2.8
+    const em = cardEm(this.sceneObject, this.textEmCm)
+    const card = makeCardBody(this.sceneObject, "JobConfirmCard", w, 1.4, 0.8, "top")
+    this.auxBody = card.body
+    addCardHeader(card.content, "JobConfirmHeader", kind === "end" ? "End job" : "New job", inner, this.sceneObject)
+    addFitText(card.content, "ConfirmMessage", message, inner, em, {color: TEXT_BODY})
+    addButton(card.content, "Btn_ConfirmYes", "Yes", inner - 4, 3.6, () => this._onConfirm.invoke({kind, yes: true}), {emCm: em, primary: true})
+    addButton(card.content, "Btn_ConfirmNo", "No", inner - 4, 3.6, () => this._onConfirm.invoke({kind, yes: false}), {emCm: em})
+  }
+
+  hideAux(): void {
+    if (this.auxBody) {
+      deferDestroy(this, this.auxBody)
+      this.auxBody = null
+    }
+  }
+
   /** Hides / shows the card without rebuilding it (keeps its state while the Library is open). */
   setVisible(v: boolean): void {
     if (this.body) this.body.enabled = v
@@ -100,6 +151,7 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
 
   hide(): void {
     this.clear()
+    this.hideAux()
     this.currentView = "hidden"
   }
 

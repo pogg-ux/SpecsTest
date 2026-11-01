@@ -12,6 +12,7 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexAlign, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
+import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 
 // ── Typography (Specs type scale; see specs-build-ui patterns → Typography) ──
@@ -364,7 +365,8 @@ export function estimateLines(text: string, widthCm: number, emCm: number, bold:
       let ww = 0
       for (const ch of word) ww += charAdvance(ch) * k
       const sp = 0.3 * k
-      if (lineW > 0 && lineW + sp + ww > widthCm) {
+      // 4% safety margin: a line that only just fits by the estimate can wrap in the real font.
+      if (lineW > 0 && lineW + sp + ww > widthCm * 0.96) {
         n++
         lineW = ww
       } else {
@@ -509,4 +511,15 @@ export function addCardHeader(content: SceneObject, name: string, title: string,
   item.flexShrink = 0
   register(content, item)
   return t
+}
+
+/** Makes a scaled thumbnail object tappable (invisible box collider + SIK Interactable); a tap calls `onTap`. */
+export function makeTappable(so: SceneObject, onTap: () => void): void {
+  const col = so.createComponent("Physics.ColliderComponent") as ColliderComponent
+  const shape = Shape.createBoxShape()
+  shape.size = new vec3(1, 1, 0.6)
+  col.shape = shape
+  col.fitVisual = false
+  const it = so.createComponent(Interactable.getTypeName()) as Interactable
+  it.onTriggerEnd.add(() => onTap())
 }

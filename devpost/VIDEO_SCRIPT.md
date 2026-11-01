@@ -39,7 +39,8 @@ VO: "And if a reading doesn't fit anything in the files — six volts here — i
 
 **2:20–2:35 — Retest + report + hide**
 SCREEN: Fuse replaced: retest → S1 UP → L1 lights → 12.0 green → Job report. Then Hide → labels stay → Show.
-VO: "Retest, lamp's on, logged. The job report has every reading and time. And when I need to work, one tap clears the cards and keeps the labels on the parts."
+SCREEN (add): Notes → Add note → "Fuse replaced"; Job → End job → Yes; Job report shows "Complete".
+VO: "Retest, lamp's on, logged. I add a note, end the job, and the report has every reading, note and time. And when I need to work, one tap clears the cards and keeps the labels on the parts."
 
 **2:35–2:45 — Close**
 SCREEN: Full view of the cabinet with labels. (Optional: 3-second clip of the real MWNP 1.0 bench unit.)

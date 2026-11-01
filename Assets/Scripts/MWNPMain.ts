@@ -22,7 +22,9 @@ import {MWNPSafetyNoticeUI} from "./MWNPSafetyNoticeUI"
 import {MWNPJobPanelUI} from "./MWNPJobPanelUI"
 import {MWNPStepCardUI} from "./MWNPStepCardUI"
 import {MWNPFindingCardUI} from "./MWNPFindingCardUI"
-import {MWNPSummaryUI, SummaryRow, ReportCapture} from "./MWNPSummaryUI"
+import {MWNPSummaryUI, SummaryRow, ReportCapture, SummaryData} from "./MWNPSummaryUI"
+import {MWNPNotesCardUI, Note} from "./MWNPNotesCardUI"
+import {MWNPPhotoViewerUI, ViewerInfo} from "./MWNPPhotoViewerUI"
 import {MWNPCameraCardUI} from "./MWNPCameraCardUI"
 const ICON_HIDE = requireAsset("../Icons/visibility_off.png") as Texture
 const ICON_SHOW = requireAsset("../Icons/visibility.png") as Texture
@@ -89,6 +91,12 @@ export class MWNPMain extends BaseScriptComponent {
   @hint("Options card")
   optionsCard: MWNPOptionsCardUI
   @input
+  @hint("Notes card")
+  notesCard: MWNPNotesCardUI
+  @input
+  @hint("Photo viewer card")
+  photoViewer: MWNPPhotoViewerUI
+  @input
   @hint("Schematic panel above the step card")
   schematicPanel: MWNPSchematicPanelUI
   @input
@@ -149,8 +157,23 @@ export class MWNPMain extends BaseScriptComponent {
     this.updateDisplayButtonPos()
   }
   private cameraReturn = "home"
+  /** Notes of the current job, newest first (agent notes and the technician's). */
+  notes: Note[] = []
+  private nextNoteId = 1
+  jobEnded = false
+  endTime = ""
+  /** The previous job's report, kept viewable until the new job logs its first reading. */
+  previousJobs: {name: string; result: string; endTime: string; label: string; data: SummaryData}[] = []
+  /** Index into previousJobs of the report being viewed, or -1 for the current job's. */
+  viewingPrevious = -1
+  private viewerReturn = "camera"
+  private viewerId = -1
+  /** Index into previousJobs when the viewer shows a previous job's picture (view only), else -1. */
+  private viewerPrevJob = -1
+  private viewerConfirm = false
+  private confirmReturn = "job"
   /** Screen offset (fraction of the view) of the menu's top-left from the cabinet's top-left corner. */
-  libraryDock = new vec2(-0.03, -0.115)
+  libraryDock = new vec2(-0.03, -0.15)
   private schematicWasOpen = false
   private textFactor = 1
   private schemFactor = 1
@@ -238,7 +261,7 @@ export class MWNPMain extends BaseScriptComponent {
     settle.bind(() => this.placeRelativeToUser())
     settle.reset(0.25)
 
-    const missing = ["cabinet", "partTags", "safetyNotice", "jobPanel", "stepCard", "findingCard", "summaryCard", "schematicPanel", "cameraCard", "libraryCard", "optionsCard"].filter(
+    const missing = ["cabinet", "partTags", "safetyNotice", "jobPanel", "stepCard", "findingCard", "summaryCard", "schematicPanel", "cameraCard", "libraryCard", "optionsCard", "notesCard", "photoViewer"].filter(
       (k) => !(this as any)[k]
     )
     if (missing.length > 0 || !this.nl) {
@@ -257,6 +280,20 @@ export class MWNPMain extends BaseScriptComponent {
     this.stepCard.onSchematic.add(() => this.onSchematic())
     this.stepCard.onCamera.add(() => this.openCamera())
     this.libraryCard.onPick.add((k) => this.onLibraryPick(k))
+    this.jobPanel.onEndRequest.add(() => this.onJobRequest("end"))
+    this.jobPanel.onNewRequest.add(() => this.onJobRequest("new"))
+    this.jobPanel.onConfirm.add((c) => this.onJobConfirm(c.kind, c.yes))
+    this.notesCard.onNote.add((n) => this.onNote(n.text, n.placeholder))
+    this.notesCard.onEdit.add((e) => this.onNoteEdit(e.id, e.text))
+    this.summaryCard.onPrevious.add((i) => this.onPreviousPick(i))
+    this.summaryCard.onBack.add(() => this.onBackToCurrent())
+    this.summaryCard.onThumbTap.add((id) => this.openViewer(id))
+    this.cameraCard.onThumbTap.add((id) => this.openViewer(id))
+    this.photoViewer.onPrev.add(() => this.stepViewer(-1))
+    this.photoViewer.onNext.add(() => this.stepViewer(1))
+    this.photoViewer.onDelete.add(() => this.askDelete())
+    this.photoViewer.onConfirm.add((yes) => this.onDeleteConfirm(yes))
+    this.photoViewer.onClose.add(() => this.closeViewer())
     this.optionsCard.onChange.add((c) => this.onOptionChange(c))
     this.cameraCard.onClose.add(() => this.closeCamera())
     this.cameraCard.onSnapshot.add(() => this.onSnapshot())
@@ -316,6 +353,7 @@ export class MWNPMain extends BaseScriptComponent {
     const agent = this.agent as MWNPAgent
     this.click()
     agent.pickSymptom(i)
+    this.addNote("Agent", "Symptom reported: " + nl.symptomLabel(i) + ".")
     this.jobPanel.hide()
 
     // Path parts amber, everything else dim.
@@ -338,6 +376,7 @@ export class MWNPMain extends BaseScriptComponent {
   }
 
   private onKey(k: string): void {
+    if (this.jobEnded) return
     const agent = this.agent as MWNPAgent
     if (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait") return
     this.click()
@@ -346,6 +385,7 @@ export class MWNPMain extends BaseScriptComponent {
   }
 
   private onEnter(): void {
+    if (this.jobEnded) return
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
     if (agent.phase === "retest_wait") {
@@ -363,6 +403,8 @@ export class MWNPMain extends BaseScriptComponent {
     const res = agent.enter(clock())
     if (!res.accepted || !res.cls) {
       this.click()
+      // Enter with nothing typed: say what to do instead of doing nothing.
+      if (agent.phase === "steps" || agent.phase === "retest") this.stepCard.setResult("Type the meter reading with the number pad, then press Enter.", "amber")
       return
     }
     const v = nl.fmtReading(res.value)
@@ -462,6 +504,9 @@ export class MWNPMain extends BaseScriptComponent {
     else if (v === "report") this.summaryCard.hide()
     else if (v === "camera") this.cameraCard.hide()
     else if (v === "options") this.optionsCard.hide()
+    else if (v === "notes") this.notesCard.hide()
+    else if (v === "viewer") this.photoViewer.hide()
+    else if (v === "jobhome" || v === "confirm") this.jobPanel.hideAux()
     this.visibleCard = "home"
   }
 
@@ -472,7 +517,12 @@ export class MWNPMain extends BaseScriptComponent {
     } else if (v === "options") {
       this.optionsCard.show()
       this.visibleCard = "options"
-    } else if (v === "home") {
+    } else if (v === "notes") {
+      this.notesCard.show(this.notes)
+      this.visibleCard = "notes"
+    } else if (v === "jobhome") {
+      this.openOverview()
+    } else if (v === "home" || v === "confirm") {
       this.visibleCard = "home"
     } else {
       this.flowCard = v
@@ -505,25 +555,304 @@ export class MWNPMain extends BaseScriptComponent {
     const v = this.visibleCard
     this.click()
     if (key === "job") {
-      if (v === this.flowCard) return
-      this.hideOpenCard()
-      this.resumeFlow()
+      if (v === "jobhome") {
+        this.jobPanel.hideAux()
+        this.resumeFlow()
+      } else if (v === this.flowCard) {
+        // The flow card is already showing: the Job button now opens the Job overview (End job / New job).
+        if (v === "step" || v === "finding" || v === "summary") this.openOverview()
+        else return this.pulseCard(this.jobPanel.sceneObject)
+      } else {
+        this.hideOpenCard()
+        this.resumeFlow()
+      }
     } else if (key === "report") {
-      if (v === "report" || v === "summary") return
+      if (v === "report" || v === "summary") return this.pulseCard(this.summaryCard.sceneObject)
       this.hideOpenCard()
       if (this.flowCard === "summary") this.resumeFlow()
       else this.buildReport(false)
     } else if (key === "camera") {
-      if (v === "camera") return
+      if (v === "camera") return this.pulseCard(this.cameraCard.sceneObject)
       this.hideOpenCard()
       this.openCameraCard(v)
+    } else if (key === "notes") {
+      if (v === "notes") return this.pulseCard(this.notesCard.sceneObject)
+      this.hideOpenCard()
+      this.notesCard.show(this.notes)
+      this.visibleCard = "notes"
     } else if (key === "options") {
-      if (v === "options") return
+      if (v === "options") return this.pulseCard(this.optionsCard.sceneObject)
       this.hideOpenCard()
       this.optionsCard.show()
       this.visibleCard = "options"
     }
     this.log("library-pick " + key)
+  }
+
+  private overviewStatus(): string {
+    return this.jobEnded ? "Status: Complete · ended " + this.endTime : (this.agent as MWNPAgent).repaired ? "Status: Repaired · not yet ended" : "Status: In progress"
+  }
+
+  private openOverview(): void {
+    const nl = this.nl as Netlist
+    this.hideOpenCard()
+    this.jobPanel.showOverview("Job: " + nl.data.machine + " " + nl.machineKind(), this.overviewStatus())
+    this.visibleCard = "jobhome"
+  }
+
+  // ── End job / New job / Notes ─────────────────────────────────────────────
+
+  private onJobRequest(kind: string): void {
+    const v = this.visibleCard
+    if (v !== "job" && v !== "jobhome") return
+    this.click()
+    this.confirmReturn = v
+    this.hideOpenCard()
+    this.jobPanel.showConfirm(
+      kind,
+      kind === "end"
+        ? "End this job? The Job report is marked Complete and the readings are locked."
+        : "Start a new job? Readings, badges, outlines and traces are cleared. The previous report stays in Job report until the new job logs its first reading."
+    )
+    this.visibleCard = "confirm"
+    this.log("confirm-" + kind)
+  }
+
+  private onJobConfirm(kind: string, yes: boolean): void {
+    if (this.visibleCard !== "confirm") return
+    this.click()
+    this.jobPanel.hideAux()
+    if (!yes) {
+      if (this.confirmReturn === "job") {
+        this.jobPanel.setVisible(true)
+        this.visibleCard = "job"
+      } else this.openOverview()
+      this.log("confirm-no")
+      return
+    }
+    if (kind === "end") this.endJob()
+    else this.newJob()
+  }
+
+  private resultText(): string {
+    const agent = this.agent as MWNPAgent
+    const f = agent.finding
+    const fn = agent.functionKey
+    if (agent.repaired) return fn ? fn + " restored" : "restored"
+    return f ? "not resolved — " + f.head : "no finding logged"
+  }
+
+  /** Stamps the end time, marks the Job report Complete with the result and locks the readings. */
+  private endJob(): void {
+    const agent = this.agent as MWNPAgent
+    if (!this.jobEnded) {
+      this.jobEnded = true
+      this.endTime = clock()
+      agent.phase = "summary"
+      this.addNote("Agent", "Job ended: " + this.resultText() + ".")
+    }
+    this.stepCard.hide()
+    this.schematicPanel.close()
+    this.flowCard = "summary"
+    this.buildReport(true)
+    this.log("job-ended")
+  }
+
+  /** Clears the job (readings, badges, outlines, traces, notes, captures) and returns to the symptom list. */
+  private newJob(): void {
+    const nl = this.nl as Netlist
+    const old = this.agent as MWNPAgent
+    if (old.readings.length > 0) {
+      const n = this.previousJobs.length + 1
+      const data = this.reportData(true)
+      data.statusLine = "Status: " + (this.jobEnded ? "Complete · ended " + this.endTime : "Not ended")
+      data.statusColor = this.jobEnded ? "green" : "amber"
+      const name = "Job " + n + " · " + (old.faultIndex >= 0 ? nl.symptomLabel(old.faultIndex) : "no symptom")
+      const result = this.resultText()
+      this.previousJobs.unshift({name, result, endTime: this.endTime, label: name + " — " + result + (this.endTime ? " · ended " + this.endTime : " · not ended"), data})
+    }
+    this.viewingPrevious = -1
+    this.captures = []
+    this.notes = []
+    this.jobEnded = false
+    this.endTime = ""
+    this.savedToJobLog = false
+    this.lastMessage = ""
+    this.lastResultColor = ""
+    this.lastTagInfo = ""
+    this.schematicWasOpen = false
+    this.agent = new MWNPAgent(nl)
+    const agent = this.agent as MWNPAgent
+    agent.dismissNotice()
+    this.cabinet.clearOutlines()
+    this.cabinet.hideTraces()
+    this.cabinet.setActivePoint(null, null)
+    this.partTags.clearBadges()
+    this.partTags.hideExpected()
+    this.partTags.resetTags()
+    this.stepCard.hide()
+    this.stepCard.setResult("", "")
+    this.stepCard.setReadout("— V")
+    this.stepCard.setSwitchControls("", [], "")
+    this.findingCard.hide()
+    this.summaryCard.hide()
+    this.schematicPanel.close()
+    const ctl = this.simulatedFaultFunction ? nl.controlOf(this.simulatedFaultFunction) : null
+    this.cabinet.setS1(ctl ? ctl.position : "UP")
+    this.updateLamps()
+    agent.openSymptoms()
+    const items = []
+    for (let i = 0; i < nl.faultCount(); i++) items.push({key: nl.symptomKey(i), label: nl.symptomLabel(i)})
+    this.jobPanel.showSymptoms(items)
+    this.jobPanel.setVisible(false)
+    this.flowCard = "symptoms"
+    // The Job report shows the new job right away (empty readings and notes, "In progress"); the finished job is listed under Previous jobs.
+    this.visibleCard = "home"
+    this.buildReport(false)
+    this.log("job-new")
+  }
+
+  private addNote(source: string, text: string, placeholder: boolean = false): void {
+    this.notes.unshift({id: this.nextNoteId++, time: clock(), source, text, placeholder})
+    this.notesCard.setNotes(this.notes)
+  }
+
+  // ── Photo viewer ──────────────────────────────────────────────────────────
+
+  /** The picture being viewed, with what the viewer shows about it. */
+  private pictureInfo(): ViewerInfo | null {
+    if (this.viewerPrevJob >= 0) {
+      const pj = this.previousJobs[this.viewerPrevJob]
+      const cap = pj ? pj.data.captures.filter((c) => c.id === this.viewerId)[0] : null
+      if (!cap) return null
+      return {texture: cap.texture, aspect: cap.aspect, placeholder: cap.placeholder || "", kind: cap.kind || "Picture", pointLabel: cap.pointLabel || "", time: cap.time || "", position: "", editable: false}
+    }
+    const idx = this.captures.map((c) => c.id).indexOf(this.viewerId)
+    if (idx < 0) return null
+    const c = this.captures[idx]
+    return {
+      texture: c.texture,
+      aspect: c.aspect,
+      placeholder: c.placeholder,
+      kind: c.kind === "snapshot" ? "Snapshot (with labels)" : "Photo",
+      pointLabel: c.pointLabel,
+      time: c.time,
+      position: idx + 1 + " of " + this.captures.length,
+      editable: true,
+    }
+  }
+
+  private showPicture(): void {
+    const info = this.pictureInfo()
+    if (!info) return this.closeViewer()
+    this.viewerConfirm = false
+    this.photoViewer.show(info)
+  }
+
+  /** Opens a thumbnail (Camera card or Job report) on the Photo viewer card. */
+  private openViewer(id: number): void {
+    const v = this.visibleCard
+    if (id < 0 || (v !== "camera" && v !== "report" && v !== "summary")) return
+    this.click()
+    this.viewerReturn = v
+    this.viewerPrevJob = v !== "camera" ? this.viewingPrevious : -1
+    this.hideOpenCard()
+    this.viewerId = id
+    this.visibleCard = "viewer"
+    this.showPicture()
+    this.log("viewer-open " + id)
+  }
+
+  private stepViewer(dir: number): void {
+    if (this.visibleCard !== "viewer" || this.viewerPrevJob >= 0 || this.captures.length === 0) return
+    this.click()
+    const ids = this.captures.map((c) => c.id)
+    const i = ids.indexOf(this.viewerId)
+    this.viewerId = ids[(i + dir + ids.length) % ids.length]
+    this.showPicture()
+    this.log("viewer-step " + this.viewerId)
+  }
+
+  private askDelete(): void {
+    if (this.visibleCard !== "viewer" || this.viewerPrevJob >= 0) return
+    this.click()
+    this.viewerConfirm = true
+    this.photoViewer.showConfirm()
+  }
+
+  private onDeleteConfirm(yes: boolean): void {
+    if (this.visibleCard !== "viewer") return
+    this.click()
+    if (!yes) return this.showPicture()
+    const ids = this.captures.map((c) => c.id)
+    const i = ids.indexOf(this.viewerId)
+    this.captures = this.captures.filter((c) => c.id !== this.viewerId)
+    this.log("viewer-deleted " + this.viewerId)
+    if (this.captures.length === 0) return this.closeViewer()
+    this.viewerId = this.captures[Math.min(i, this.captures.length - 1)].id
+    this.showPicture()
+  }
+
+  /** The Camera card's thumbnail follows the latest remaining picture. */
+  private refreshCameraThumb(): void {
+    const last = this.captures[this.captures.length - 1]
+    if (last) this.cameraCard.setThumbnail(last.texture, last.aspect, last.placeholder, last.id)
+    else this.cameraCard.setThumbnail(null, 1, "", -1)
+  }
+
+  /** Back to where the viewer was opened from (Camera card, the Job report, or a previous job's report). */
+  private closeViewer(): void {
+    if (this.visibleCard !== "viewer") return
+    this.photoViewer.hide()
+    this.viewerConfirm = false
+    const back = this.viewerReturn
+    this.visibleCard = "home"
+    if (back === "camera") {
+      this.refreshCameraThumb()
+      this.cameraCard.show(this.cameraCard.targetText)
+      this.visibleCard = "camera"
+    } else if (this.viewerPrevJob >= 0) {
+      this.visibleCard = back
+      this.onPreviousPick(this.viewerPrevJob)
+    } else if (back === "summary") {
+      this.flowCard = "summary"
+      this.buildReport(true)
+    } else this.buildReport(false)
+    this.viewerPrevJob = -1
+    this.log("viewer-closed")
+  }
+
+  private onNote(text: string, placeholder: boolean): void {
+    this.click()
+    this.addNote("You", text, placeholder)
+    this.log("note")
+  }
+
+  private onNoteEdit(id: number, text: string): void {
+    this.click()
+    for (const n of this.notes) {
+      if (n.id === id) {
+        n.text = text
+        n.placeholder = false
+      }
+    }
+    this.notesCard.setNotes(this.notes)
+    this.log("note-edited")
+  }
+
+  private onPreviousPick(i: number): void {
+    const p = this.previousJobs[i]
+    if (!p) return
+    this.click()
+    this.viewingPrevious = i
+    this.summaryCard.show({...p.data, statusLine: "Previous job · " + (p.data.statusLine || "").replace("Status: ", ""), previous: this.previousJobs.map((x) => ({label: x.label})), backToCurrent: true})
+    this.log("previous-job " + i)
+  }
+
+  private onBackToCurrent(): void {
+    this.click()
+    this.buildReport(this.visibleCard === "summary")
+    this.log("back-to-current")
   }
 
   /**
@@ -680,7 +1009,7 @@ export class MWNPMain extends BaseScriptComponent {
       this.stepCard.hide()
       this.cameraCard.setBodyEnabled(true)
       this.cameraCard.setStatus(status, c ? "green" : "red")
-      if (c) this.cameraCard.setThumbnail(c.texture, c.aspect, c.placeholder)
+      if (c) this.cameraCard.setThumbnail(c.texture, c.aspect, c.placeholder, c.id)
     }
     this.log(c ? "capture " + c.kind + " " + c.pointId : "capture-failed")
   }
@@ -841,7 +1170,7 @@ export class MWNPMain extends BaseScriptComponent {
     const agent = this.agent as MWNPAgent
     this.jobLog.push(JSON.stringify({readings: agent.readings, finding: agent.finding, repaired: agent.repaired, captures: this.captures.map((c) => ({id: c.id, point: c.pointId, kind: c.kind, time: c.time, image: !!c.texture}))}))
     this.savedToJobLog = true
-    this.summaryCard.setSaved("Saved to job log " + CHECK)
+    this.summaryCard.setSaved("Saved (this session) " + CHECK)
     this.log("saved")
   }
 
@@ -887,6 +1216,7 @@ export class MWNPMain extends BaseScriptComponent {
       btn = "Fuse replaced: retest"
     }
     this.findingCard.show("Finding: " + f.head + ".", evidence, action, btn, f.head, "Finding")
+    this.addNote("Agent", "Fault found: " + f.head + " — " + evidence)
     this.visibleCard = "finding"
     void pointId
   }
@@ -898,6 +1228,11 @@ export class MWNPMain extends BaseScriptComponent {
     this.updateLamps()
     this.cabinet.setActivePoint(null, null)
     this.stepCard.setResult(this.lastMessage, "green")
+    {
+      const last = agent.readings[agent.readings.length - 1]
+      const fnKey = agent.functionKey
+      this.addNote("Agent", "Fix confirmed: " + (fnKey ? fnKey + " restored" : "restored") + " — " + nl.display(last.pointId) + " " + nl.fmtReading(last.value) + " V in spec.")
+    }
     this.log("retest-passed")
     const ev = this.createEvent("DelayedCallbackEvent") as DelayedCallbackEvent
     ev.bind(() => this.showSummary())
@@ -912,13 +1247,10 @@ export class MWNPMain extends BaseScriptComponent {
     this.buildReport(true)
   }
 
-  /** The Job report: final at the end of the job, partial (readings so far) when opened from the Library. */
-  private buildReport(final: boolean): void {
+  /** The Job report data for the current job: final at the end of the job, partial (readings so far) otherwise. */
+  private reportData(final: boolean): SummaryData {
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
-    // A final report that arrives while the Library / Camera / Options is open waits, hidden, for the Job button.
-    const away = final && (this.visibleCard === "home" || this.visibleCard === "camera" || this.visibleCard === "options")
-    if (final && this.visibleCard === "camera") this.cameraCard.hide()
     const rows: SummaryRow[] = agent.readings.map((r) => {
       const mark = r.cls === "in_spec" ? CHECK + " in spec" : r.cls === "open" ? CROSS + " open" : r.cls === "unexplained" ? "? unexplained" : "raw"
       return {
@@ -933,24 +1265,43 @@ export class MWNPMain extends BaseScriptComponent {
         },
       }
     })
-    const captures: ReportCapture[] = this.captures.map((c) => ({id: c.id, pointId: c.pointId, caption: c.caption, texture: c.texture, aspect: c.aspect}))
+    const captures: ReportCapture[] = this.captures.map((c) => ({id: c.id, pointId: c.pointId, caption: c.caption, texture: c.texture, aspect: c.aspect, kind: c.kind === "snapshot" ? "Snapshot (with labels)" : "Photo", pointLabel: c.pointLabel, time: c.time, placeholder: c.placeholder}))
     const f = agent.finding
     const comp = f && f.kind === "component" ? nl.component(f.id) : null
     const rating = comp ? nl.shortRating(comp.id) : null
-    const action = !final ? "Action taken: none yet." : comp && comp.type === "fuse" ? "Action taken: replaced " + comp.id + " with " + rating + "." : "Action taken: repaired — " + (f ? this.humanize(f.conclusion) : "")
-    const fn = agent.functionKey
-    this.summaryCard.show({
+    const action = !final
+      ? "Action taken: none yet."
+      : !agent.repaired
+      ? "Action taken: none recorded."
+      : comp && comp.type === "fuse"
+      ? "Action taken: replaced " + comp.id + " with " + rating + "."
+      : "Action taken: repaired — " + (f ? this.humanize(f.conclusion) : "")
+    return {
       title: "Job report",
       jobLine: "Job: " + nl.data.machine + " " + nl.machineKind() + " · rev " + (nl.data.revision || "-"),
       symptomLine: "Symptom: " + (agent.faultIndex >= 0 ? nl.symptomLabel(agent.faultIndex) : "not reported yet"),
+      statusLine: "Status: " + (this.jobEnded ? "Complete · ended " + this.endTime : agent.repaired ? "Repaired · not yet ended" : "In progress"),
+      statusColor: this.jobEnded ? "green" : "amber",
       readingsHeading: "Readings (meter black lead on " + nl.referencePoint() + ")",
       rows,
       captures,
+      notes: this.notes.map((n) => ({time: n.time, source: n.source, text: n.text})),
+      previous: this.previousJobs.map((x) => ({label: x.label})),
       findingLine: f ? "Finding: " + f.head + " (" + this.findingEvidenceShort() + ")" : "Finding: none",
       actionLine: action,
-      resultLine: !final ? "Result: in progress" : "Result: " + (fn ? fn + " restored" : "restored"),
-      saveLabel: "Save to job log",
-    })
+      resultLine: !final ? "Result: in progress" : "Result: " + this.resultText(),
+      saveLabel: "Save (this session)",
+    }
+  }
+
+  /** Shows the Job report: final at the end of the job, partial when opened from the Library. */
+  private buildReport(final: boolean): void {
+    const agent = this.agent as MWNPAgent
+    // A final report that arrives while the Library / Camera / Options is open waits, hidden, for the Job button.
+    const away = final && (this.visibleCard === "home" || this.visibleCard === "camera" || this.visibleCard === "options" || this.visibleCard === "notes")
+    if (final && this.visibleCard === "camera") this.cameraCard.hide()
+    this.viewingPrevious = -1
+    this.summaryCard.show(this.reportData(final))
     if (away) {
       this.summaryCard.setVisible(false)
       this.flowCard = "summary"
@@ -976,7 +1327,7 @@ export class MWNPMain extends BaseScriptComponent {
   // ── Card placement for the Text size / Schematic options ──────────────────
 
   private setupPlacement(): void {
-    for (const c of [this.jobPanel, this.stepCard, this.findingCard, this.summaryCard, this.cameraCard, this.optionsCard]) {
+    for (const c of [this.jobPanel, this.stepCard, this.findingCard, this.summaryCard, this.cameraCard, this.optionsCard, this.notesCard, this.photoViewer]) {
       this.cardHosts.push({so: c.sceneObject, ui: c as any, built: 1, cap: 99, settle: 0})
     }
     const t = this.schematicPanel.sceneObject.getTransform()
@@ -994,6 +1345,16 @@ export class MWNPMain extends BaseScriptComponent {
     for (const h of this.cardHosts) hosts.push([h.so, true])
     for (const [so, slide] of hosts) {
       this.motion.push({so, fader: new DisplayFader(this, [so], null, 0.2), open: false, t0: -10, slide, base: so.getTransform().getLocalPosition()})
+    }
+  }
+
+  /** Visible feedback for a press that has nothing new to show (the card is already open): the card fades in again. */
+  private pulseCard(so: SceneObject): void {
+    for (const m of this.motion) {
+      if (m.so === so) {
+        m.t0 = getTime()
+        m.fader.fadeIn()
+      }
     }
   }
 
@@ -1292,6 +1653,23 @@ export class MWNPMain extends BaseScriptComponent {
       },
       flowCard: this.flowCard,
       libraryOpen: this.libraryCard.isVisible,
+      notes: this.notes.map((n) => ({time: n.time, source: n.source, text: n.text})),
+      jobEnded: this.jobEnded,
+      jobLog: this.jobLog,
+      endTime: this.endTime,
+      previousJobs: this.previousJobs.map((p) => ({name: p.name, result: p.result, endTime: p.endTime})),
+      viewingPrevious: this.viewingPrevious,
+      notesPlaceholders: this.notes.filter((n) => n.placeholder).length,
+      notesView: this.notesCard.view,
+      viewer: {
+        open: this.visibleCard === "viewer",
+        id: this.viewerId,
+        index: this.captures.map((c) => c.id).indexOf(this.viewerId),
+        count: this.captures.length,
+        confirm: this.viewerConfirm,
+        previousJob: this.viewerPrevJob,
+        returnTo: this.viewerReturn,
+      },
       libraryHidden: this.libHiddenFlag,
       libraryAlpha: this.libFader ? this.libFader.alpha : 1,
       libraryFading: !!this.libFader && this.libFader.isFading,

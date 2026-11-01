@@ -366,7 +366,7 @@ export class MWNPLibraryOptionsScenario extends Scenario {
     checkCard(cam, "StepCardCard")
     clearOfMenu("StepCardCard")
     await pick("Btn_Lib_Report", "report")
-    await sleep(600)
+    await sleep(1800) // a tall card steps down through the text sizes until it fits the view
     checkCard(cam, "SummaryCardCard")
     clearOfMenu("SummaryCardCard")
     ev("applied factors", mwnpState().options.appliedFactors)

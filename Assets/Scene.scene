@@ -5930,6 +5930,24 @@
   BlendNormals: false
   BlendShapes:
     {}
+- !<ScriptComponent/3c5fe4b8-4bc4-4f37-a75c-238844356b12>
+  PrefabRemaps:
+    []
+  Name: MWNPPhotoViewerUI
+  Enabled: true
+  ScriptAsset: !<reference> 75ad57b1-9e5f-4ac3-9ddb-ddb11d0794de
+  ScriptInputsDefault:
+    widthCm: true
+    textEmCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/3cbb5ee5-f340-4c97-8148-85e231227ddd>
   PrefabRemaps:
     []
@@ -6062,7 +6080,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 10.600000, y: 20.000000, z: -56.200001}
+    Position: {x: 11.800000, y: 22.500000, z: -56.200001}
     Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
@@ -11405,6 +11423,24 @@
     CapitalizationOverride: None
   DepthTest: false
   TwoSided: false
+- !<ScriptComponent/6e3fee1b-b90e-4712-95a6-b1356755930e>
+  PrefabRemaps:
+    []
+  Name: MWNPNotesCardUI
+  Enabled: true
+  ScriptAsset: !<reference> 08ba4333-8a47-44c7-bad8-6dba98b5b851
+  ScriptInputsDefault:
+    widthCm: true
+    textEmCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+  ScriptTypes:
+    "":
+      {}
 - !<AnimationMixer/6eaaf2d6-fcad-4762-88fc-e17d0418b25c>
   PrefabRemaps:
     []
@@ -14425,7 +14461,7 @@
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 32.000000
+      widthCm: !<float> 36.000000
       textEmCm: !<float> 1.000000
       titleEmCm: 1.400000
       thumbWidth: !<float> 9.000000
@@ -14483,6 +14519,8 @@
     - !<own> 97bd13b8-7050-4f39-a47b-ac1ca250f824
     - !<own> 9c782592-435e-4de3-b5f4-63da96287b41
     - !<own> f0fd0871-80c8-4cd2-b0ea-5662cd9acbcc
+    - !<own> c8ce177f-1ac1-4958-966c-6645fca40b32
+    - !<own> 9221a778-b767-4cd3-8093-e848d65b84c0
   Components:
     []
 - !<SceneObject/8bb30877-9ca4-46c1-a183-fb8a2c35ed69>
@@ -14994,6 +15032,21 @@
   ScriptTypes:
     "":
       {}
+- !<SceneObject/9221a778-b767-4cd3-8093-e848d65b84c0>
+  PrefabRemaps:
+    []
+  Name: PhotoViewerCard
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
+    Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 3c5fe4b8-4bc4-4f37-a75c-238844356b12
 - !<SceneObject/928e5e23-6fce-41ec-bbea-ae7528d952d4>
   PrefabRemaps:
     - 0e4744dd-f12a-4295-95d6-bf1f33f1caf7: a176b73f-e29e-4529-706b-2b1a92832ca6
@@ -16561,7 +16614,9 @@
       cameraCard: !<MappingBased.AssignableType_8> d97fa82a-f580-4743-ba60-d4c14eb529b1
       libraryCard: !<MappingBased.AssignableType_9> 9b5257e8-0415-4d7e-bc93-a4b77fb43994
       optionsCard: !<MappingBased.AssignableType_10> 10f7c405-a52b-4240-84e2-b2f500bb1055
-      schematicPanel: !<MappingBased.AssignableType_11> 5883671a-fe17-4de3-8062-3d5a898d1c41
+      notesCard: !<MappingBased.AssignableType_11> 6e3fee1b-b90e-4712-95a6-b1356755930e
+      photoViewer: !<MappingBased.AssignableType_12> 3c5fe4b8-4bc4-4f37-a75c-238844356b12
+      schematicPanel: !<MappingBased.AssignableType_13> 5883671a-fe17-4de3-8062-3d5a898d1c41
       clickSfx: !<reference.AudioTrackAsset> aa04b099-960e-4e88-8151-312ed57bcee5
       passSfx: !<reference.AudioTrackAsset> fece2eca-2bf4-4fdc-b238-968a4a65f1ec
       faultSfx: !<reference.AudioTrackAsset> 994ea9a4-2e7e-4717-b9c8-ffc51d10f16a
@@ -18993,6 +19048,21 @@
     []
   Components:
     - !<own> addc9d8c-a84b-497c-b49e-e3ddf0385393
+- !<SceneObject/c8ce177f-1ac1-4958-966c-6645fca40b32>
+  PrefabRemaps:
+    []
+  Name: NotesCard
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
+    Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 6e3fee1b-b90e-4712-95a6-b1356755930e
 - !<RenderMeshVisual/c8dc669f-a269-4f2e-a280-b8e11548cbff>
   PrefabRemaps:
     []

@@ -181,6 +181,11 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     h.plate.setEdge(lit ? COLOR.amber : PLATE_EDGE_IDLE)
   }
 
+  /** Back to the idle look for every tag (New job). */
+  resetTags(): void {
+    for (const id of Object.keys(this.tags)) this.setTagState(id, "dim")
+  }
+
   showExpected(pointId: string, pos: vec3, text: string): void {
     if (!this.expectedSO) {
       this.expectedSO = makeObj(this.sceneObject, "ExpectedTag")

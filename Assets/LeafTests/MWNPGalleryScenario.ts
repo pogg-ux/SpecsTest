@@ -68,11 +68,30 @@ export class MWNPGalleryScenario extends Scenario {
       return ev("GALLERY " + shot, {})
     }
 
+    if (shot === "notes") {
+      await ui.tap("Btn_Lib_Notes")
+      await waitFor((s) => s.visibleCard === "notes", 3000, "notes")
+      await ui.tap("Btn_AddNote")
+      await waitFor((s) => s.notesView === "pick", 3000, "quick picks")
+      await ui.tap("Btn_QuickNote_1")
+      await waitFor((s) => s.notes.length === 2 && s.notesView === "list", 3000, "note added")
+      await sleep(300)
+      await settle()
+      return ev("GALLERY " + shot, {})
+    }
+
     // A snapshot for the Camera card and the Job report.
     await ui.tap("Btn_Camera")
     await waitFor((s) => s.visibleCard === "camera", 3000, "camera")
     await ui.tap("Btn_Snapshot")
     await waitFor((s) => s.captures.length === 1 && s.cameraCardOpen, 6000, "snapshot")
+    if (shot === "viewer") {
+      await sleep(400)
+      await ui.tap("CameraThumb")
+      await waitFor((s) => s.visibleCard === "viewer", 3000, "photo viewer")
+      await settle()
+      return ev("GALLERY " + shot, {})
+    }
     if (shot === "camera") {
       await settle()
       return ev("GALLERY " + shot, {})
@@ -103,6 +122,16 @@ export class MWNPGalleryScenario extends Scenario {
     await ui.enterReading("12.0")
     await waitFor((s) => s.visibleCard === "summary", 4000, "job report")
     await sleep(1400)
+    if (shot === "complete") {
+      await ui.tap("Btn_Lib_Job")
+      await waitFor((s) => s.visibleCard === "jobhome", 3000, "overview")
+      await ui.tap("Btn_EndJob")
+      await waitFor((s) => s.visibleCard === "confirm", 3000, "confirm")
+      await sleep(300)
+      await ui.tap("Btn_ConfirmYes")
+      await waitFor((s) => s.jobEnded === true && s.visibleCard === "summary", 3000, "job ended")
+      await sleep(1400)
+    }
     ev("GALLERY " + shot, {})
   }
 }

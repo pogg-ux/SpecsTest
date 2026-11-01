@@ -12,7 +12,7 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addButton, addCardHeader, addFitText, cardEm, colorForWord, deferDestroy, fitText, makeCardBody, makeObj, TEXT_BODY} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, cardEm, colorForWord, deferDestroy, fitText, makeCardBody, makeObj, makeTappable, TEXT_BODY} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -69,6 +69,11 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
   private _onSnapshot = new Event<void>()
   private _onPhoto = new Event<void>()
   private _onClose = new Event<void>()
+  private _onThumb = new Event<number>()
+  thumbCaptureId = -1
+  get onThumbTap(): PublicApi<number> {
+    return this._onThumb.publicApi()
+  }
   get onSnapshot(): PublicApi<void> {
     return this._onSnapshot.publicApi()
   }
@@ -112,7 +117,7 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
     this.build()
     this.setTarget(this.targetText)
     this.setStatus(this.statusText, this.statusColor)
-    if (this.lastThumb) this.setThumbnail(this.lastThumb.texture, this.lastThumb.aspect, this.lastThumb.placeholder)
+    if (this.lastThumb) this.setThumbnail(this.lastThumb.texture, this.lastThumb.aspect, this.lastThumb.placeholder, this.thumbCaptureId)
     ;(this.body as SceneObject | null)!.enabled = vis
   }
 
@@ -139,7 +144,8 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
    * Shows the latest capture: an image (texture + width/height aspect), or `placeholder` text when there is no
    * image, or nothing (texture null and placeholder empty).
    */
-  setThumbnail(texture: Texture | null, aspect: number, placeholder: string): void {
+  setThumbnail(texture: Texture | null, aspect: number, placeholder: string, captureId: number = -1): void {
+    this.thumbCaptureId = captureId
     this.thumbHasTexture = !!texture
     this.thumbPlaceholder = placeholder
     this.thumbShown = !!texture || placeholder.length > 0
@@ -176,6 +182,7 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
 
     // Thumbnail of the latest capture (image) or its placeholder text.
     this.thumbSO = makeObj(c, "CameraThumb")
+    makeTappable(this.thumbSO, () => this._onThumb.invoke(this.thumbCaptureId))
     const img = this.thumbSO.createComponent("Component.Image") as Image
     this.thumbMat = imageMaterial.clone()
     this.thumbMat.mainPass.depthTest = true

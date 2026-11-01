@@ -5,7 +5,7 @@
 // main Hide never fades it.
 // Text is >= 1.0 cm; the card grows downward from its host's top-center (the host sits at the menu's top edge).
 // Holds no job state: Main decides what each destination shows.
-// API: show(), hide(), built, menuWidth, event onPick(key: "job"|"report"|"camera"|"options").
+// API: show(), hide(), built, menuWidth, event onPick(key: "job"|"report"|"camera"|"notes"|"options").
 // Test handles: "Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options", card "LibraryCardCard".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
@@ -14,6 +14,7 @@ import {addButton, addCardHeader, addFitText, cardEm, makeCardBody, TEXT_SOFT} f
 const iconJob = requireAsset("../Icons/build.png") as Texture
 const iconReport = requireAsset("../Icons/assignment.png") as Texture
 const iconCamera = requireAsset("../Icons/photo_camera.png") as Texture
+const iconNotes = requireAsset("../Icons/edit_note.png") as Texture
 const iconOptions = requireAsset("../Icons/settings.png") as Texture
 
 @component
@@ -80,6 +81,7 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
       ["job", "Job", iconJob],
       ["report", "Job report", iconReport],
       ["camera", "Camera", iconCamera],
+      ["notes", "Notes", iconNotes],
       ["options", "Options", iconOptions],
     ]
     for (const [key, label, icon] of items) {

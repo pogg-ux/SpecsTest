@@ -25,12 +25,16 @@ import {
   colorForWord,
   deferDestroy,
   estimateLines,
+  fitText,
   LINE_H,
   makeCardBody,
+  makeTappable,
   makeObj,
   TEXT_BODY,
   TEXT_SOFT,
 } from "./MWNPSharedUI"
+
+export const EXPORT_NOTE = "Planned: save to glasses, send to phone, or upload to job history."
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -50,6 +54,11 @@ export interface ReportCapture {
   caption: string
   texture: Texture | null
   aspect: number
+  /** For the Photo viewer. */
+  kind?: string
+  pointLabel?: string
+  time?: string
+  placeholder?: string
 }
 
 export interface SummaryData {
@@ -59,6 +68,15 @@ export interface SummaryData {
   readingsHeading: string
   rows: SummaryRow[]
   captures: ReportCapture[]
+  /** "Status: Complete · ended ..." etc., with the color word for it. */
+  statusLine?: string
+  statusColor?: string
+  /** Notes section, newest first. */
+  notes?: {time: string; source: string; text: string}[]
+  /** Finished jobs of this session, newest first: one collapsed line each, tap to view. */
+  previous?: {label: string}[]
+  /** True while a previous job's report is showing: adds the "Back to current job" button. */
+  backToCurrent?: boolean
   findingLine: string
   actionLine: string
   resultLine: string
@@ -101,8 +119,25 @@ export class MWNPSummaryUI extends BaseScriptComponent {
   private lastData: SummaryData | null = null
   private savedLabel = ""
   private saveBtn: ButtonHandle | null = null
+  private tExport: Text | null = null
+  private exportShown = false
+  private exportEm = 0
+  private exportInner = 0
+  exportNoteText = ""
   private whiteTex: Texture | null = null
   private _onSave = new Event<void>()
+  private _onPrevious = new Event<number>()
+  private _onBack = new Event<void>()
+  private _onThumb = new Event<number>()
+  get onThumbTap(): PublicApi<number> {
+    return this._onThumb.publicApi()
+  }
+  get onPrevious(): PublicApi<number> {
+    return this._onPrevious.publicApi()
+  }
+  get onBack(): PublicApi<void> {
+    return this._onBack.publicApi()
+  }
   get onSave(): PublicApi<void> {
     return this._onSave.publicApi()
   }
@@ -119,15 +154,18 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     this.findingText = d.findingLine
     this.resultText = d.resultLine
     this.captureIds = []
+    this.exportShown = false
+    this.exportNoteText = ""
     const w = this.widthCm
     const inner = w - 2.8
     const em = cardEm(this.sceneObject, this.textEmCm)
-    const card = makeCardBody(this.sceneObject, "SummaryCardCard", w, 1.4, 0.5, "top")
+    const card = makeCardBody(this.sceneObject, "SummaryCardCard", w, 1.4, 0.15, "top")
     this.body = card.body
     const c = card.content
     addCardHeader(c, "SummaryTitle", d.title, inner, this.sceneObject)
     addFitText(c, "SummaryJob", d.jobLine, inner, em, {color: TEXT_SOFT})
     addFitText(c, "SummarySymptom", d.symptomLine, inner, em, {color: TEXT_BODY})
+    if (d.statusLine) addFitText(c, "SummaryStatus", d.statusLine, inner, em, {color: colorForWord(d.statusColor || ""), bold: true})
     addFitText(c, "ReadingsHeading", d.readingsHeading, inner, em, {color: COLOR.cyan, bold: true})
 
     // Each point's captures follow its last reading row; captures of points without a reading come after the table.
@@ -150,10 +188,26 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     })
     for (const cap of d.captures) if (!placed[cap.id]) this.captureRow(c, cap, inner, em)
 
+    if (d.notes && d.notes.length > 0) {
+      addFitText(c, "NotesHeading", "Notes", inner, em, {bold: true})
+      // The newest notes fit the card; the full list is on the Notes card.
+      d.notes.slice(0, 2).forEach((n, i) => addFitText(c, "ReportNote_" + i, n.time + " · " + n.source + " — " + n.text, inner, em, {color: TEXT_BODY}))
+      if (d.notes.length > 2) addFitText(c, "ReportNotesMore", "+" + (d.notes.length - 2) + " more on the Notes card.", inner, em, {color: TEXT_SOFT})
+    }
     addFitText(c, "SummaryFinding", d.findingLine, inner, em, {color: COLOR.red})
     addFitText(c, "SummaryAction", d.actionLine, inner, em, {color: TEXT_BODY})
     addFitText(c, "SummaryResult", d.resultLine, inner, em, {color: COLOR.green, bold: true})
     this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, inner - 6, 3.6, () => this._onSave.invoke(), {emCm: em, primary: true})
+    // Placeholder: there is no real export in v1; the button says so and shows what is planned.
+    addButton(c, "Btn_ExportReport", "Export report — coming in v2", inner, 3.6, () => this.showExportNote(), {emCm: em})
+    this.tExport = addFitText(c, "ExportNote", this.exportShown ? EXPORT_NOTE : "", inner, em, {color: TEXT_SOFT, minLines: 0})
+    this.exportEm = em
+    this.exportInner = inner
+    if (d.backToCurrent) addButton(c, "Btn_BackToCurrent", "Back to current job", inner - 6, 3.6, () => this._onBack.invoke(), {emCm: em, bold: true})
+    if (d.previous && d.previous.length > 0) {
+      addFitText(c, "PreviousJobsHeading", "Previous jobs", inner, em, {bold: true})
+      d.previous.forEach((p, i) => addButton(c, "Btn_PrevJob_" + i, p.label, inner - 2, 3.0, () => this._onPrevious.invoke(i), {emCm: em}))
+    }
   }
 
   /**
@@ -180,10 +234,11 @@ export class MWNPSummaryUI extends BaseScriptComponent {
   /** [thumbnail][caption] row for one capture. */
   private captureRow(c: SceneObject, cap: ReportCapture, inner: number, em: number): void {
     // Thumbnail fits a thumbWidth x (thumbWidth * 0.62) box, keeping its aspect (a tall photo stays small).
+    const tmax = Math.min(this.thumbWidth, 7)
     const aspect = Math.max(0.3, cap.aspect)
-    const th = Math.min(this.thumbWidth / aspect, this.thumbWidth * 0.62)
+    const th = Math.min(tmax / aspect, tmax * 0.62)
     const tw = th * aspect
-    const capW = inner - this.thumbWidth - 1.0
+    const capW = inner - tmax - 1.0
     const capH = Math.max(1, estimateLines(cap.caption, capW, em)) * em * LINE_H
     const rowH = Math.max(th, capH)
     const row = addFlex(c, "ReportCapture_" + cap.id, FlexDirection.Row, inner, rowH, 1.0, {align: FlexAlign.Center})
@@ -202,6 +257,7 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     img.clearMaterials()
     img.addMaterial(mat)
     thumb.getTransform().setLocalScale(new vec3(tw, th, 1))
+    makeTappable(thumb, () => this._onThumb.invoke(cap.id))
     const item = thumb.createComponent(FlexItem.getTypeName()) as FlexItem
     item.overrideWidth = tw
     item.overrideHeight = th
@@ -235,6 +291,13 @@ export class MWNPSummaryUI extends BaseScriptComponent {
 
   setVisible(v: boolean): void {
     if (this.body) this.body.enabled = v
+  }
+
+  /** The Export placeholder: no export exists yet, so it only shows what is planned. */
+  private showExportNote(): void {
+    this.exportShown = true
+    this.exportNoteText = EXPORT_NOTE
+    if (this.tExport) fitText(this.tExport, EXPORT_NOTE, this.exportInner, this.exportEm, 0)
   }
 
   setSaved(label: string): void {
