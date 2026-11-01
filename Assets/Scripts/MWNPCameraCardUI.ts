@@ -12,7 +12,7 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addButton, addFitText, cardEm, colorForWord, fitText, makeCardBody, makeObj, TEXT_BODY} from "./MWNPSharedUI"
+import {addButton, addFitText, cardEm, colorForWord, deferDestroy, fitText, makeCardBody, makeObj, TEXT_BODY} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -55,6 +55,8 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
   }
 
   private body: SceneObject | null = null
+  private statusColor = ""
+  private lastThumb: {texture: Texture | null; aspect: number; placeholder: string} | null = null
   private inner = 0
   private em = 0
   private tTarget: Text | null = null
@@ -91,6 +93,29 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
     if (this.body) this.body.enabled = false
   }
 
+  get built(): boolean {
+    return !!this.body
+  }
+
+  /** Rebuilds at the current Text size factor, keeping target, status, thumbnail and visibility. */
+  rebuild(): void {
+    if (!this.body) return
+    const vis = this.body.enabled
+    deferDestroy(this, this.body)
+    this.body = null
+    this.tTarget = null
+    this.tStatus = null
+    this.tPlaceholder = null
+    this.thumbSO = null
+    this.thumbItem = null
+    this.thumbMat = null
+    this.build()
+    this.setTarget(this.targetText)
+    this.setStatus(this.statusText, this.statusColor)
+    if (this.lastThumb) this.setThumbnail(this.lastThumb.texture, this.lastThumb.aspect, this.lastThumb.placeholder)
+    ;(this.body as SceneObject | null)!.enabled = vis
+  }
+
   /** Keeps the card's content but makes it visible / invisible without touching its state (used around a snapshot). */
   setBodyEnabled(enabled: boolean): void {
     if (this.body) this.body.enabled = enabled
@@ -103,6 +128,7 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
 
   setStatus(text: string, colorWord: string = ""): void {
     this.statusText = text
+    this.statusColor = colorWord
     if (this.tStatus) {
       fitText(this.tStatus, text, this.inner, this.em, 0)
       this.tStatus.textFill.color = colorWord ? colorForWord(colorWord) : TEXT_BODY
@@ -117,6 +143,7 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
     this.thumbHasTexture = !!texture
     this.thumbPlaceholder = placeholder
     this.thumbShown = !!texture || placeholder.length > 0
+    this.lastThumb = {texture, aspect, placeholder}
     if (!this.thumbSO || !this.thumbItem || !this.thumbMat || !this.tPlaceholder) return
     if (texture) {
       const w = Math.min(18, 11 * aspect)

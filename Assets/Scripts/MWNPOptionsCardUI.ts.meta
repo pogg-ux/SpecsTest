@@ -1,0 +1,56 @@
+- !<AssetImportMetadata/561a4de9-2d37-4d00-9a45-bd50a338bb1f>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 36c9f335-b6de-4001-a218-e2d011402b49
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 36c9f335-b6de-4001-a218-e2d011402b49
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 8bfbb9a0-e6f7-464c-8501-e4b9efb02635
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/8bfbb9a0-e6f7-464c-8501-e4b9efb02635>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: f1bbabdb-2fc1-4d4b-836f-80433324183d
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    textEmCm: false
+    titleEmCm: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+      titleEmCm: 1.400000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Options Card – labels, hide button, card style, text size, schematic</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float widthCm = 32 {"hint":"Card width in card units (cm before scaling)", "widget":"slider", "min":26, "max":40, "step":0.5}'
+    - '// @input float textEmCm = 1 {"hint":"Card text size: em height in real cm", "widget":"slider", "min":0.6, "max":2, "step":0.05}'
+    - '// @input float titleEmCm = 1.4 {"hint":"Title text size: em height in real cm", "widget":"slider", "min":1, "max":3, "step":0.05}'
+    - '// @ui {"widget":"group_end"}'

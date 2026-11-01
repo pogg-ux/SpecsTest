@@ -5,6 +5,7 @@
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {findInteractablesByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
+import {InteractionManager} from "SpectaclesInteractionKit.lspkg/Core/InteractionManager/InteractionManager"
 
 export function mwnpState(): any {
   const a = (global as any).mwnpAssistant
@@ -59,6 +60,8 @@ export class MWNPLeafInteractor extends DefaultLeafInteractor {
   async startExtendDiagnosis(): Promise<any> {
     await waitFor((s) => s.initialized === true && s.visibleCard === "safety", 10000, "app start (safety card)")
     await this.tap("Btn_DismissSafety")
+    await waitFor((s) => s.visibleCard === "home", 3000, "library menu, no card open")
+    await this.tap("Btn_Lib_Job")
     await waitFor((s) => s.visibleCard === "job", 3000, "job card")
     await this.tap("Btn_ReportSymptom")
     await waitFor((s) => s.visibleCard === "symptoms", 3000, "symptom list")
@@ -73,4 +76,25 @@ export class MWNPLeafInteractor extends DefaultLeafInteractor {
     await this.enterReading("12.0")
     return await waitFor((s) => s.activePoint === "F1:OUT", 3000, "F1:OUT active")
   }
+}
+
+/**
+ * True when a mouse ray from the camera through the middle of the named control reaches that control first
+ * (nothing else interactable is in front of it) — what a click in the Interactive Preview needs.
+ */
+export async function rayReaches(camPos: vec3, name: string): Promise<string> {
+  const target = findInteractablesByName(name, undefined, true)[0]
+  if (!target) return "not found or disabled"
+  const to = target.sceneObject.getTransform().getWorldPosition()
+  const far = to.add(to.sub(camPos).normalize().uniformScale(30))
+  const hits: RayCastHit[] = await Promise.race([
+    new Promise<RayCastHit[]>((res) => Physics.createGlobalProbe().rayCastAll(camPos, far, (h) => res(h))),
+    sleep(1500).then(() => [] as RayCastHit[]),
+  ])
+  const ims = InteractionManager.getInstance()
+  const named = hits
+    .filter((h) => !!h.collider && !!ims.getInteractableByCollider(h.collider))
+    .map((h) => ({n: ims.getInteractableByCollider(h.collider).sceneObject.name as string, d: h.distance}))
+    .sort((a, b) => a.d - b.d)
+  return named.length > 0 && named[0].n === name ? "" : "first hit is " + (named.length > 0 ? named[0].n : "nothing")
 }

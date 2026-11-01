@@ -12,7 +12,7 @@ import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 type R = {x0: number; x1: number; y0: number; y1: number}
 
-function findCamera(): Camera {
+export function findCamera(): Camera {
   let found: Camera | null = null
   const scan = (o: SceneObject) => {
     if (found) return
@@ -24,7 +24,7 @@ function findCamera(): Camera {
   return found as unknown as Camera
 }
 
-function screenRect(cam: Camera, so: SceneObject, w: number, h: number): R {
+export function screenRect(cam: Camera, so: SceneObject, w: number, h: number): R {
   const m = so.getTransform().getWorldTransform()
   const r: R = {x0: 9, x1: -9, y0: 9, y1: -9}
   for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
@@ -59,7 +59,7 @@ function collectTexts(so: SceneObject, out: {name: string; emCm: number; fits: b
   for (let i = 0; i < so.getChildrenCount(); i++) collectTexts(so.getChild(i), out)
 }
 
-function partRects(cam: Camera): {id: string; r: R}[] {
+export function partRects(cam: Camera): {id: string; r: R}[] {
   const parts: [string, string][] = [["TS-4", "Part_TS-4"], ["F1", "Part_F1"], ["L1", "Lamp_L1"], ["S1", "S1_Toggle"]]
   return parts.map(([id, name]) => {
     const so = findSceneObjectByName(name)
@@ -71,7 +71,7 @@ function partRects(cam: Camera): {id: string; r: R}[] {
 }
 
 /** Checks one card: text size, text fit, in view, parts clear. Returns the collected texts. */
-function checkCard(cam: Camera, cardName: string): {name: string; emCm: number; fits: boolean; chars: number}[] {
+export function checkCard(cam: Camera, cardName: string): {name: string; emCm: number; fits: boolean; chars: number}[] {
   const card = findSceneObjectByName(cardName)
   expect(!!card && card.isEnabledInHierarchy, cardName + " visible").toBe(true)
   const size: vec2 = (card.getComponent("Component.ScriptComponent") as any).size
@@ -100,6 +100,10 @@ export class MWNPLayoutCardsScenario extends Scenario {
     expect(!!cam, "camera found").toBe(true)
 
     await ui.tap("Btn_DismissSafety")
+    await waitFor((s) => s.visibleCard === "home", 3000, "library menu, no card open")
+    await sleep(500)
+    checkCard(cam, "LibraryCardCard")
+    await ui.tap("Btn_Lib_Job")
     await waitFor((s) => s.visibleCard === "job", 3000, "job card")
     await sleep(500)
     checkCard(cam, "JobCard")

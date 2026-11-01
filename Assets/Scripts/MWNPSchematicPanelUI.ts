@@ -13,7 +13,7 @@
 
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addText, COLOR, makeCardBody, makeObj, sizeForEmCm, textWidthCm} from "./MWNPSharedUI"
+import {addText, COLOR, hostBaseScale, makeCardBody, makeObj, sizeForEmCm, textWidthCm} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -336,7 +336,7 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
   private build(): void {
     const w = this.widthCm
     const inner = w - 2.4
-    this.scaleY = Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
+    this.scaleY = hostBaseScale(this.sceneObject)
     const card = makeCardBody(this.sceneObject, "SchematicCard", w, 1.2, 0.5, "bottom")
     this.body = card.body
     addText(card.content, "SchematicTitle", "Schematic · MWNP_1.0_wiring.png", inner, (this.titleEmCm / this.scaleY) * 1.4, {

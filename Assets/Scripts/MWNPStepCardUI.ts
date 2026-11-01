@@ -18,7 +18,7 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection, FlexJustify, FlexAlign} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
-import {addButton, addFlex, addText, ButtonHandle, COLOR, colorForWord, fitText, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addFlex, addText, ButtonHandle, COLOR, colorForWord, deferDestroy, fitText, getHostEmFactor, hostBaseScale, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 export interface SwitchPick {
   component: string
@@ -93,6 +93,13 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   private switchRow: SceneObject | null = null
   private switchKey = ""
   private switchButtons: {[position: string]: ButtonHandle} = {}
+  private btnEmLocal = 0
+  // Last values given to the setters, so rebuild() (Text size option) can put them back.
+  private sReasoning = ""
+  private sPathCite = ""
+  private sStep: [string, string, string, string] = ["", "", "", ""]
+  private sReadout = ""
+  private sSwitch: [string, string[], string] = ["", [], ""]
 
   private _onKey = new Event<string>()
   private _onEnter = new Event<void>()
@@ -128,16 +135,43 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     if (this.body) this.body.enabled = false
   }
 
+  get built(): boolean {
+    return !!this.body
+  }
+
+  /** Rebuilds the card at the current Text size factor, keeping everything it shows and whether it is visible. */
+  rebuild(): void {
+    if (!this.body) return
+    const vis = this.body.enabled
+    deferDestroy(this, this.body)
+    this.body = null
+    this.content = null
+    this.switchRow = null
+    this.switchKey = ""
+    this.switchButtons = {}
+    this.build()
+    this.setReasoning(this.sReasoning)
+    this.setPathCitation(this.sPathCite)
+    this.setStep(...this.sStep)
+    this.setResult(this.resultText, this.resultColorWord)
+    this.setReadout(this.sReadout || "— V")
+    if (this.sSwitch[1].length > 0) this.setSwitchControls(...this.sSwitch)
+    ;(this.body as SceneObject).enabled = vis
+  }
+
   setReasoning(text: string): void {
+    this.sReasoning = text
     if (this.tReasoning) fitText(this.tReasoning, text, this.inner, this.textEmLocal)
   }
 
   setPathCitation(text: string): void {
+    this.sPathCite = text
     if (this.tPathCite) fitText(this.tPathCite, text, this.inner, this.textEmLocal)
   }
 
   setStep(title: string, question: string, citation: string, expected: string): void {
     this.stepTitleText = title
+    this.sStep = [title, question, citation, expected]
     const em = this.textEmLocal
     if (this.tTitle) fitText(this.tTitle, title, this.inner, em, 1, true)
     if (this.tQuestion) fitText(this.tQuestion, question, this.inner, em)
@@ -158,6 +192,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
 
   setReadout(text: string): void {
     this.readoutText = this.readoutPrefix + " " + text
+    this.sReadout = text
     // Two short lines ("Reading:" / "12.1 V") so the value stays big inside the narrow side column.
     if (this.tReadout) this.tReadout.text = this.readoutPrefix + "\n" + text
   }
@@ -168,6 +203,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
    */
   setSwitchControls(component: string, positions: string[], current: string): void {
     this.switchCurrent = current
+    this.sSwitch = [component, positions, current]
     if (!this.content) return
     if (positions.length === 0) {
       if (this.switchRow) this.switchRow.enabled = false
@@ -190,7 +226,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
 
   private buildSwitchRow(component: string, positions: string[]): void {
     const c = this.content as SceneObject
-    const em = this.textEmLocal
+    const em = this.btnEmLocal
     const labelW = 5.5
     const gap = 0.8
     const bw = (this.inner - labelW - gap * positions.length) / positions.length
@@ -212,9 +248,12 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const inner = w - 2.8
     this.inner = inner
     // Real-cm text size → card units, so the text stays the same physical size if the card is rescaled.
-    const scale = Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
-    const em = this.textEmCm / scale
+    const scale = hostBaseScale(this.sceneObject)
+    // Text cells follow the Text size option; keys and side buttons keep their size (narrow column).
+    const em = (this.textEmCm * getHostEmFactor(this.sceneObject.name)) / scale
     this.textEmLocal = em
+    const btnEm = this.textEmCm / scale
+    this.btnEmLocal = btnEm
     const card = makeCardBody(this.sceneObject, "StepCardCard", w, 1.4, 0.5, "top")
     this.body = card.body
     const c = card.content
@@ -260,8 +299,8 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const side = addFlex(row, "PadSide", FlexDirection.Column, sideW, padH, 0.8, {justify: FlexJustify.Center})
     const rem = this.readoutEmCm / scale
     this.tReadout = addText(side, "Readout", this.readoutPrefix + "\n— V", sideW, rem * LINE_H * 2, {emCm: rem, align: "center", wrap: true, valign: "top"})
-    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: em, bold: true})
-    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.0, () => this._onSchematic.invoke(), {emCm: em})
-    addButton(side, "Btn_Camera", this.cameraLabel, sideW - 1, 3.0, () => this._onCamera.invoke(), {emCm: em})
+    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: btnEm, bold: true})
+    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.0, () => this._onSchematic.invoke(), {emCm: btnEm})
+    addButton(side, "Btn_Camera", this.cameraLabel, sideW - 1, 3.0, () => this._onCamera.invoke(), {emCm: btnEm})
   }
 }

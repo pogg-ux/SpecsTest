@@ -24,10 +24,13 @@ import {MWNPStepCardUI} from "./MWNPStepCardUI"
 import {MWNPFindingCardUI} from "./MWNPFindingCardUI"
 import {MWNPSummaryUI, SummaryRow, ReportCapture} from "./MWNPSummaryUI"
 import {MWNPCameraCardUI} from "./MWNPCameraCardUI"
+import {MWNPLibraryCardUI} from "./MWNPLibraryCardUI"
+import {MWNPOptionsCardUI, OptionChange} from "./MWNPOptionsCardUI"
+import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {Capture, PHOTO_PLACEHOLDER, SnapshotCamera, takePhoto} from "./MWNPCapture"
 import {MWNPSchematicPanelUI} from "./MWNPSchematicPanelUI"
 import {DisplayFader} from "./MWNPDisplayFader"
-import {addButton, ButtonHandle, cardEm, makeObj} from "./MWNPSharedUI"
+import {addButton, ButtonHandle, cardEm, makeObj, setCardOpaque, setHostEmFactor, setHostFactor} from "./MWNPSharedUI"
 
 const CHECK = "✓"
 const CROSS = "×" // U+00D7: the Lens font has no U+2717 ✗ glyph
@@ -78,6 +81,12 @@ export class MWNPMain extends BaseScriptComponent {
   @hint("Camera card (opens in the step card's place)")
   cameraCard: MWNPCameraCardUI
   @input
+  @hint("Library card (home)")
+  libraryCard: MWNPLibraryCardUI
+  @input
+  @hint("Options card")
+  optionsCard: MWNPOptionsCardUI
+  @input
   @hint("Schematic panel above the step card")
   schematicPanel: MWNPSchematicPanelUI
   @input
@@ -126,7 +135,31 @@ export class MWNPMain extends BaseScriptComponent {
   // ── Readable state (see getState) ──
   nl: Netlist | null = null
   agent: MWNPAgent | null = null
-  visibleCard: string = "none"
+  private _visible = "none"
+  /** The last view of the job flow (job, symptoms, step, finding, summary): what the Library's Job button returns to. */
+  flowCard = "job"
+  get visibleCard(): string {
+    return this._visible
+  }
+  set visibleCard(v: string) {
+    this._visible = v
+    if (v === "job" || v === "symptoms" || v === "step" || v === "finding" || v === "summary") this.flowCard = v
+    this.updateDisplayButtonPos()
+  }
+  private cameraReturn = "home"
+  /** Screen offset (fraction of the view) of the menu's top-left from the cabinet's top-left corner. */
+  libraryDock = new vec2(-0.012, -0.075)
+  private schematicWasOpen = false
+  private textFactor = 1
+  private schemFactor = 1
+  private placed: {so: SceneObject; basePos: vec3; baseScale: vec3; centered: boolean; width: number; factor: number}[] = []
+  private cardHosts: {so: SceneObject; ui: any; built: number; cap: number; settle: number}[] = []
+  private displayBtnBase: vec3 | null = null
+  private hiddenFlag = false
+  private libHiddenFlag = false
+  private libFader: DisplayFader | null = null
+  private libBtn: ButtonHandle | null = null
+  private libControls: SceneObject | null = null
   lastMessage: string = ""
   lastResultColor: string = ""
   lastTagInfo: string = ""
@@ -140,6 +173,7 @@ export class MWNPMain extends BaseScriptComponent {
 
   private audio: AudioComponent | null = null
   private fader: DisplayFader | null = null
+  private labelsFader: DisplayFader | null = null
   private displayBtn: ButtonHandle | null = null
   private lastGrabToggle = -10
   private initialized = false
@@ -202,7 +236,7 @@ export class MWNPMain extends BaseScriptComponent {
     settle.bind(() => this.placeRelativeToUser())
     settle.reset(0.25)
 
-    const missing = ["cabinet", "partTags", "safetyNotice", "jobPanel", "stepCard", "findingCard", "summaryCard", "schematicPanel", "cameraCard"].filter(
+    const missing = ["cabinet", "partTags", "safetyNotice", "jobPanel", "stepCard", "findingCard", "summaryCard", "schematicPanel", "cameraCard", "libraryCard", "optionsCard"].filter(
       (k) => !(this as any)[k]
     )
     if (missing.length > 0 || !this.nl) {
@@ -220,6 +254,8 @@ export class MWNPMain extends BaseScriptComponent {
     this.stepCard.onEnter.add(() => this.onEnter())
     this.stepCard.onSchematic.add(() => this.onSchematic())
     this.stepCard.onCamera.add(() => this.openCamera())
+    this.libraryCard.onPick.add((k) => this.onLibraryPick(k))
+    this.optionsCard.onChange.add((c) => this.onOptionChange(c))
     this.cameraCard.onClose.add(() => this.closeCamera())
     this.cameraCard.onSnapshot.add(() => this.onSnapshot())
     this.cameraCard.onPhoto.add(() => this.onPhoto())
@@ -237,6 +273,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.safetyNotice.show()
     this.visibleCard = "safety"
     this.buildDisplayControls()
+    this.setupPlacement()
     this.setupDeviceExtras()
     this.initialized = true
     this.log("start")
@@ -249,8 +286,15 @@ export class MWNPMain extends BaseScriptComponent {
     this.click()
     this.safetyNotice.hide()
     ;(this.agent as MWNPAgent).dismissNotice()
+    // The Job card is built now but stays hidden: the Library is home, its Job button opens this card.
     this.jobPanel.showJob("Job: " + nl.data.machine + " " + nl.machineKind(), this.filesLoadedText)
-    this.visibleCard = "job"
+    this.jobPanel.setVisible(false)
+    this.flowCard = "job"
+    // The Library menu is docked (expanded) in the upper left; no other card is open until the user picks one.
+    this.dockLibrary()
+    this.buildLibraryControls()
+    this.libraryCard.show()
+    this.visibleCard = "home"
     this.log("notice-dismissed")
   }
 
@@ -378,14 +422,17 @@ export class MWNPMain extends BaseScriptComponent {
 
   private openCamera(): void {
     if (this.visibleCard !== "step") return
+    this.hideOpenCard()
+    this.openCameraCard("step")
+  }
+
+  /** Opens the Camera card; Close returns to the view named `from` ("home" = no card). */
+  private openCameraCard(from: string): void {
     this.click()
     const nl = this.nl as Netlist
     const id = this.captureTargetId()
-    this.stepCard.hide()
-    this.schematicPanel.close()
+    this.cameraReturn = from
     this.cameraCard.show(id ? "Attaches to test point: " + nl.display(id) : "No active test point")
-    this.cameraCard.setStatus("", "")
-    this.cameraCard.setThumbnail(null, 1, "")
     this.visibleCard = "camera"
     this.log("camera-open")
   }
@@ -394,9 +441,162 @@ export class MWNPMain extends BaseScriptComponent {
     if (this.visibleCard !== "camera") return
     this.click()
     this.cameraCard.hide()
-    this.stepCard.show()
-    this.visibleCard = "step"
+    this.showView(this.cameraReturn)
     this.log("camera-closed")
+  }
+
+  // ── Docked Library menu / Options navigation ──────────────────────────────
+
+  /** Hides whatever card is open without losing its state; nothing is open afterwards ("home"). */
+  private hideOpenCard(): void {
+    const v = this.visibleCard
+    if (v === "job" || v === "symptoms") this.jobPanel.setVisible(false)
+    else if (v === "step") {
+      this.schematicWasOpen = this.schematicPanel.isOpen
+      this.schematicPanel.close()
+      this.stepCard.hide()
+    } else if (v === "finding") this.findingCard.setVisible(false)
+    else if (v === "summary") this.summaryCard.setVisible(false)
+    else if (v === "report") this.summaryCard.hide()
+    else if (v === "camera") this.cameraCard.hide()
+    else if (v === "options") this.optionsCard.hide()
+    this.visibleCard = "home"
+  }
+
+  /** Shows a view again as it was left ("home" = no card). */
+  private showView(v: string): void {
+    if (v === "report") {
+      this.buildReport(false)
+    } else if (v === "options") {
+      this.optionsCard.show()
+      this.visibleCard = "options"
+    } else if (v === "home") {
+      this.visibleCard = "home"
+    } else {
+      this.flowCard = v
+      this.resumeFlow()
+    }
+  }
+
+  /** Shows the job flow's current card again, exactly as it was left. */
+  private resumeFlow(): void {
+    switch (this.flowCard) {
+      case "job":
+      case "symptoms":
+        this.jobPanel.setVisible(true)
+        break
+      case "step":
+        this.stepCard.show()
+        if (this.schematicWasOpen) this.schematicPanel.open(this.currentWireId())
+        break
+      case "finding":
+        this.findingCard.setVisible(true)
+        break
+      case "summary":
+        this.summaryCard.setVisible(true)
+        break
+    }
+    this.visibleCard = this.flowCard
+  }
+
+  private onLibraryPick(key: string): void {
+    const v = this.visibleCard
+    this.click()
+    if (key === "job") {
+      if (v === this.flowCard) return
+      this.hideOpenCard()
+      this.resumeFlow()
+    } else if (key === "report") {
+      if (v === "report" || v === "summary") return
+      this.hideOpenCard()
+      if (this.flowCard === "summary") this.resumeFlow()
+      else this.buildReport(false)
+    } else if (key === "camera") {
+      if (v === "camera") return
+      this.hideOpenCard()
+      this.openCameraCard(v)
+    } else if (key === "options") {
+      if (v === "options") return
+      this.hideOpenCard()
+      this.optionsCard.show()
+      this.visibleCard = "options"
+    }
+    this.log("library-pick " + key)
+  }
+
+  /**
+   * Docks the Library at the upper left: its top-left corner sits just above and left of the cabinet's top-left
+   * corner as seen from the user's eye, on the same plane and tilt as the other cards. The menu is a child of the
+   * assistant root (outside the UI root), so the main Hide never fades it.
+   */
+  private dockLibrary(): void {
+    const camSO = this.findUserCamera()
+    const trainer = this.cabinet.sceneObject
+    if (!camSO) return
+    const cam = camSO.getComponent("Component.Camera") as Camera
+    const half = this.cabinet.getBoardHalfSize()
+    const corner = cam.worldSpaceToScreenSpace(trainer.getTransform().getWorldTransform().multiplyPoint(new vec3(-half.x, half.y, 0)))
+    const ct = camSO.getTransform()
+    const stepT = this.stepCard.sceneObject.getTransform()
+    const depth = Math.max(10, stepT.getWorldPosition().distance(ct.getWorldPosition()))
+    const tl = cam.screenSpaceToWorldSpace(new vec2(corner.x + this.libraryDock.x, corner.y + this.libraryDock.y), depth)
+    const hostT = this.libraryCard.sceneObject.getTransform()
+    hostT.setWorldRotation(stepT.getWorldRotation())
+    const right = stepT.right
+    const wScale = hostT.getWorldScale().x
+    hostT.setWorldPosition(tl.add(right.uniformScale((this.libraryCard.menuWidth * wScale) / 2)))
+  }
+
+  /**
+   * The Library's own Hide / Show: the same button as the main one (label, size, style, fade), a separate button floating
+   * just outside the Library card's top-right corner (the side facing the center), kept in place while the Library is hidden.
+   */
+  private buildLibraryControls(): void {
+    const host = this.libraryCard.sceneObject.getTransform()
+    if (!this.libControls) {
+      const root = makeObj(this.sceneObject, "LibraryControls")
+      root.createComponent("Component.Canvas")
+      this.libControls = root
+    }
+    const root = this.libControls
+    const rt = root.getTransform()
+    rt.setWorldPosition(host.getWorldPosition())
+    rt.setWorldRotation(host.getWorldRotation())
+    rt.setWorldScale(host.getWorldScale())
+    if (this.libBtn) return
+    const em = cardEm(root, 1.0)
+    const w = 8.0
+    const h = 3.6
+    const btn = addButton(root, "Btn_LibraryToggle", "Hide", w, h, () => this.onLibraryToggle(), {emCm: em, bold: true, inFlex: false})
+    btn.so.getTransform().setLocalPosition(new vec3(this.libraryCard.menuWidth / 2 - w / 2, h / 2 + 1.0, 0))
+    this.libBtn = btn
+    this.libFader = new DisplayFader(this, [this.libraryCard.sceneObject], null)
+  }
+
+  private onLibraryToggle(): void {
+    this.click()
+    this.setLibraryHidden(!this.libHiddenFlag)
+  }
+
+  /** Fades the Library menu out (true) or back in (false); its button stays where it is. */
+  setLibraryHidden(hidden: boolean): void {
+    if (!this.libFader) return
+    this.libHiddenFlag = hidden
+    this.libFader.setHidden(hidden)
+    if (this.libBtn) this.libBtn.label.text = hidden ? "Show" : "Hide"
+    this.log(hidden ? "library-hidden" : "library-shown")
+  }
+
+  private onOptionChange(c: OptionChange): void {
+    this.click()
+    if (c.key === "labels" || c.key === "hideButton") this.applyHide()
+    else if (c.key === "cardStyle") setCardOpaque(c.index === 1)
+    else if (c.key === "textSize") {
+      this.textFactor = [1, 1.25, 1.5][c.index]
+      for (const h of this.cardHosts) h.cap = 99
+    }
+    else if (c.key === "schematic") this.schemFactor = [1, 1.35][c.index]
+    this.log("option " + c.key + " " + c.value)
   }
 
   private userCameraObject(): SceneObject | null {
@@ -440,7 +640,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.cameraCard.setStatus("Taking snapshot…", "cyan")
     // Show the step context (cabinet, tags, badges, step card) for the capture frames instead of the Camera card.
     this.cameraCard.setBodyEnabled(false)
-    this.stepCard.show()
+    if (this.cameraReturn === "step") this.stepCard.show()
     if (!this.snapshotCam) this.snapshotCam = new SnapshotCamera(this, cam)
     this.snapshotCam
       .snapshot(960)
@@ -542,13 +742,25 @@ export class MWNPMain extends BaseScriptComponent {
 
   /** True while the display is hidden or fading out. */
   get displayHidden(): boolean {
-    return !!this.fader && this.fader.hidden
+    return this.hiddenFlag
   }
 
-  /** Fades every card, tag, badge and trace out (true) or back in the same state (false). */
+  /** Whether the labels (tags, badges, outlines, traces) follow the Hide button right now. */
+  private labelsHide(): boolean {
+    return this.hiddenFlag && (this.optionsCard.value("hideButton") === "Everything" || this.optionsCard.value("labels") === "Hide with cards")
+  }
+
+  private applyHide(): void {
+    if (!this.fader || !this.labelsFader) return
+    this.fader.setHidden(this.hiddenFlag)
+    this.labelsFader.setHidden(this.labelsHide())
+  }
+
+  /** Fades the cards (and, per the Options, the labels) out (true) or back in the same state (false). */
   setDisplayHidden(hidden: boolean): void {
     if (!this.fader) return
-    this.fader.setHidden(hidden)
+    this.hiddenFlag = hidden
+    this.applyHide()
     if (this.displayBtn) this.displayBtn.label.text = hidden ? "Show" : "Hide"
     this.log(hidden ? "display-hidden" : "display-shown")
   }
@@ -575,7 +787,9 @@ export class MWNPMain extends BaseScriptComponent {
     // Flush with the step card's right edge, just above its top edge = the cabinet's top-right corner on screen.
     btn.so.getTransform().setLocalPosition(new vec3(this.stepCard.widthCm / 2 - w / 2, h / 2 + 1.0, 0))
     this.displayBtn = btn
-    this.fader = new DisplayFader(this, [host.getParent() as SceneObject, this.partTags.sceneObject], this.cabinet)
+    this.displayBtnBase = btn.so.getTransform().getLocalPosition()
+    this.fader = new DisplayFader(this, [host.getParent() as SceneObject], null)
+    this.labelsFader = new DisplayFader(this, [this.partTags.sceneObject], this.cabinet)
   }
 
   /**
@@ -683,12 +897,20 @@ export class MWNPMain extends BaseScriptComponent {
   }
 
   private showSummary(): void {
-    const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
     agent.phase = "summary"
     this.stepCard.hide()
-    this.cameraCard.hide()
     this.schematicPanel.close()
+    this.buildReport(true)
+  }
+
+  /** The Job report: final at the end of the job, partial (readings so far) when opened from the Library. */
+  private buildReport(final: boolean): void {
+    const nl = this.nl as Netlist
+    const agent = this.agent as MWNPAgent
+    // A final report that arrives while the Library / Camera / Options is open waits, hidden, for the Job button.
+    const away = final && (this.visibleCard === "home" || this.visibleCard === "camera" || this.visibleCard === "options")
+    if (final && this.visibleCard === "camera") this.cameraCard.hide()
     const rows: SummaryRow[] = agent.readings.map((r) => {
       const mark = r.cls === "in_spec" ? CHECK + " in spec" : r.cls === "open" ? CROSS + " open" : r.cls === "unexplained" ? "? unexplained" : "raw"
       return {
@@ -701,33 +923,137 @@ export class MWNPMain extends BaseScriptComponent {
     const f = agent.finding
     const comp = f && f.kind === "component" ? nl.component(f.id) : null
     const rating = comp ? nl.shortRating(comp.id) : null
-    const action = comp && comp.type === "fuse" ? "Action taken: replaced " + comp.id + " with " + rating + "." : "Action taken: repaired — " + (f ? this.humanize(f.conclusion) : "")
+    const action = !final ? "Action taken: none yet." : comp && comp.type === "fuse" ? "Action taken: replaced " + comp.id + " with " + rating + "." : "Action taken: repaired — " + (f ? this.humanize(f.conclusion) : "")
     const fn = agent.functionKey
     this.summaryCard.show({
       title: "Job report",
       jobLine: "Job: " + nl.data.machine + " " + nl.machineKind() + " · rev " + (nl.data.revision || "-"),
-      symptomLine: "Symptom: " + nl.symptomLabel(agent.faultIndex),
+      symptomLine: "Symptom: " + (agent.faultIndex >= 0 ? nl.symptomLabel(agent.faultIndex) : "not reported yet"),
       readingsHeading: "Readings (meter black lead on " + nl.referencePoint() + ")",
       rows,
       captures,
       findingLine: f ? "Finding: " + f.head + " (" + this.findingEvidenceShort() + ")" : "Finding: none",
       actionLine: action,
-      resultLine: "Result: " + (fn ? fn + " restored" : "restored"),
+      resultLine: !final ? "Result: in progress" : "Result: " + (fn ? fn + " restored" : "restored"),
       saveLabel: "Save to job log",
     })
-    this.visibleCard = "summary"
-    this.moveDisplayButtonBesideReport()
-    this.log("summary")
+    if (away) {
+      this.summaryCard.setVisible(false)
+      this.flowCard = "summary"
+    } else this.visibleCard = final ? "summary" : "report"
+    this.log(final ? "summary" : "report")
   }
 
   /** The Job report is taller than the step card, so the Hide / Show button moves to the report's top-left outside edge. */
-  private moveDisplayButtonBesideReport(): void {
-    if (!this.displayBtn) return
-    const host = this.summaryCard.sceneObject.getTransform().getWorldTransform()
-    const w = 8.0
-    const h = 3.6
-    const local = new vec3(-(this.summaryCard.widthCm / 2 + w / 2 + 0.5), -h / 2, 0)
-    this.displayBtn.so.getTransform().setWorldPosition(host.multiplyPoint(local))
+  private updateDisplayButtonPos(): void {
+    if (!this.displayBtn || !this.displayBtnBase) return
+    const t = this.displayBtn.so.getTransform()
+    if (this._visible === "summary" || this._visible === "report") {
+      const host = this.summaryCard.sceneObject.getTransform().getWorldTransform()
+      const w = 8.0
+      const h = 3.6
+      const local = new vec3(-(this.summaryCard.widthCm / 2 + w / 2 + 0.5), -h / 2, 0)
+      t.setWorldPosition(host.multiplyPoint(local))
+    } else {
+      t.setLocalPosition(this.displayBtnBase)
+    }
+  }
+
+  // ── Card placement for the Text size / Schematic options ──────────────────
+
+  private setupPlacement(): void {
+    for (const c of [this.jobPanel, this.stepCard, this.findingCard, this.summaryCard, this.cameraCard, this.optionsCard]) {
+      this.cardHosts.push({so: c.sceneObject, ui: c as any, built: 1, cap: 99, settle: 0})
+    }
+    const t = this.schematicPanel.sceneObject.getTransform()
+    this.placed.push({so: this.schematicPanel.sceneObject, basePos: t.getLocalPosition(), baseScale: t.getLocalScale(), centered: true, width: this.schematicPanel.widthCm, factor: 1})
+    this.createEvent("UpdateEvent").bind(() => this.updatePlacement())
+  }
+
+  private cardBodyOf(host: SceneObject): {body: SceneObject; plate: BackPlate} | null {
+    for (let i = 0; i < host.getChildrenCount(); i++) {
+      const ch = host.getChild(i)
+      if (!ch.enabled) continue
+      const plate = ch.getComponent(BackPlate.getTypeName()) as BackPlate | null
+      if (plate) return {body: ch, plate}
+    }
+    return null
+  }
+
+  /** Screen rect (0..1, y down) of a card body, or null before it has a size. */
+  private screenRectOf(cam: Camera, cb: {body: SceneObject; plate: BackPlate}): {x0: number; x1: number; y0: number; y1: number} | null {
+    const size = cb.plate.size
+    if (!size || size.x < 1 || size.y < 1) return null
+    const m = cb.body.getTransform().getWorldTransform()
+    const r = {x0: 9, x1: -9, y0: 9, y1: -9}
+    for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const sp = cam.worldSpaceToScreenSpace(m.multiplyPoint(new vec3((dx * size.x) / 2, (dy * size.y) / 2, 0)))
+      r.x0 = Math.min(r.x0, sp.x)
+      r.x1 = Math.max(r.x1, sp.x)
+      r.y0 = Math.min(r.y0, sp.y)
+      r.y1 = Math.max(r.y1, sp.y)
+    }
+    return r
+  }
+
+  /**
+   * Text size: each card is rebuilt at the chosen text size factor with its width unchanged, so its text wraps and
+   * the card grows downward; if the grown card would leave the bottom of the view, that card steps down to the next
+   * smaller factor. Schematic: the schematic host is scaled, shrinking until it fits the view.
+   */
+  private updatePlacement(): void {
+    const camSO = this.findUserCamera()
+    if (!camSO) return
+    const cam = camSO.getComponent("Component.Camera") as Camera
+    const steps = [1, 1.25, 1.5]
+    for (const h of this.cardHosts) {
+      const desired = Math.min(this.textFactor, h.cap)
+      if (h.built !== desired) {
+        setHostEmFactor(h.so.name, desired)
+        h.built = desired
+        h.settle = 0
+        if (h.ui.built) h.ui.rebuild()
+        continue
+      }
+      if (!h.so.isEnabledInHierarchy || h.built <= 1) continue
+      h.settle++
+      if (h.settle < 6) continue
+      const cb = this.cardBodyOf(h.so)
+      const r = cb ? this.screenRectOf(cam, cb) : null
+      if (r && r.y1 > 0.97) {
+        const lower = steps.filter((v) => v < h.built)
+        h.cap = lower.length > 0 ? lower[lower.length - 1] : 1
+      }
+    }
+    for (const h of this.placed) {
+      if (!h.so.isEnabledInHierarchy) continue
+      const cb = this.cardBodyOf(h.so)
+      if (!cb) continue
+      const target = this.schemFactor
+      let f = target
+      for (let it = 0; it < 3; it++) {
+        this.applyFactor(h, f)
+        const r = this.screenRectOf(cam, cb)
+        if (!r) break
+        const hgt = Math.max(1e-4, r.y1 - r.y0)
+        const wid = Math.max(1e-4, r.x1 - r.x0)
+        const cx = (r.x0 + r.x1) / 2
+        // The schematic grows upward from its bottom edge and sideways about its center.
+        let lim = f * ((r.y1 - 0.03) / hgt)
+        lim = Math.min(lim, f * Math.min((0.97 - cx) / (wid / 2), (cx - 0.03) / (wid / 2)))
+        const nf = Math.max(1, Math.min(target, lim))
+        if (Math.abs(nf - f) < 1e-3) break
+        f = nf
+      }
+      this.applyFactor(h, f)
+    }
+    this.updateDisplayButtonPos()
+  }
+
+  private applyFactor(h: {so: SceneObject; basePos: vec3; baseScale: vec3; factor: number}, f: number): void {
+    h.factor = f
+    setHostFactor(h.so.name, f)
+    h.so.getTransform().setLocalScale(h.baseScale.uniformScale(f))
   }
 
   private findingEvidenceShort(): string {
@@ -899,7 +1225,28 @@ export class MWNPMain extends BaseScriptComponent {
       repaired: agent.repaired,
       tagInfo: this.lastTagInfo,
       schematicOpen: this.schematicPanel.isOpen,
-      display: {hidden: this.displayHidden, alpha: this.fader ? this.fader.alpha : 1, fading: !!this.fader && this.fader.isFading},
+      display: {
+        hidden: this.displayHidden,
+        alpha: this.fader ? this.fader.alpha : 1,
+        fading: (!!this.fader && this.fader.isFading) || (!!this.labelsFader && this.labelsFader.isFading),
+        labelsHidden: !!this.labelsFader && this.labelsFader.hidden,
+        labelsAlpha: this.labelsFader ? this.labelsFader.alpha : 1,
+      },
+      options: {
+        labels: this.optionsCard.value("labels"),
+        hideButton: this.optionsCard.value("hideButton"),
+        cardStyle: this.optionsCard.value("cardStyle"),
+        textSize: this.optionsCard.value("textSize"),
+        schematic: this.optionsCard.value("schematic"),
+        textFactor: this.textFactor,
+        schematicFactor: this.schemFactor,
+        appliedFactors: this.cardHosts.map((h) => ({card: h.so.name, factor: h.built})).concat(this.placed.map((h) => ({card: h.so.name, factor: +h.factor.toFixed(3)}))),
+      },
+      flowCard: this.flowCard,
+      libraryOpen: this.libraryCard.isVisible,
+      libraryHidden: this.libHiddenFlag,
+      libraryAlpha: this.libFader ? this.libFader.alpha : 1,
+      libraryFading: !!this.libFader && this.libFader.isFading,
       switchRow: this.stepCard.switchRowVisible,
       schematicWire: this.schematicPanel.highlightedWire,
       savedToJobLog: this.savedToJobLog,

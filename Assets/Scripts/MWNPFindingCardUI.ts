@@ -43,6 +43,7 @@ export class MWNPFindingCardUI extends BaseScriptComponent {
   }
 
   private body: SceneObject | null = null
+  private lastArgs: [string, string, string, string, string, string] | null = null
   private _onRetest = new Event<void>()
   get onRetest(): PublicApi<void> {
     return this._onRetest.publicApi()
@@ -58,6 +59,7 @@ export class MWNPFindingCardUI extends BaseScriptComponent {
    */
   show(title: string, evidence: string, nextAction: string, buttonLabel: string, headline: string = title, eyebrow: string = ""): void {
     this.hide()
+    this.lastArgs = [title, evidence, nextAction, buttonLabel, headline, eyebrow]
     this.titleText = title
     this.evidenceText = evidence
     this.nextActionText = nextAction
@@ -75,6 +77,22 @@ export class MWNPFindingCardUI extends BaseScriptComponent {
     addFitText(c, "NextActionHeading", this.nextActionHeading, inner, em, {color: COLOR.amber, bold: true})
     addFitText(c, "NextAction", nextAction, inner, em, {color: TEXT_BODY})
     addButton(c, "Btn_Retest", buttonLabel, inner - 4, 3.6, () => this._onRetest.invoke(), {emCm: em})
+  }
+
+  get built(): boolean {
+    return !!this.body
+  }
+
+  /** Rebuilds at the current Text size factor, keeping visibility. */
+  rebuild(): void {
+    if (!this.body || !this.lastArgs) return
+    const vis = this.body.enabled
+    this.show(...this.lastArgs)
+    if (this.body) (this.body as SceneObject).enabled = vis
+  }
+
+  setVisible(v: boolean): void {
+    if (this.body) this.body.enabled = v
   }
 
   hide(): void {

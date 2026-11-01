@@ -13,6 +13,7 @@ import {MWNPLayoutCardsScenario} from "./MWNPLayoutCardsScenario"
 import {MWNPRetestControlsScenario} from "./MWNPRetestControlsScenario"
 import {MWNPDisplayToggleScenario} from "./MWNPDisplayToggleScenario"
 import {MWNPCameraCardScenario} from "./MWNPCameraCardScenario"
+import {MWNPLibraryOptionsScenario} from "./MWNPLibraryOptionsScenario"
 
 /** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
 const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
@@ -33,6 +34,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-retest-controls", typename: MWNPRetestControlsScenario.getTypeName(), parameters: {stop_after: ""}},
     {id: "mwnp-display-toggle", typename: MWNPDisplayToggleScenario.getTypeName()},
     {id: "mwnp-camera-card", typename: MWNPCameraCardScenario.getTypeName(), parameters: {stop_at: ""}},
+    {id: "mwnp-library-options", typename: MWNPLibraryOptionsScenario.getTypeName(), parameters: {stop_at: ""}},
   ]
 
   private overlays: {[name: string]: SceneObject} = {}

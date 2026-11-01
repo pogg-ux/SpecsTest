@@ -2249,6 +2249,26 @@
     []
   Components:
     - !<own> fe0f1520-1497-4343-ad4d-51f9a663e902
+- !<ScriptComponent/10f7c405-a52b-4240-84e2-b2f500bb1055>
+  PrefabRemaps:
+    []
+  Name: MWNPOptionsCardUI
+  Enabled: true
+  ScriptAsset: !<reference> 36c9f335-b6de-4001-a218-e2d011402b49
+  ScriptInputsDefault:
+    widthCm: true
+    textEmCm: true
+    titleEmCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+      titleEmCm: 1.400000
+  ScriptTypes:
+    "":
+      {}
 - !<ColliderComponent/10fb116e-d670-40ca-b5f1-f302e7bd6cfc>
   PrefabRemaps:
     []
@@ -11835,6 +11855,7 @@
   Children:
     - !<own> 8baf39c6-78e3-4871-bb7c-388a337796fc
     - !<own> d3520347-0114-454e-a494-5fa9cd9f3bc1
+    - !<own> c2a66694-22c9-407b-b9a2-c29b40b59a4b
   Components:
     - !<own> a4b54894-543c-458c-8d20-6982e5e7304c
 - !<ScriptComponent/714cf194-28c3-40bb-a2c8-4b60abcbc01f>
@@ -14461,6 +14482,7 @@
     - !<own> 40841ca5-6c0b-4964-869f-b920adca1b94
     - !<own> 97bd13b8-7050-4f39-a47b-ac1ca250f824
     - !<own> 9c782592-435e-4de3-b5f4-63da96287b41
+    - !<own> f0fd0871-80c8-4cd2-b0ea-5662cd9acbcc
   Components:
     []
 - !<SceneObject/8bb30877-9ca4-46c1-a183-fb8a2c35ed69>
@@ -15747,6 +15769,23 @@
     - !<own> 1052c1eb-b2ef-4b6d-91a7-c0c6b2750250
   Components:
     - !<own> 0b8e59ef-189d-4c1d-bc86-486343411ee7
+- !<ScriptComponent/9b5257e8-0415-4d7e-bc93-a4b77fb43994>
+  PrefabRemaps:
+    []
+  Name: MWNPLibraryCardUI
+  Enabled: true
+  ScriptAsset: !<reference> f4fc0ec1-0cad-40c4-be65-a6436a2711d8
+  ScriptInputsDefault:
+    textEmCm: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      widthCm: !<float> 15.000000
+      textEmCm: !<float> 1.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/9bcb5604-8777-45b4-9780-3746025e4fd2>
   PrefabRemaps:
     []
@@ -16520,7 +16559,9 @@
       findingCard: !<MappingBased.AssignableType_6> f5229863-72d5-4591-ad2e-647c2c802f64
       summaryCard: !<MappingBased.AssignableType_7> 8a9333c8-4e02-45b3-927c-5310b0ec4443
       cameraCard: !<MappingBased.AssignableType_8> d97fa82a-f580-4743-ba60-d4c14eb529b1
-      schematicPanel: !<MappingBased.AssignableType_9> 5883671a-fe17-4de3-8062-3d5a898d1c41
+      libraryCard: !<MappingBased.AssignableType_9> 9b5257e8-0415-4d7e-bc93-a4b77fb43994
+      optionsCard: !<MappingBased.AssignableType_10> 10f7c405-a52b-4240-84e2-b2f500bb1055
+      schematicPanel: !<MappingBased.AssignableType_11> 5883671a-fe17-4de3-8062-3d5a898d1c41
       clickSfx: !<reference.AudioTrackAsset> aa04b099-960e-4e88-8151-312ed57bcee5
       passSfx: !<reference.AudioTrackAsset> fece2eca-2bf4-4fdc-b238-968a4a65f1ec
       faultSfx: !<reference.AudioTrackAsset> 994ea9a4-2e7e-4717-b9c8-ffc51d10f16a
@@ -18576,6 +18617,21 @@
     - !<own> d0977f92-16bc-4782-ac37-e1a6fa010fdd
   Components:
     - !<own> 060aca0c-f88a-47de-a0ec-edf433ecc8f6
+- !<SceneObject/c2a66694-22c9-407b-b9a2-c29b40b59a4b>
+  PrefabRemaps:
+    []
+  Name: LibraryCard
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
+    Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 9b5257e8-0415-4d7e-bc93-a4b77fb43994
 - !<SceneObject/c34a437f-3332-439d-a680-0911eb19b585>
   PrefabRemaps:
     []
@@ -21742,6 +21798,21 @@
     []
   Components:
     - !<own> bc6f6862-90a8-4594-aadb-82c834c30bb5
+- !<SceneObject/f0fd0871-80c8-4cd2-b0ea-5662cd9acbcc>
+  PrefabRemaps:
+    []
+  Name: OptionsCard
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
+    Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 10f7c405-a52b-4240-84e2-b2f500bb1055
 - !<SceneObject/f20cafff-e356-49d7-99b1-2d3d9103475b>
   PrefabRemaps:
     []

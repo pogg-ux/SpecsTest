@@ -43,6 +43,8 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   currentView: string = "hidden"
 
   private body: SceneObject | null = null
+  private jobArgs: [string, string] = ["", ""]
+  private symptomItems: SymptomItem[] = []
   private _onReportSymptom = new Event<void>()
   private _onSymptomPicked = new Event<number>()
   get onReportSymptom(): PublicApi<void> {
@@ -58,6 +60,7 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
 
   showJob(jobLine: string, filesLine: string): void {
     this.clear()
+    this.jobArgs = [jobLine, filesLine]
     const w = this.widthCm
     const inner = w - 2.8
     const em = cardEm(this.sceneObject, this.textEmCm)
@@ -71,6 +74,7 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
 
   showSymptoms(items: SymptomItem[]): void {
     this.clear()
+    this.symptomItems = items
     const w = this.widthCm
     const inner = w - 2.8
     const em = cardEm(this.sceneObject, this.textEmCm)
@@ -87,9 +91,27 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     this.currentView = "symptoms"
   }
 
+  /** Hides / shows the card without rebuilding it (keeps its state while the Library is open). */
+  setVisible(v: boolean): void {
+    if (this.body) this.body.enabled = v
+  }
+
   hide(): void {
     this.clear()
     this.currentView = "hidden"
+  }
+
+  get built(): boolean {
+    return !!this.body
+  }
+
+  /** Rebuilds the current view at the current Text size factor, keeping visibility. */
+  rebuild(): void {
+    if (!this.body) return
+    const vis = this.body.enabled
+    if (this.currentView === "job") this.showJob(this.jobArgs[0], this.jobArgs[1])
+    else if (this.currentView === "symptoms") this.showSymptoms(this.symptomItems)
+    if (this.body) (this.body as SceneObject).enabled = vis
   }
 
   private clear(): void {

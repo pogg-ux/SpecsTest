@@ -128,6 +128,14 @@ export function addButton(
   onClick: () => void,
   opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number; wrap?: boolean; bold?: boolean}
 ): ButtonHandle {
+  // A label too long for its button wraps and the button grows (large Text size option).
+  if (opts?.emCm && !opts.wrap) {
+    const lines = estimateLines(label, w - 1.5, opts.emCm, !!opts.bold)
+    if (lines > 1) {
+      opts = {...opts, wrap: true}
+      h = Math.max(h, lines * opts.emCm * LINE_H + 1.6)
+    }
+  }
   const so = makeObj(parent, name)
   const btn = so.createComponent(Button.getTypeName()) as Button
   btn.size = new vec3(w, h, 1) // BEFORE init
@@ -202,13 +210,58 @@ export type CardAnchor = "center" | "top" | "bottom"
 export const CARD_FILL_GRAY = 0.16
 export const CARD_FILL_ALPHA = 0.9
 const CARD_FILL = new vec4(CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_ALPHA)
+const CARD_FILL_OPAQUE = new vec4(0.2, 0.2, 0.2, 1)
+
+// Session option "Card style": every card plate, existing and future, follows it.
+let cardOpaque = false
+const allPlates: BackPlate[] = []
+
+export function isCardOpaque(): boolean {
+  return cardOpaque
+}
+
+function cardFill(): vec4 {
+  return cardOpaque ? CARD_FILL_OPAQUE : CARD_FILL
+}
+
+export function setCardOpaque(opaque: boolean): void {
+  cardOpaque = opaque
+  for (let i = allPlates.length - 1; i >= 0; i--) {
+    const p = allPlates[i]
+    if (isNull(p)) {
+      allPlates.splice(i, 1)
+      continue
+    }
+    const rr = (p as any).roundedRectangle
+    if (p.initialized && rr) rr.backgroundColor = cardFill()
+  }
+}
+
+// Session option "Text size": cards build their text at textEm x this factor (their width stays, so they wrap and grow
+// downward). Main sets the factor per card host before it rebuilds the card.
+const emFactors: {[name: string]: number} = {}
+export function setHostEmFactor(hostName: string, f: number): void {
+  emFactors[hostName] = f
+}
+export function getHostEmFactor(hostName: string): number {
+  return emFactors[hostName] || 1
+}
+
+// Option "Schematic: Enlarged": the schematic host is scaled; it sizes its labels from the host's BASE scale.
+const scaleFactors: {[name: string]: number} = {}
+export function setHostFactor(hostName: string, f: number): void {
+  scaleFactors[hostName] = f
+}
+export function hostBaseScale(host: SceneObject): number {
+  return Math.max(0.05, host.getTransform().getWorldScale().y / (scaleFactors[host.name] || 1))
+}
 
 /** Applies the translucent fill once the plate's RoundedRectangle has initialized (BackPlate sets its own color on start). */
 function applyTranslucentFill(owner: SceneObject, plate: BackPlate): void {
   const apply = (): boolean => {
     const rr = (plate as any).roundedRectangle
     if (!plate.initialized || !rr) return false
-    rr.backgroundColor = CARD_FILL
+    rr.backgroundColor = cardFill()
     return true
   }
   if (apply()) return
@@ -225,6 +278,7 @@ export function makeCardBody(host: SceneObject, name: string, width: number, pad
   const plate = body.createComponent(BackPlate.getTypeName()) as BackPlate
   plate.style = "simple"
   applyTranslucentFill(body, plate)
+  allPlates.push(plate)
   const content = makeObj(body, "Content", new vec3(0, 0, CONTENT_Z))
   const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
   flex.autoDiscoverItemsOnStart = false // children are registered explicitly via addItems
@@ -332,7 +386,7 @@ export const TEXT_SOFT = new vec4(1, 1, 1, 1)
  * (card units are cm before the host's scale), so text keeps its physical size if the card is rescaled.
  */
 export function cardEm(host: SceneObject, realCm: number): number {
-  return realCm / Math.max(0.05, host.getTransform().getWorldScale().y)
+  return (realCm * getHostEmFactor(host.name)) / hostBaseScale(host)
 }
 
 /** A wrapped text cell sized to its words (emLocal in card units). */
@@ -401,4 +455,9 @@ export function styleLabelText(t: Text, color: vec4 = new vec4(1, 1, 1, 1)): voi
   t.outlineSettings.enabled = false
   t.renderOrder = 10
   t.depthTest = true
+}
+
+/** The "Library" button every card (except the safety notice) carries; `cardKey` keeps names unique ("Btn_Library_Step"). */
+export function addLibraryButton(content: SceneObject, cardKey: string, inner: number, em: number, onClick: () => void): ButtonHandle {
+  return addButton(content, "Btn_Library_" + cardKey, "Library", Math.min(10, inner - 2), 3.0, onClick, {emCm: em})
 }

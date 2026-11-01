@@ -1,0 +1,53 @@
+- !<AssetImportMetadata/0beddc8a-0791-4afc-a35e-606ac3152d7a>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> f4fc0ec1-0cad-40c4-be65-a6436a2711d8
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> f4fc0ec1-0cad-40c4-be65-a6436a2711d8
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> bbb872f6-1911-47e8-8c67-8accbd235b5b
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/bbb872f6-1911-47e8-8c67-8accbd235b5b>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: fc2cc4b1-c75c-4078-b6bf-997a0e845a41
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    textEmCm: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Library – docked menu: Job, Job report, Camera, Options</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float widthCm = 15 {"hint":"Menu width in card units (cm before scaling)", "widget":"slider", "min":10, "max":24, "step":0.5}'
+    - '// @input float textEmCm = 1 {"hint":"Menu text size: em height in real cm (at least 1.0)", "widget":"slider", "min":0.6, "max":2, "step":0.05}'
+    - '// @ui {"widget":"group_end"}'

@@ -62,6 +62,8 @@ export class MWNPDisplayToggleScenario extends Scenario {
     const ui = new MWNPLeafInteractor()
     const app = (global as any).mwnpAssistant
     await ui.startExtendDiagnosis()
+    // This scenario checks the fade of everything; the Options default (Cards only + labels Always on) is tested in mwnp-library-options.
+    app.optionsCard.set("hideButton", 1)
     await ui.logInSpecUpToF1Out()
     await ui.enterReading("0.0")
     await waitFor((s) => s.visibleCard === "finding", 3000, "finding card")

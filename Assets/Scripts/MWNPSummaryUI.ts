@@ -94,6 +94,8 @@ export class MWNPSummaryUI extends BaseScriptComponent {
   }
 
   private body: SceneObject | null = null
+  private lastData: SummaryData | null = null
+  private savedLabel = ""
   private saveBtn: ButtonHandle | null = null
   private whiteTex: Texture | null = null
   private _onSave = new Event<void>()
@@ -107,6 +109,8 @@ export class MWNPSummaryUI extends BaseScriptComponent {
 
   show(d: SummaryData): void {
     this.hide()
+    this.lastData = d
+    this.savedLabel = ""
     this.rowTexts = d.rows.map((r) => r.text)
     this.findingText = d.findingLine
     this.resultText = d.resultLine
@@ -190,7 +194,26 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     return this.whiteTex
   }
 
+  get built(): boolean {
+    return !!this.body
+  }
+
+  /** Rebuilds at the current Text size factor, keeping visibility and the Saved label. */
+  rebuild(): void {
+    if (!this.body || !this.lastData) return
+    const vis = this.body.enabled
+    const saved = this.savedLabel
+    this.show(this.lastData)
+    if (saved) this.setSaved(saved)
+    if (this.body) (this.body as SceneObject).enabled = vis
+  }
+
+  setVisible(v: boolean): void {
+    if (this.body) this.body.enabled = v
+  }
+
   setSaved(label: string): void {
+    this.savedLabel = label
     if (this.saveBtn) this.saveBtn.label.text = label
   }
 
