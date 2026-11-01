@@ -1,0 +1,65 @@
+- !<AssetImportMetadata/8e9e56c7-bd65-46fa-9ae9-1bebcde709e7>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> a20edce4-18fa-4c83-ba04-465cf8e68b94
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> a20edce4-18fa-4c83-ba04-465cf8e68b94
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> ee1456ac-e4e7-4f88-b04f-7e12b31e836a
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/ee1456ac-e4e7-4f88-b04f-7e12b31e836a>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 17c581e3-b6b9-4c84-a2fa-8a7d7d04c12d
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    closeLabel: false
+    photoLabel: false
+    snapshotLabel: false
+    textEmCm: false
+    titleEmCm: false
+    widthCm: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+      titleEmCm: 1.400000
+      snapshotLabel: Snapshot (with labels)
+      photoLabel: Photo
+      closeLabel: Close
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Camera Card – snapshot (with labels) and photo</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float widthCm = 32 {"hint":"Card width in card units (cm before scaling)", "widget":"slider", "min":26, "max":40, "step":0.5}'
+    - '// @input float textEmCm = 1 {"hint":"Card text size: em height in real cm (1.0 reads in a 1080p recording)", "widget":"slider", "min":0.6, "max":2, "step":0.05}'
+    - '// @input float titleEmCm = 1.4 {"hint":"Title text size: em height in real cm", "widget":"slider", "min":1, "max":3, "step":0.05}'
+    - '// @input string snapshotLabel = "Snapshot (with labels)" {"hint":"Snapshot button label"}'
+    - '// @input string photoLabel = "Photo" {"hint":"Photo button label"}'
+    - '// @input string closeLabel = "Close" {"hint":"Close button label"}'
+    - '// @ui {"widget":"group_end"}'

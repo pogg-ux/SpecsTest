@@ -1,16 +1,17 @@
 // MWNPStepCardUI.ts — the step card: reasoning, current step, citation, result, readout, number pad.
 //
 // Owns: card layout, the number pad (0–9, ".", Del, Enter), the Schematic toggle, and — during the retest step —
-// a row of switch buttons (e.g. "S1 UP" / "S1 DOWN") as a backup to pinching the switch on the model.
+// a row of switch buttons (e.g. "S1 UP" / "S1 DOWN") as a backup to pinching the switch on the model, and a
+// "Camera" button that opens the Camera card in this card's place.
 // Text is sized in real centimetres (textEmCm, default 1.0 cm) whatever the card's scale, each text cell is
 // sized to its words (fitText), and the card grows DOWNWARD from its host's origin (host = top-center).
 // The number pad keys are about 3 cm wide with bold digits at least 1.2 cm tall.
 // API: show(), hide(), setReasoning(), setPathCitation(), setStep(), setResult(), setReadout(),
 //      setSwitchControls(component, positions, current),
 //      readable text fields (stepTitleText, resultText, readoutText, resultColorWord),
-//      events onKey(key: "0".."9" | "." | "back"), onEnter, onSchematic, onSwitch({component, position}).
+//      events onKey(key: "0".."9" | "." | "back"), onEnter, onSchematic, onCamera, onSwitch({component, position}).
 // Must not: parse readings, classify, or advance steps — Main/agent own that.
-// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "Btn_<comp>_<pos>" (Btn_S1_UP,
+// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "Btn_Camera", "Btn_<comp>_<pos>" (Btn_S1_UP,
 //               Btn_S1_DOWN), "StepCardCard", text cells "Reasoning", "PathCitation", "StepTitle", "StepQuestion",
 //               "StepCitation", "Expected", "Result", "Readout".
 
@@ -59,6 +60,9 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   @input
   @hint("Schematic toggle label")
   schematicLabel: string = "Schematic"
+  @input
+  @hint("Camera button label")
+  cameraLabel: string = "Camera"
   @ui.group_end
 
   // Readable state for tests
@@ -93,6 +97,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   private _onKey = new Event<string>()
   private _onEnter = new Event<void>()
   private _onSchematic = new Event<void>()
+  private _onCamera = new Event<void>()
   private _onSwitch = new Event<SwitchPick>()
   get onKey(): PublicApi<string> {
     return this._onKey.publicApi()
@@ -102,6 +107,9 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   }
   get onSchematic(): PublicApi<void> {
     return this._onSchematic.publicApi()
+  }
+  get onCamera(): PublicApi<void> {
+    return this._onCamera.publicApi()
   }
   get onSwitch(): PublicApi<SwitchPick> {
     return this._onSwitch.publicApi()
@@ -252,7 +260,8 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const side = addFlex(row, "PadSide", FlexDirection.Column, sideW, padH, 0.8, {justify: FlexJustify.Center})
     const rem = this.readoutEmCm / scale
     this.tReadout = addText(side, "Readout", this.readoutPrefix + "\n— V", sideW, rem * LINE_H * 2, {emCm: rem, align: "center", wrap: true, valign: "top"})
-    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.6, () => this._onEnter.invoke(), {emCm: em, bold: true})
-    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.6, () => this._onSchematic.invoke(), {emCm: em})
+    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: em, bold: true})
+    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.0, () => this._onSchematic.invoke(), {emCm: em})
+    addButton(side, "Btn_Camera", this.cameraLabel, sideW - 1, 3.0, () => this._onCamera.invoke(), {emCm: em})
   }
 }

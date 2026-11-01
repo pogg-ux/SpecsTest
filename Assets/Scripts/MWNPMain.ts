@@ -22,7 +22,9 @@ import {MWNPSafetyNoticeUI} from "./MWNPSafetyNoticeUI"
 import {MWNPJobPanelUI} from "./MWNPJobPanelUI"
 import {MWNPStepCardUI} from "./MWNPStepCardUI"
 import {MWNPFindingCardUI} from "./MWNPFindingCardUI"
-import {MWNPSummaryUI, SummaryRow} from "./MWNPSummaryUI"
+import {MWNPSummaryUI, SummaryRow, ReportCapture} from "./MWNPSummaryUI"
+import {MWNPCameraCardUI} from "./MWNPCameraCardUI"
+import {Capture, PHOTO_PLACEHOLDER, SnapshotCamera, takePhoto} from "./MWNPCapture"
 import {MWNPSchematicPanelUI} from "./MWNPSchematicPanelUI"
 import {DisplayFader} from "./MWNPDisplayFader"
 import {addButton, ButtonHandle, cardEm, makeObj} from "./MWNPSharedUI"
@@ -70,8 +72,11 @@ export class MWNPMain extends BaseScriptComponent {
   @hint("Finding card")
   findingCard: MWNPFindingCardUI
   @input
-  @hint("Findings summary")
+  @hint("Job report (readings, finding, snapshots and photos)")
   summaryCard: MWNPSummaryUI
+  @input
+  @hint("Camera card (opens in the step card's place)")
+  cameraCard: MWNPCameraCardUI
   @input
   @hint("Schematic panel above the step card")
   schematicPanel: MWNPSchematicPanelUI
@@ -127,6 +132,11 @@ export class MWNPMain extends BaseScriptComponent {
   lastTagInfo: string = ""
   savedToJobLog: boolean = false
   jobLog: string[] = []
+  /** Snapshots and photos of this session (memory only, never written to disk or sent anywhere). */
+  captures: Capture[] = []
+  private nextCaptureId = 1
+  private captureBusy = false
+  private snapshotCam: SnapshotCamera | null = null
 
   private audio: AudioComponent | null = null
   private fader: DisplayFader | null = null
@@ -192,7 +202,7 @@ export class MWNPMain extends BaseScriptComponent {
     settle.bind(() => this.placeRelativeToUser())
     settle.reset(0.25)
 
-    const missing = ["cabinet", "partTags", "safetyNotice", "jobPanel", "stepCard", "findingCard", "summaryCard", "schematicPanel"].filter(
+    const missing = ["cabinet", "partTags", "safetyNotice", "jobPanel", "stepCard", "findingCard", "summaryCard", "schematicPanel", "cameraCard"].filter(
       (k) => !(this as any)[k]
     )
     if (missing.length > 0 || !this.nl) {
@@ -209,6 +219,10 @@ export class MWNPMain extends BaseScriptComponent {
     this.stepCard.onKey.add((k) => this.onKey(k))
     this.stepCard.onEnter.add(() => this.onEnter())
     this.stepCard.onSchematic.add(() => this.onSchematic())
+    this.stepCard.onCamera.add(() => this.openCamera())
+    this.cameraCard.onClose.add(() => this.closeCamera())
+    this.cameraCard.onSnapshot.add(() => this.onSnapshot())
+    this.cameraCard.onPhoto.add(() => this.onPhoto())
     this.findingCard.onRetest.add(() => this.onRetest())
     this.summaryCard.onSave.add(() => this.onSave())
     this.cabinet.onS1Toggled.add((pos) => this.onS1Toggled(pos))
@@ -353,6 +367,119 @@ export class MWNPMain extends BaseScriptComponent {
     this.log("schematic " + (this.schematicPanel.isOpen ? "open" : "closed"))
   }
 
+  // ── Camera card ───────────────────────────────────────────────────────────
+
+  /** Display form of the test point a capture would attach to right now ("" when none). */
+  private captureTargetId(): string {
+    const agent = this.agent as MWNPAgent
+    if (agent.phase === "retest_wait") return agent.retestPointId || ""
+    return agent.activePoint() || ""
+  }
+
+  private openCamera(): void {
+    if (this.visibleCard !== "step") return
+    this.click()
+    const nl = this.nl as Netlist
+    const id = this.captureTargetId()
+    this.stepCard.hide()
+    this.schematicPanel.close()
+    this.cameraCard.show(id ? "Attaches to test point: " + nl.display(id) : "No active test point")
+    this.cameraCard.setStatus("", "")
+    this.cameraCard.setThumbnail(null, 1, "")
+    this.visibleCard = "camera"
+    this.log("camera-open")
+  }
+
+  private closeCamera(): void {
+    if (this.visibleCard !== "camera") return
+    this.click()
+    this.cameraCard.hide()
+    this.stepCard.show()
+    this.visibleCard = "step"
+    this.log("camera-closed")
+  }
+
+  private userCameraObject(): SceneObject | null {
+    return this.findUserCamera()
+  }
+
+  private addCapture(kind: "snapshot" | "photo", texture: Texture | null, aspect: number, placeholder: string): Capture {
+    const nl = this.nl as Netlist
+    const id = this.captureTargetId()
+    const label = id ? nl.display(id) : "no test point"
+    const c: Capture = {
+      id: this.nextCaptureId++,
+      pointId: id,
+      pointLabel: label,
+      kind,
+      time: clock(),
+      texture,
+      aspect,
+      placeholder,
+      caption: (kind === "snapshot" ? "Snapshot (with labels)" : "Photo") + " · " + label + " · " + clock() + (placeholder ? " · " + placeholder : ""),
+    }
+    this.captures.push(c)
+    return c
+  }
+
+  private static readonly MAX_CAPTURES = 12
+
+  private onSnapshot(): void {
+    if (this.captureBusy || this.visibleCard !== "camera") return
+    if (this.captures.length >= MWNPMain.MAX_CAPTURES) {
+      this.cameraCard.setStatus("Capture limit reached (" + MWNPMain.MAX_CAPTURES + ").", "amber")
+      return
+    }
+    const cam = this.userCameraObject()
+    if (!cam) {
+      this.cameraCard.setStatus("No camera found for a snapshot.", "red")
+      return
+    }
+    this.click()
+    this.captureBusy = true
+    this.cameraCard.setStatus("Taking snapshot…", "cyan")
+    // Show the step context (cabinet, tags, badges, step card) for the capture frames instead of the Camera card.
+    this.cameraCard.setBodyEnabled(false)
+    this.stepCard.show()
+    if (!this.snapshotCam) this.snapshotCam = new SnapshotCamera(this, cam)
+    this.snapshotCam
+      .snapshot(960)
+      .then((r) => {
+        const c = this.addCapture("snapshot", r.texture, r.aspect, "")
+        this.finishCapture(c, "Snapshot attached to " + c.pointLabel + ".")
+      })
+      .catch((e) => {
+        this.finishCapture(null, "Snapshot failed: " + e)
+      })
+  }
+
+  private onPhoto(): void {
+    if (this.captureBusy || this.visibleCard !== "camera") return
+    if (this.captures.length >= MWNPMain.MAX_CAPTURES) {
+      this.cameraCard.setStatus("Capture limit reached (" + MWNPMain.MAX_CAPTURES + ").", "amber")
+      return
+    }
+    this.click()
+    this.captureBusy = true
+    this.cameraCard.setStatus("Taking photo…", "cyan")
+    takePhoto(this).then((r) => {
+      const c = this.addCapture("photo", r.texture, r.aspect, r.texture ? "" : PHOTO_PLACEHOLDER)
+      print("[MWNP] photo: " + r.note)
+      this.finishCapture(c, r.texture ? "Photo attached to " + c.pointLabel + "." : PHOTO_PLACEHOLDER + " — attached to " + c.pointLabel + ".")
+    })
+  }
+
+  private finishCapture(c: Capture | null, status: string): void {
+    this.captureBusy = false
+    if (this.visibleCard === "camera") {
+      this.stepCard.hide()
+      this.cameraCard.setBodyEnabled(true)
+      this.cameraCard.setStatus(status, c ? "green" : "red")
+      if (c) this.cameraCard.setThumbnail(c.texture, c.aspect, c.placeholder)
+    }
+    this.log(c ? "capture " + c.kind + " " + c.pointId : "capture-failed")
+  }
+
   private onRetest(): void {
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
@@ -452,28 +579,12 @@ export class MWNPMain extends BaseScriptComponent {
   }
 
   /**
-   * Device-only extras: say "hide display" / "show display", or make a fist (grab), to hide / show the display.
-   * Skipped in the editor and wrapped so a missing module or permission never breaks the Lens; the button
-   * above always works.
+   * Device-only extra: make a fist (grab) to hide / show the display. No voice recognition is used (it needs the
+   * internet and blocks camera frames, which would make the Camera card unpublishable). Skipped in the editor and
+   * wrapped so a missing module never breaks the Lens; the button above always works.
    */
   private setupDeviceExtras(): void {
     if (global.deviceInfoSystem.isEditor()) return
-    try {
-      const asr = require("LensStudio:AsrModule") as AsrModule
-      const options = AsrModule.AsrTranscriptionOptions.create()
-      options.silenceUntilTerminationMs = 1500
-      options.mode = AsrModule.AsrMode.Balanced
-      options.onTranscriptionUpdateEvent.add((e: AsrModule.TranscriptionUpdateEvent) => {
-        if (!e.isFinal) return
-        const said = e.text.toLowerCase()
-        if (said.indexOf("hide display") >= 0) this.setDisplayHidden(true)
-        else if (said.indexOf("show display") >= 0) this.setDisplayHidden(false)
-      })
-      options.onTranscriptionErrorEvent.add(() => {})
-      asr.startTranscribing(options)
-    } catch (e) {
-      print("[MWNP] voice control unavailable: " + e)
-    }
     try {
       const gestures = require("LensStudio:GestureModule") as GestureModule
       const onGrab = () => {
@@ -506,7 +617,7 @@ export class MWNPMain extends BaseScriptComponent {
   private onSave(): void {
     this.click()
     const agent = this.agent as MWNPAgent
-    this.jobLog.push(JSON.stringify({readings: agent.readings, finding: agent.finding, repaired: agent.repaired}))
+    this.jobLog.push(JSON.stringify({readings: agent.readings, finding: agent.finding, repaired: agent.repaired, captures: this.captures.map((c) => ({id: c.id, point: c.pointId, kind: c.kind, time: c.time, image: !!c.texture}))}))
     this.savedToJobLog = true
     this.summaryCard.setSaved("Saved to job log " + CHECK)
     this.log("saved")
@@ -576,32 +687,47 @@ export class MWNPMain extends BaseScriptComponent {
     const agent = this.agent as MWNPAgent
     agent.phase = "summary"
     this.stepCard.hide()
+    this.cameraCard.hide()
     this.schematicPanel.close()
     const rows: SummaryRow[] = agent.readings.map((r) => {
       const mark = r.cls === "in_spec" ? CHECK + " in spec" : r.cls === "open" ? CROSS + " open" : r.cls === "unexplained" ? "? unexplained" : "raw"
       return {
         text: nl.display(r.pointId) + "  ·  " + nl.fmtReading(r.value) + " V  ·  " + r.range + "  ·  " + r.time + "  ·  " + mark + (r.phase === "retest" ? " (retest)" : ""),
         colorWord: r.colorWord,
+        pointId: r.pointId,
       }
     })
+    const captures: ReportCapture[] = this.captures.map((c) => ({id: c.id, pointId: c.pointId, caption: c.caption, texture: c.texture, aspect: c.aspect}))
     const f = agent.finding
     const comp = f && f.kind === "component" ? nl.component(f.id) : null
     const rating = comp ? nl.shortRating(comp.id) : null
     const action = comp && comp.type === "fuse" ? "Action taken: replaced " + comp.id + " with " + rating + "." : "Action taken: repaired — " + (f ? this.humanize(f.conclusion) : "")
     const fn = agent.functionKey
     this.summaryCard.show({
-      title: "Findings summary",
+      title: "Job report",
       jobLine: "Job: " + nl.data.machine + " " + nl.machineKind() + " · rev " + (nl.data.revision || "-"),
       symptomLine: "Symptom: " + nl.symptomLabel(agent.faultIndex),
       readingsHeading: "Readings (meter black lead on " + nl.referencePoint() + ")",
       rows,
+      captures,
       findingLine: f ? "Finding: " + f.head + " (" + this.findingEvidenceShort() + ")" : "Finding: none",
       actionLine: action,
       resultLine: "Result: " + (fn ? fn + " restored" : "restored"),
       saveLabel: "Save to job log",
     })
     this.visibleCard = "summary"
+    this.moveDisplayButtonBesideReport()
     this.log("summary")
+  }
+
+  /** The Job report is taller than the step card, so the Hide / Show button moves to the report's top-left outside edge. */
+  private moveDisplayButtonBesideReport(): void {
+    if (!this.displayBtn) return
+    const host = this.summaryCard.sceneObject.getTransform().getWorldTransform()
+    const w = 8.0
+    const h = 3.6
+    const local = new vec3(-(this.summaryCard.widthCm / 2 + w / 2 + 0.5), -h / 2, 0)
+    this.displayBtn.so.getTransform().setWorldPosition(host.multiplyPoint(local))
   }
 
   private findingEvidenceShort(): string {
@@ -764,6 +890,9 @@ export class MWNPMain extends BaseScriptComponent {
       finding: agent.finding ? {part: agent.finding.id, head: agent.finding.head} : null,
       findingCard: {title: this.findingCard.titleText, evidence: this.findingCard.evidenceText, nextAction: this.findingCard.nextActionText},
       readings: agent.readings.map((r) => ({point: r.pointId, value: r.value, range: r.range, time: r.time, cls: r.cls, phase: r.phase})),
+      captures: this.captures.map((c) => ({id: c.id, pointId: c.pointId, kind: c.kind, time: c.time, hasTexture: !!c.texture, placeholder: c.placeholder})),
+      cameraCardOpen: this.cameraCard.isVisible,
+      reportCaptureIds: this.summaryCard.captureIds,
       summaryRows: this.summaryCard.rowTexts,
       summaryFinding: this.summaryCard.findingText,
       summaryResult: this.summaryCard.resultText,

@@ -2,8 +2,8 @@
 // badge and trace, and brings them back in exactly the same state. Runs on the richest state (the Finding card,
 // with badges, outlines, traces, tags and the expected-value tag all live).
 //
-// Not covered (device only, guarded in MWNPMain.setupDeviceExtras): the "hide display" / "show display" voice
-// commands and the fist-grab toggle. They call the same setDisplayHidden() the button does.
+// Not covered (device only, guarded in MWNPMain.setupDeviceExtras): the fist-grab toggle. It calls the same
+// setDisplayHidden() the button does.
 
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"

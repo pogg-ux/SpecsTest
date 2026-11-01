@@ -97,6 +97,14 @@ export class DisplayFader {
           this.targets.push({set: (a) => (rr.opacity = base * a)})
         }
       }
+      // Label plates on the model: a bare rounded rectangle (no BackPlate / Button around it).
+      if (so.name === "LabelPlate") {
+        const rr = so.getComponent(RoundedRectangle.getTypeName()) as RoundedRectangle | null
+        if (rr) {
+          const base = rr.opacity
+          this.targets.push({set: (a) => (rr.opacity = base * a)})
+        }
+      }
       // Plain images / meshes (schematic drawing, highlight bars, label plates). Skip UIKit's own rounded
       // rectangles: their opacity is handled above.
       if (!so.getComponent(RoundedRectangle.getTypeName())) {

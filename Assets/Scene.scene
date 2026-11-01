@@ -14399,6 +14399,7 @@
   ScriptInputsDefault:
     textEmCm: true
     titleEmCm: true
+    thumbWidth: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -14406,6 +14407,7 @@
       widthCm: !<float> 32.000000
       textEmCm: !<float> 1.000000
       titleEmCm: 1.400000
+      thumbWidth: !<float> 9.000000
   ScriptTypes:
     "":
       {}
@@ -14458,6 +14460,7 @@
     - !<own> 1e8b81b9-6cbe-4018-9ac3-d1468fe91296
     - !<own> 40841ca5-6c0b-4964-869f-b920adca1b94
     - !<own> 97bd13b8-7050-4f39-a47b-ac1ca250f824
+    - !<own> 9c782592-435e-4de3-b5f4-63da96287b41
   Components:
     []
 - !<SceneObject/8bb30877-9ca4-46c1-a183-fb8a2c35ed69>
@@ -15776,6 +15779,21 @@
     []
   Components:
     - !<own> f32e48b6-6568-46da-ab1c-e6259166d818
+- !<SceneObject/9c782592-435e-4de3-b5f4-63da96287b41>
+  PrefabRemaps:
+    []
+  Name: CameraCard
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 10.600000, y: 9.900000, z: -56.200001}
+    Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
+    Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> d97fa82a-f580-4743-ba60-d4c14eb529b1
 - !<SceneObject/9cd4e227-248e-436c-bce0-47a4da38497c>
   PrefabRemaps:
     []
@@ -16501,7 +16519,8 @@
       stepCard: !<MappingBased.AssignableType_5> ffe7c52b-c40c-40c5-82dc-998333de4748
       findingCard: !<MappingBased.AssignableType_6> f5229863-72d5-4591-ad2e-647c2c802f64
       summaryCard: !<MappingBased.AssignableType_7> 8a9333c8-4e02-45b3-927c-5310b0ec4443
-      schematicPanel: !<MappingBased.AssignableType_8> 5883671a-fe17-4de3-8062-3d5a898d1c41
+      cameraCard: !<MappingBased.AssignableType_8> d97fa82a-f580-4743-ba60-d4c14eb529b1
+      schematicPanel: !<MappingBased.AssignableType_9> 5883671a-fe17-4de3-8062-3d5a898d1c41
       clickSfx: !<reference.AudioTrackAsset> aa04b099-960e-4e88-8151-312ed57bcee5
       passSfx: !<reference.AudioTrackAsset> fece2eca-2bf4-4fdc-b238-968a4a65f1ec
       faultSfx: !<reference.AudioTrackAsset> 994ea9a4-2e7e-4717-b9c8-ffc51d10f16a
@@ -19839,6 +19858,32 @@
       receiverLayers: 1
     Material: !<reference> 00000000-0000-0000-0000-000000000000
     HideFromCamera: false
+- !<ScriptComponent/d97fa82a-f580-4743-ba60-d4c14eb529b1>
+  PrefabRemaps:
+    []
+  Name: MWNPCameraCardUI
+  Enabled: true
+  ScriptAsset: !<reference> a20edce4-18fa-4c83-ba04-465cf8e68b94
+  ScriptInputsDefault:
+    widthCm: true
+    textEmCm: true
+    titleEmCm: true
+    snapshotLabel: true
+    photoLabel: true
+    closeLabel: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      widthCm: !<float> 32.000000
+      textEmCm: !<float> 1.000000
+      titleEmCm: 1.400000
+      snapshotLabel: Snapshot (with labels)
+      photoLabel: Photo
+      closeLabel: Close
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/d9c309aa-4c51-4f67-863c-890812130fdf>
   PrefabRemaps:
     []
@@ -22335,25 +22380,20 @@
   ScriptAsset: !<reference> 8b8107bd-d2e6-4625-b059-7874fab07f6d
   ScriptInputsDefault:
     tagEmCm: true
-    tagOutline: true
     overlayEmCm: true
     wireEmCm: true
     noteEmCm: true
-    noteColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       tagEmCm: 1.500000
-      tagOutline: 0.220000
       overlayEmCm: !<float> 1.000000
       wireEmCm: !<float> 1.000000
       noteEmCm: 0.600000
       overlayMaxWidthCm: 8.600000
-      dimAlpha: 0.550000
       supplyWireColor: !<Vec4> {x: 1.000000, y: 0.160000, z: 0.120000, w: 1.000000}
       returnWireColor: !<Vec4> {x: 0.220000, y: 0.420000, z: 1.000000, w: 1.000000}
-      noteColor: !<Vec4> {x: 0.300000, y: 0.320000, z: 0.360000, w: 1.000000}
   ScriptTypes:
     "":
       {}
@@ -22768,6 +22808,7 @@
     digitEmCm: true
     readoutPrefix: true
     schematicLabel: true
+    cameraLabel: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -22780,6 +22821,7 @@
       digitEmCm: 1.250000
       readoutPrefix: "Reading:"
       schematicLabel: Schematic
+      cameraLabel: Camera
   ScriptTypes:
     "":
       {}

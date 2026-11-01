@@ -6,7 +6,24 @@
 - Build done: all 5 LEAF done criteria PASS + layout test. Cabinet at 100 cm, translucent cards.
 - Job data: `Assets/MWNP/netlist.json` (tolerances, reading rules), `MWNP_1.0_wiring.png`, `MWNP_1.0_panel_layout.png`
 
-## UPDATE 4:18 PM — layout fix DONE (matches panel image, 6/6 LEAF pass, preview env = Plane, head-anchored)
+## UPDATE Nov 1, 11:35 AM — NEXT PROMPT (paste into Claude Code)
+Done since last: readable cards, labeled schematic, vivid colors, 3 cm keypad, S1 UP/DOWN retest buttons, Hide/Show, bench backdrop (Multimedia mode, Media/bench_backdrop.jpg, lowered 10%), brighter labels. 9 LEAF tests passing. save.bat in project root commits+pushes.
+
+> Navigation and options rework:
+> 1. Library card = home. After the safety notice, show a Library card (same spot/style as the step card) listing buttons that jump straight to: Job (diagnosis flow), Job report, Camera, Options. Every other card gets a "Library" button to return home. Each card keeps its state when you leave and come back.
+> 2. Options card, toggles apply immediately, persist for the session:
+>    - Labels: Always on / Hide with cards (default Always on).
+>    - Hide button behavior: Cards only / Everything.
+>    - Card style: Translucent / Opaque.
+>    - Text size: Normal / Large / Extra large (cards grow; never cover TS-4, F1, L1, S1; stay in view).
+>    - Schematic: Normal / Enlarged.
+> 3. Camera card (if not built): Snapshot with labels (render-target capture of Lens view, works in Preview), Photo (device CaptureSession; placeholder in Preview), Close. Snapshots attach to the active test point and show in the Job report. No internet alongside camera.
+> 4. Every card reachable and closable with mouse clicks in Interactive Preview.
+> LEAF: Library reaches every card and returns; each Options toggle works; labels stay up with cards hidden when Always on. Re-run all LEAF tests. Screenshot Library and Options cards over the backdrop.
+
+THEN FEATURE FREEZE → README, video script, Devpost description (Claude in chat drafts these), record (Win+Alt+R), YouTube public, Discord post before Thu Nov 5 12 PM ET, submit before Mon Nov 9 5 PM ET, git tag v1.0-submission, then v2-dev branch/worktree for parked features.
+
+## UPDATE 4:18 PM (older) — layout fix DONE (matches panel image, 6/6 LEAF pass, preview env = Plane, head-anchored)
 Next prompt for Claude Code:
 
 > Three fixes:

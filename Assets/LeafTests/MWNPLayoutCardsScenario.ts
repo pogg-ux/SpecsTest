@@ -103,6 +103,10 @@ export class MWNPLayoutCardsScenario extends Scenario {
     await waitFor((s) => s.visibleCard === "job", 3000, "job card")
     await sleep(500)
     checkCard(cam, "JobCard")
+    if (stopAt === "job") {
+      ev("CARDS PASS (stopped at job)", {})
+      return
+    }
 
     await ui.tap("Btn_ReportSymptom")
     await waitFor((s) => s.visibleCard === "symptoms", 3000, "symptom list")
@@ -111,6 +115,14 @@ export class MWNPLayoutCardsScenario extends Scenario {
 
     await ui.tap("Btn_Symptom_EXTEND")
     await waitFor((s) => s.visibleCard === "step" && s.activePoint === "TS-4", 3000, "step card at TS-4")
+    // The Camera card takes the step card's place: same size rules.
+    await sleep(400)
+    await ui.tap("Btn_Camera")
+    await waitFor((s) => s.visibleCard === "camera", 3000, "camera card")
+    await sleep(500)
+    checkCard(cam, "CameraCardCard")
+    await ui.tap("Btn_CameraClose")
+    await waitFor((s) => s.visibleCard === "step" && s.activePoint === "TS-4", 3000, "step card again")
     await ui.logInSpecUpToF1Out()
     await ui.enterReading("0.0")
     await waitFor((s) => s.visibleCard === "finding", 3000, "finding card")
@@ -128,6 +140,24 @@ export class MWNPLayoutCardsScenario extends Scenario {
     expect(((tso.getComponent("Component.Text") as Text).text || "").indexOf("F1 open") >= 0, "headline reads F1 open").toBe(true)
     const retest = findSceneObjectByName("Btn_Retest")
     expect(!!retest && retest.isEnabledInHierarchy, "Btn_Retest visible").toBe(true)
+    // Badges on the model: green #00FF66 for in-spec readings, red #FF3B30 for the open reading, on plates.
+    {
+      const badge = (name: string): vec4 => {
+        const so = findSceneObjectByName(name)
+        expect(!!so && so.isEnabledInHierarchy, name + " is shown").toBe(true)
+        let lbl: Text | null = null
+        for (let i = 0; i < so.getChildrenCount(); i++) if (so.getChild(i).name === "Label") lbl = so.getChild(i).getComponent("Component.Text") as Text
+        expect((lbl as any).weight, name + " is bold").toBe(700)
+        let hasPlate = false
+        for (let i = 0; i < so.getChildrenCount(); i++) if (so.getChild(i).name === "LabelPlate") hasPlate = true
+        expect(hasPlate, name + " has a backing plate").toBe(true)
+        return (lbl as Text).textFill.color
+      }
+      const g = badge("Badge_TS-4")
+      expect(Math.abs(g.x - 0) < 0.012 && Math.abs(g.y - 1) < 0.012 && Math.abs(g.z - 0.4) < 0.012, "pass badge text is green #00FF66").toBe(true)
+      const r = badge("Badge_F1:OUT")
+      expect(Math.abs(r.x - 1) < 0.012 && Math.abs(r.y - 0.231) < 0.012 && Math.abs(r.z - 0.188) < 0.012, "fail badge text is red #FF3B30").toBe(true)
+    }
     const rc = (findSceneObjectByName("FindingTitle").getComponent("Component.Text") as Text).textFill.color
     ev("cards finding color", {title: [+rc.x.toFixed(3), +rc.y.toFixed(3), +rc.z.toFixed(3)]})
     expect(Math.abs(rc.x - 1) < 0.012 && Math.abs(rc.y - 0.231) < 0.012 && Math.abs(rc.z - 0.188) < 0.012, "F1 open is red #FF3B30").toBe(true)

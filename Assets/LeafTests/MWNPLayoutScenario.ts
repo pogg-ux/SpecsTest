@@ -7,6 +7,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
+import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 type R = {x0: number; x1: number; y0: number; y1: number}
@@ -55,6 +56,42 @@ function colorStr(c: vec4): string {
   return "(" + c.x.toFixed(3) + "," + c.y.toFixed(3) + "," + c.z.toFixed(3) + "," + c.w.toFixed(3) + ")"
 }
 
+
+/** Every label printed on the model: the "Tag_*" and "WireLabel_*" objects (plus the board note) under PartTags. */
+function modelLabels(): SceneObject[] {
+  const root = findSceneObjectByName("PartTags")
+  const out: SceneObject[] = []
+  for (let i = 0; i < root.getChildrenCount(); i++) {
+    const c = root.getChild(i)
+    if (c.name.indexOf("Tag_") === 0 || c.name.indexOf("WireLabel_") === 0 || c.name === "BoardNote") out.push(c)
+  }
+  return out
+}
+
+function childNamed(so: SceneObject, name: string): SceneObject | null {
+  for (let i = 0; i < so.getChildrenCount(); i++) if (so.getChild(i).name === name) return so.getChild(i)
+  return null
+}
+
+/** Checks one label's style: bold text on a 90% smoke-gray plate with a thin bright edge. Returns its text color. */
+function checkLabelStyle(so: SceneObject): vec4 {
+  const lbl = childNamed(so, "Label")
+  const plate = childNamed(so, "LabelPlate")
+  expect(!!lbl && !!plate, so.name + " has a text and a backing plate").toBe(true)
+  const t = (lbl as SceneObject).getComponent("Component.Text") as Text
+  expect((t as any).weight, so.name + " text is bold").toBe(700)
+  expect(t.renderOrder >= 10, so.name + " text draws on top (renderOrder " + t.renderOrder + ")").toBe(true)
+  expect(t.outlineSettings.enabled, so.name + " has no blurring outline").toBe(false)
+  const rr = (plate as SceneObject).getComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
+  const fill = rr.backgroundColor
+  expect(fill.w >= 0.85 && fill.x <= 0.2, so.name + " plate is dark smoke-gray at 90%: " + colorStr(fill)).toBe(true)
+  expect(rr.border, so.name + " plate has an edge").toBe(true)
+  const e = rr.borderColor
+  expect(Math.max(e.x, e.y, e.z) >= 0.85 && e.w >= 0.99, so.name + " plate edge is bright: " + colorStr(e)).toBe(true)
+  expect(rr.opacity, so.name + " plate fully opaque (not faded)").toBe(1)
+  return t.textFill.color
+}
+
 function fmt(r: R): string {
   return "[" + [r.x0, r.x1, r.y0, r.y1].map((v) => v.toFixed(3)).join(", ") + "]"
 }
@@ -78,6 +115,21 @@ export class MWNPLayoutScenario extends Scenario {
       expect(Math.abs((r.x0 + r.x1) / 2 - 0.5) < 0.05, "safety notice centered " + fmt(r)).toBe(true)
     }
 
+    // Start state: every label is idle, so every label is full-brightness pure white (never dimmed), bold, on a plate.
+    {
+      const labels = modelLabels()
+      expect(labels.length >= 20, "found the model's labels: " + labels.length).toBe(true)
+      for (const so of labels) {
+        const c = checkLabelStyle(so)
+        expect(c.x === 1 && c.y === 1 && c.z === 1 && c.w === 1, so.name + " is pure white at full brightness: " + colorStr(c)).toBe(true)
+      }
+      // Terminal labels are printed on TS-1..TS-5: white bold text on a dark plate, one per terminal.
+      for (const id of ["TS-1", "TS-2", "TS-3", "TS-4", "TS-5"]) {
+        expect(!!findSceneObjectByName("Tag_" + id), "terminal label " + id + " exists").toBe(true)
+      }
+      ev("layout labels", {count: labels.length})
+    }
+
     // ID tags: text em height ≥ 1.5 cm in world space.
     {
       const tags = findSceneObjectByName("PartTags")
@@ -97,6 +149,43 @@ export class MWNPLayoutScenario extends Scenario {
     }
 
     await ui.startExtendDiagnosis()
+
+    // Symptom picked: the active label (TS-4) and the labels on the path (F1, L1) are amber #FFB800 with an amber
+    // edge; every other label stays white at full brightness.
+    {
+      for (const so of modelLabels()) {
+        if (so.name.indexOf("Tag_") !== 0) continue
+        const id = so.name.substring(4)
+        const c = checkLabelStyle(so)
+        const lit = id === "TS-4" || id === "F1" || id === "L1"
+        if (lit) expect(near(c, 1, 0.722, 0), so.name + " is amber #FFB800: " + colorStr(c)).toBe(true)
+        else expect(c.x === 1 && c.y === 1 && c.z === 1 && c.w === 1, so.name + " stays white: " + colorStr(c)).toBe(true)
+        if (lit) {
+          const rr = (childNamed(so, "LabelPlate") as SceneObject).getComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
+          expect(near(rr.borderColor, 1, 0.722, 0), so.name + " edge is amber: " + colorStr(rr.borderColor)).toBe(true)
+        }
+      }
+      const expected = findSceneObjectByName("ExpectedTag")
+      const ec = checkLabelStyle(expected)
+      expect(ec.x === 1 && ec.y === 1 && ec.z === 1, "expected tag text is white: " + colorStr(ec)).toBe(true)
+    }
+
+    // Labels stay off the spots the technician reaches (probe points, L1 lamp, S1 toggle).
+    {
+      const trainer1 = findSceneObjectByName("MWNPTrainer")
+      const keys = (trainer1.getComponent("Component.ScriptComponent") as any).getKeyAreas() as {id: string; cx: number; cy: number; w: number; h: number}[]
+      const boxes = (findSceneObjectByName("PartTags").getComponent("Component.ScriptComponent") as any).labelBoxes() as {name: string; cx: number; cy: number; w: number; h: number}[]
+      let clashes: string[] = []
+      for (const b of boxes) {
+        for (const k of keys) {
+          const ox = Math.abs(b.cx - k.cx) < (b.w + k.w) / 2
+          const oy = Math.abs(b.cy - k.cy) < (b.h + k.h) / 2
+          if (ox && oy) clashes.push(b.name + " covers " + k.id)
+        }
+      }
+      ev("layout label keys", {labels: boxes.length, keyAreas: keys.length, clashes})
+      expect(clashes.length === 0, "labels cover key areas: " + clashes.join("; ")).toBe(true)
+    }
 
     // Wires and traces: every segment inside the 46 × 46 backboard (cabinet-local).
     {

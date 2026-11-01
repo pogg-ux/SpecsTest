@@ -28,15 +28,12 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    dimAlpha: false
-    noteColor: false
     noteEmCm: false
     overlayEmCm: false
     overlayMaxWidthCm: false
     returnWireColor: false
     supplyWireColor: false
     tagEmCm: false
-    tagOutline: false
     wireEmCm: false
   ScriptTypesHidden:
     {}
@@ -48,15 +45,12 @@
     []
   DefaultScriptInputs:
     - tagEmCm: 1.500000
-      tagOutline: 0.220000
       overlayEmCm: !<float> 1.000000
       wireEmCm: !<float> 1.000000
       noteEmCm: 0.600000
       overlayMaxWidthCm: 9.600000
-      dimAlpha: 0.450000
       supplyWireColor: !<Vec4> {x: 1.000000, y: 0.500000, z: 0.450000, w: 1.000000}
       returnWireColor: !<Vec4> {x: 0.550000, y: 0.700000, z: 1.000000, w: 1.000000}
-      noteColor: !<Vec4> {x: 0.300000, y: 0.320000, z: 0.360000, w: 1.000000}
   ScriptTypes:
     -
       {}
@@ -65,13 +59,10 @@
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float tagEmCm = 1.5 {"hint":"ID tag text size: em height in cm (≥1.5 to read from 100 cm)", "widget":"slider", "min":1, "max":2.5, "step":0.1}'
-    - '// @input float tagOutline = 0.22 {"hint":"Dark outline around ID tag text (keeps it readable on any part color)", "widget":"slider", "min":0, "max":0.5, "step":0.01}'
     - '// @input float overlayEmCm = 1 {"hint":"Expected tag / badge / info text size: em height in cm", "widget":"slider", "min":0.6, "max":2, "step":0.1}'
     - '// @input float wireEmCm = 1 {"hint":"Wire number text size: em height in cm", "widget":"slider", "min":0.6, "max":2, "step":0.1}'
     - '// @input float noteEmCm = 0.6 {"hint":"Board footnote text size: em height in cm", "widget":"slider", "min":0.3, "max":1.5, "step":0.05}'
     - '// @input float overlayMaxWidthCm = 8.6 {"hint":"Max width of the expected tag / info bubble before wrapping (cm)", "widget":"slider", "min":6, "max":16, "step":0.5}'
-    - '// @input float dimAlpha = 0.55 {"hint":"Opacity of tag labels that are not relevant yet", "widget":"slider", "min":0.1, "max":1, "step":0.05}'
-    - '// @input vec4 supplyWireColor = {1,0.16,0.12,1} {"hint":"Wire label color for +12 V conductors", "widget":"color"}'
-    - '// @input vec4 returnWireColor = {0.22,0.42,1,1} {"hint":"Wire label color for 0 V return conductors", "widget":"color"}'
-    - '// @input vec4 noteColor = {0.3,0.32,0.36,1} {"hint":"Board footnote color", "widget":"color"}'
+    - '// @input vec4 supplyWireColor = {1,0.16,0.12,1} {"hint":"Edge color of the plate behind +12 V wire numbers", "widget":"color"}'
+    - '// @input vec4 returnWireColor = {0.22,0.42,1,1} {"hint":"Edge color of the plate behind 0 V return wire numbers", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

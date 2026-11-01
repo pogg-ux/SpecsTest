@@ -12,6 +12,7 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexAlign, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
+import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 
 // ── Typography (Specs type scale; see specs-build-ui patterns → Typography) ──
 const FONT_SIZE_SCALE = 1.0
@@ -347,4 +348,57 @@ export function addFitText(
   if (opts?.bold) (t as Text & {weight?: number}).weight = 700
   fitText(t, text, widthCm, emLocal, opts?.minLines ?? 1, !!opts?.bold)
   return t
+}
+
+// ── Label plates: the backing for every label printed on the model ──
+
+/** Thin bright edge of a label plate when the label is idle (amber when it is active / relevant). */
+export const PLATE_EDGE_IDLE = new vec4(0.85, 0.95, 1.0, 1)
+
+export interface LabelPlate {
+  so: SceneObject
+  /** Width / height in cabinet cm. */
+  setSize(w: number, h: number): void
+  /** Color of the thin edge. */
+  setEdge(color: vec4): void
+}
+
+/**
+ * A small backing plate in the cards' 90% smoke-gray with a thin bright edge, so text has contrast over the light
+ * board and the backdrop. Visual only (no collider, so it never takes a click from the tag's own pinch target).
+ * The object is named "LabelPlate" (the display fader looks for that name).
+ */
+export function makeLabelPlate(parent: SceneObject, w: number, h: number, edge: vec4 = PLATE_EDGE_IDLE, z: number = -0.06): LabelPlate {
+  const so = makeObj(parent, "LabelPlate", new vec3(0, 0, z))
+  const rr = so.createComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
+  rr.initialize()
+  rr.renderMeshVisual.mainPass.blendMode = BlendMode.PremultipliedAlphaAuto
+  rr.renderMeshVisual.mainPass.colorMask = new vec4b(true, true, true, true)
+  rr.renderOrder = 5
+  rr.gradient = false
+  rr.backgroundColor = CARD_FILL
+  rr.border = true
+  rr.borderSize = 0.07
+  rr.borderColor = edge
+  const apply = (pw: number, ph: number) => {
+    rr.cornerRadius = Math.min(0.45, ph / 2)
+    rr.size = new vec2(pw, ph)
+  }
+  apply(w, h)
+  return {
+    so,
+    setSize: apply,
+    setEdge: (c: vec4) => {
+      rr.borderColor = c
+    },
+  }
+}
+
+/** Label text: pure white, bold, drawn after the plate and the model (text is never lit by the scene). */
+export function styleLabelText(t: Text, color: vec4 = new vec4(1, 1, 1, 1)): void {
+  ;(t as Text & {weight?: number}).weight = 700
+  t.textFill.color = color
+  t.outlineSettings.enabled = false
+  t.renderOrder = 10
+  t.depthTest = true
 }

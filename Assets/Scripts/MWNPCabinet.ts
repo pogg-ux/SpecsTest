@@ -46,8 +46,8 @@ const LAYOUT = {
   fuseSize: [1.5, 4.4, 1.2],
   openFuseX: [-5.3, -2.0, 1.4, 4.6, 7.9, 11.2],
   // Tag placement (cabinet-local). ID tags: em 1.5 cm. Overlays (expected/badge/info): em 1.0 cm.
-  tagZ: {ps1: 5.3, terminal: 4.25, fuse: 2.3, plate: 1.8},
-  switchTagX: {L1: -8.0, L2: -8.0, S1: -5.0} as {[id: string]: number},
+  tagZ: {ps1: 5.3, terminal: 4.6, fuse: 2.3, plate: 1.8}, // terminal labels sit in front of the part outline
+  switchTagX: {L1: -7.5, L2: -7.5, S1: -4.9} as {[id: string]: number},
 }
 
 // Terminal / connection points (cabinet-local x,y).
@@ -68,7 +68,7 @@ const ROUTES: {[key: string]: {pts: V2[]; label: V2}} = {
   "PS1:+>TS-1": {pts: [[-7.2, 11.05], [-7.2, 8.8], [-13.3, 8.8], [-13.3, 7.1]], label: [-12.6, 9.75]},
   "PS1:->TS-2": {pts: [[7.5, 11.05], [7.5, 9.45], [-11.3, 9.45], [-11.3, 7.1]], label: [-9.8, 10.35]},
   "TS-1>S1:COM": {pts: [[-13.3, 2.7], [-13.3, 0.45], [-15.6, 0.45], [-15.6, -3.6], [-11.2, -3.6]], label: [-16.4, -1.2]},
-  "S1:UP>TS-4": {pts: [[-10.4, -3.1], [-10.4, 0.2], [-7.6, 0.2], [-7.6, 2.7]], label: [-8.9, 1.0]},
+  "S1:UP>TS-4": {pts: [[-10.4, -3.1], [-10.4, 0.2], [-7.6, 0.2], [-7.6, 2.7]], label: [-10.1, 1.1]},
   "TS-4>F1:IN": {pts: [[-6.9, 2.7], [-6.9, 1.45], [19.2, 1.45], [19.2, -8.3], [-11.85, -8.3], [-11.85, -11.3]], label: [17.9, -6.0]},
   "TS-5>F2:IN": {pts: [[-5.3, 2.7], [-5.3, 2.2], [20.3, 2.2], [20.3, -9.1], [-8.6, -9.1], [-8.6, -11.3]], label: [21.3, -6.0]},
   "F1:OUT>L1:+": {pts: [[-11.85, -15.7], [-11.85, -19.1], [-18.1, -19.1], [-18.1, -2.3], [-11.15, -2.3]], label: [-16.6, -18.4]},
@@ -335,6 +335,23 @@ export class MWNPCabinet extends BaseScriptComponent {
     return {text: "Not drawn: " + missing.join(", ") + " (see schematic)", pos: new vec3(2.0, -21.35, 0.3)}
   }
 
+  /**
+   * The spots the technician has to reach or read, in cabinet-local cm: the TS-4 / F1 IN / F1 OUT / L1+ probe points,
+   * the L1 lamp and the S1 toggle. Labels must stay off these (a label may sit on its own part's body).
+   */
+  getKeyAreas(): {id: string; cx: number; cy: number; w: number; h: number}[] {
+    const out: {id: string; cx: number; cy: number; w: number; h: number}[] = []
+    const ts4 = this.probeOffset("TS-4")
+    out.push({id: "TS-4 probe point", cx: ts4.x, cy: ts4.y, w: 2.0, h: 2.0})
+    for (const id of ["F1:IN", "F1:OUT", "L1:+"]) {
+      const p = POINTS[id]
+      out.push({id: id + " probe point", cx: p[0], cy: p[1], w: 2.0, h: 2.0})
+    }
+    out.push({id: "L1 lamp", cx: LAYOUT.lamps.L1[0], cy: LAYOUT.lamps.L1[1], w: 1.6, h: 1.6})
+    out.push({id: "S1 toggle", cx: LAYOUT.s1[0], cy: LAYOUT.s1[1], w: 3.4, h: 3.0})
+    return out
+  }
+
   /** Board extents in cabinet-local cm (for tests). */
   getBoardHalfSize(): vec2 {
     return new vec2(LAYOUT.board.w / 2, LAYOUT.board.h / 2)
@@ -350,7 +367,9 @@ export class MWNPCabinet extends BaseScriptComponent {
     if (!o) {
       const so = this.obj(this.sceneObject, "Outline_" + id)
       const mats: Material[] = []
-      this.rectFrame(so, b.c, b.w + 1.0, b.h + 1.0, 0.22, b.zFront + 0.15, PALETTE.outlineAmber, mats)
+      // Terminals are 2 cm apart, so their outline hugs the part instead of reaching onto the neighbor's label.
+      const margin = LAYOUT.terminalX[id] !== undefined ? 0.4 : 1.0
+      this.rectFrame(so, b.c, b.w + margin, b.h + margin, 0.22, b.zFront + 0.15, PALETTE.outlineAmber, mats)
       o = {so, mats}
       this.outlines[id] = o
     }
