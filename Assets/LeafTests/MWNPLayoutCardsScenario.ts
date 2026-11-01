@@ -128,6 +128,11 @@ export class MWNPLayoutCardsScenario extends Scenario {
     expect(((tso.getComponent("Component.Text") as Text).text || "").indexOf("F1 open") >= 0, "headline reads F1 open").toBe(true)
     const retest = findSceneObjectByName("Btn_Retest")
     expect(!!retest && retest.isEnabledInHierarchy, "Btn_Retest visible").toBe(true)
+    const rc = (findSceneObjectByName("FindingTitle").getComponent("Component.Text") as Text).textFill.color
+    ev("cards finding color", {title: [+rc.x.toFixed(3), +rc.y.toFixed(3), +rc.z.toFixed(3)]})
+    expect(Math.abs(rc.x - 1) < 0.012 && Math.abs(rc.y - 0.231) < 0.012 && Math.abs(rc.z - 0.188) < 0.012, "F1 open is red #FF3B30").toBe(true)
+    const wc = (findSceneObjectByName("FindingEvidence").getComponent("Component.Text") as Text).textFill.color
+    expect(wc.x === 1 && wc.y === 1 && wc.z === 1 && wc.w === 1, "evidence text is pure white").toBe(true)
 
     if (stopAt === "finding") {
       ev("CARDS PASS (stopped at finding)", {})
@@ -146,6 +151,8 @@ export class MWNPLayoutCardsScenario extends Scenario {
     await waitFor((x) => x.visibleCard === "summary", 4000, "findings summary")
     await sleep(700)
     checkCard(cam, "SummaryCardCard")
+    const gc = (findSceneObjectByName("SummaryResult").getComponent("Component.Text") as Text).textFill.color
+    expect(Math.abs(gc.x - 0) < 0.012 && Math.abs(gc.y - 1) < 0.012 && Math.abs(gc.z - 0.4) < 0.012, "result is green #00FF66").toBe(true)
     ev("CARDS PASS", {})
   }
 }

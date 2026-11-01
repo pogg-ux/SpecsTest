@@ -91,7 +91,7 @@ const LABELS: {[crop: string]: LabelSpec[]} = {
   ],
 }
 
-const HI_CORE = new vec4(1.0, 0.6, 0.05, 1) // bright orange, same as the active-path outline on the model
+const HI_CORE = new vec4(1.0, 0.549, 0.0, 1) // #FF8C00, same orange as the traces on the model
 const HI_CASING = new vec4(0.1, 0.1, 0.16, 1) // dark casing so the core pops off the white drawing
 
 @component
@@ -115,7 +115,7 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
   @input
   @widget(new SliderWidget(0.2, 1.0, 0.05))
   @hint("Highlighted wire thickness in real cm (the drawn wire is about 0.12 cm)")
-  highlightThicknessCm: number = 0.5
+  highlightThicknessCm: number = 0.6
   @input
   @widget(new SliderWidget(0.5, 1.5, 0.05))
   @hint("Panel title text size: em height in real cm")

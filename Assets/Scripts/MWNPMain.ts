@@ -24,6 +24,8 @@ import {MWNPStepCardUI} from "./MWNPStepCardUI"
 import {MWNPFindingCardUI} from "./MWNPFindingCardUI"
 import {MWNPSummaryUI, SummaryRow} from "./MWNPSummaryUI"
 import {MWNPSchematicPanelUI} from "./MWNPSchematicPanelUI"
+import {DisplayFader} from "./MWNPDisplayFader"
+import {addButton, ButtonHandle, cardEm, makeObj} from "./MWNPSharedUI"
 
 const CHECK = "✓"
 const CROSS = "×" // U+00D7: the Lens font has no U+2717 ✗ glyph
@@ -127,6 +129,9 @@ export class MWNPMain extends BaseScriptComponent {
   jobLog: string[] = []
 
   private audio: AudioComponent | null = null
+  private fader: DisplayFader | null = null
+  private displayBtn: ButtonHandle | null = null
+  private lastGrabToggle = -10
   private initialized = false
 
   onAwake() {
@@ -207,6 +212,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.findingCard.onRetest.add(() => this.onRetest())
     this.summaryCard.onSave.add(() => this.onSave())
     this.cabinet.onS1Toggled.add((pos) => this.onS1Toggled(pos))
+    this.stepCard.onSwitch.add((e) => this.onSwitchPicked(e.component, e.position))
     this.partTags.onTagPinched.add((id) => this.onTagPinched(id))
 
     // Model starts in the reported condition: switch in the broken function's position.
@@ -216,6 +222,8 @@ export class MWNPMain extends BaseScriptComponent {
 
     this.safetyNotice.show()
     this.visibleCard = "safety"
+    this.buildDisplayControls()
+    this.setupDeviceExtras()
     this.initialized = true
     this.log("start")
   }
@@ -271,7 +279,7 @@ export class MWNPMain extends BaseScriptComponent {
 
   private onKey(k: string): void {
     const agent = this.agent as MWNPAgent
-    if (agent.phase !== "steps" && agent.phase !== "retest") return
+    if (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait") return
     this.click()
     const e = agent.key(k)
     this.stepCard.setReadout((e.length > 0 ? e : "—") + " V")
@@ -280,6 +288,17 @@ export class MWNPMain extends BaseScriptComponent {
   private onEnter(): void {
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
+    if (agent.phase === "retest_wait") {
+      // The reading belongs to the retest point, which is live only once the switch is back. Say so.
+      const fn = agent.functionKey
+      const ctl = fn ? nl.controlOf(fn) : null
+      this.click()
+      this.lastResultColor = ""
+      this.lastMessage = "Flip " + (ctl ? ctl.component + " " + ctl.position : "the switch") + " first (pinch it on the model or use the button), then press Enter."
+      this.stepCard.setResult(this.lastMessage, "")
+      this.log("enter-blocked")
+      return
+    }
     const pointId = agent.activePoint()
     const res = agent.enter(clock())
     if (!res.accepted || !res.cls) {
@@ -362,10 +381,111 @@ export class MWNPMain extends BaseScriptComponent {
     this.click()
     this.updateLamps()
     if (agent.switchMoved("S1", pos)) {
+      this.stepCard.setResult("", "")
       this.refreshStep()
       this.log("retest-active")
     } else {
       this.log("s1 " + pos)
+    }
+  }
+
+  /** The backup buttons (e.g. S1 UP / S1 DOWN) on the retest card; positions come from the netlist component. */
+  private updateSwitchControls(): void {
+    const nl = this.nl as Netlist
+    const agent = this.agent as MWNPAgent
+    const retest = agent.phase === "retest_wait" || agent.phase === "retest"
+    const fn = agent.functionKey
+    const ctl = fn ? nl.controlOf(fn) : null
+    if (retest && ctl) {
+      const comp = nl.component(ctl.component)
+      const positions = comp && comp.terminals ? comp.terminals.filter((t) => t !== "COM") : []
+      this.stepCard.setSwitchControls(ctl.component, positions, this.cabinet.s1Position)
+    } else {
+      this.stepCard.setSwitchControls("", [], "")
+    }
+  }
+
+  /** A backup switch button: same effect as pinching the switch on the model. */
+  private onSwitchPicked(component: string, position: string): void {
+    if (component === "S1") this.cabinet.setS1(position)
+    this.onS1Toggled(position)
+  }
+
+  // ── Hide / Show display ───────────────────────────────────────────────────
+
+  /** True while the display is hidden or fading out. */
+  get displayHidden(): boolean {
+    return !!this.fader && this.fader.hidden
+  }
+
+  /** Fades every card, tag, badge and trace out (true) or back in the same state (false). */
+  setDisplayHidden(hidden: boolean): void {
+    if (!this.fader) return
+    this.fader.setHidden(hidden)
+    if (this.displayBtn) this.displayBtn.label.text = hidden ? "Show" : "Hide"
+    this.log(hidden ? "display-hidden" : "display-shown")
+  }
+
+  private onDisplayToggle(): void {
+    this.click()
+    this.setDisplayHidden(!this.displayHidden)
+  }
+
+  /** The always-visible Hide / Show button at the cabinet's top-right edge, and the fader behind it. */
+  private buildDisplayControls(): void {
+    const host = this.stepCard.sceneObject
+    const root = makeObj(this.sceneObject, "DisplayControls")
+    root.createComponent("Component.Canvas")
+    const ht = host.getTransform()
+    const rt = root.getTransform()
+    rt.setLocalPosition(ht.getLocalPosition())
+    rt.setLocalRotation(ht.getLocalRotation())
+    rt.setLocalScale(ht.getLocalScale())
+    const em = cardEm(root, 1.0)
+    const w = 8.0
+    const h = 3.6
+    const btn = addButton(root, "Btn_DisplayToggle", "Hide", w, h, () => this.onDisplayToggle(), {emCm: em, bold: true, inFlex: false})
+    // Flush with the step card's right edge, just above its top edge = the cabinet's top-right corner on screen.
+    btn.so.getTransform().setLocalPosition(new vec3(this.stepCard.widthCm / 2 - w / 2, h / 2 + 1.0, 0))
+    this.displayBtn = btn
+    this.fader = new DisplayFader(this, [host.getParent() as SceneObject, this.partTags.sceneObject], this.cabinet)
+  }
+
+  /**
+   * Device-only extras: say "hide display" / "show display", or make a fist (grab), to hide / show the display.
+   * Skipped in the editor and wrapped so a missing module or permission never breaks the Lens; the button
+   * above always works.
+   */
+  private setupDeviceExtras(): void {
+    if (global.deviceInfoSystem.isEditor()) return
+    try {
+      const asr = require("LensStudio:AsrModule") as AsrModule
+      const options = AsrModule.AsrTranscriptionOptions.create()
+      options.silenceUntilTerminationMs = 1500
+      options.mode = AsrModule.AsrMode.Balanced
+      options.onTranscriptionUpdateEvent.add((e: AsrModule.TranscriptionUpdateEvent) => {
+        if (!e.isFinal) return
+        const said = e.text.toLowerCase()
+        if (said.indexOf("hide display") >= 0) this.setDisplayHidden(true)
+        else if (said.indexOf("show display") >= 0) this.setDisplayHidden(false)
+      })
+      options.onTranscriptionErrorEvent.add(() => {})
+      asr.startTranscribing(options)
+    } catch (e) {
+      print("[MWNP] voice control unavailable: " + e)
+    }
+    try {
+      const gestures = require("LensStudio:GestureModule") as GestureModule
+      const onGrab = () => {
+        // A fist toggles the display; ignore a second fist within a second (hand jitter).
+        if (getTime() - this.lastGrabToggle < 1) return
+        this.lastGrabToggle = getTime()
+        this.setDisplayHidden(!this.displayHidden)
+      }
+      gestures.getGrabBeginEvent(GestureModule.HandType.Right).add(onGrab)
+      gestures.getGrabBeginEvent(GestureModule.HandType.Left).add(onGrab)
+    } catch (e) {
+      print("[MWNP] grab gesture unavailable: " + e)
     }
   }
 
@@ -499,6 +619,7 @@ export class MWNPMain extends BaseScriptComponent {
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
     const ref = nl.referencePoint()
+    this.updateSwitchControls()
     const prevActive = this.cabinet.activePointId
     if (prevActive) {
       const pc = nl.baseId(prevActive)
@@ -649,6 +770,8 @@ export class MWNPMain extends BaseScriptComponent {
       repaired: agent.repaired,
       tagInfo: this.lastTagInfo,
       schematicOpen: this.schematicPanel.isOpen,
+      display: {hidden: this.displayHidden, alpha: this.fader ? this.fader.alpha : 1, fading: !!this.fader && this.fader.isFading},
+      switchRow: this.stepCard.switchRowVisible,
       schematicWire: this.schematicPanel.highlightedWire,
       savedToJobLog: this.savedToJobLog,
       reasoning: agent.faultIndex >= 0 ? nl.reasoning(agent.faultIndex) + " " + nl.pathChain(agent.faultIndex) : "",

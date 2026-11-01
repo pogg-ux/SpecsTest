@@ -6,9 +6,14 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {MWNPLeafInteractor, ev, waitFor} from "./MWNPLeafInteractor"
+import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
+import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 type R = {x0: number; x1: number; y0: number; y1: number}
+
+function textOf(name: string): Text {
+  return findSceneObjectByName(name).getComponent("Component.Text") as Text
+}
 
 function findCamera(): Camera {
   let found: Camera | null = null
@@ -39,6 +44,15 @@ function screenRect(cam: Camera, so: SceneObject, w: number, h: number, z: numbe
 
 function overlaps(a: R, b: R): boolean {
   return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1
+}
+
+
+function near(c: vec4, r: number, g: number, b: number, tol: number = 0.012): boolean {
+  return Math.abs(c.x - r) < tol && Math.abs(c.y - g) < tol && Math.abs(c.z - b) < tol && c.w > 0.98
+}
+
+function colorStr(c: vec4): string {
+  return "(" + c.x.toFixed(3) + "," + c.y.toFixed(3) + "," + c.z.toFixed(3) + "," + c.w.toFixed(3) + ")"
 }
 
 function fmt(r: R): string {
@@ -139,6 +153,53 @@ export class MWNPLayoutScenario extends Scenario {
           ev("layout reasoning", {text: t.text.replace(/\n/g, " | "), approxLines: nlines})
         }
       }
+    }
+
+    // Number pad: keys about 3 cm, digits bold and at least 1.2 cm tall; retest-only switch row is not shown yet.
+    {
+      expect(mwnpState().switchRow, "switch row is hidden outside the retest step").toBe(false)
+      for (const k of ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]) {
+        const so = findSceneObjectByName("Key_" + k)
+        const btn = so.getComponent(Button.getTypeName()) as Button
+        const ws = so.getTransform().getWorldScale()
+        const wCm = btn.size.x * ws.x
+        let label: Text | null = null
+        for (let i = 0; i < so.getChildrenCount(); i++) if (so.getChild(i).name === "Label") label = so.getChild(i).getComponent("Component.Text") as Text
+        expect(!!label, "Key_" + k + " has a label").toBe(true)
+        const lt = label as Text
+        const emCm = (lt.size / 43.886) * lt.getSceneObject().getTransform().getWorldScale().y
+        if (k === "5") ev("layout key", {widthCm: +wCm.toFixed(2), digitEmCm: +emCm.toFixed(2), weight: (lt as any).weight})
+        expect(wCm >= 2.8 && wCm <= 3.3, "Key_" + k + " is " + wCm.toFixed(2) + " cm wide (about 3)").toBe(true)
+        expect(emCm >= 1.2 - 1e-3, "Key_" + k + " digit " + emCm.toFixed(2) + " cm (need >= 1.2)").toBe(true)
+        expect((lt as any).weight, "Key_" + k + " digit is bold").toBe(700)
+      }
+    }
+
+    // Vivid colors: pure white card text, #FFB800 amber, orange trace, brighter wires, thicker trace, opaque cards.
+    {
+      for (const n of ["Reasoning", "StepQuestion", "StepCitation", "StepTitle"]) {
+        const c = textOf(n).textFill.color
+        expect(near(c, 1, 1, 1), n + " is pure white: " + colorStr(c)).toBe(true)
+      }
+      const amber = textOf("PathCitation").textFill.color
+      expect(near(amber, 1, 0.722, 0), "PathCitation is amber #FFB800: " + colorStr(amber)).toBe(true)
+      const trainer0 = findSceneObjectByName("MWNPTrainer")
+      const tcomp = trainer0.getComponent("Component.ScriptComponent") as any
+      expect(tcomp.traceThicknessCm >= 0.7, "trace lines are thick: " + tcomp.traceThicknessCm + " cm").toBe(true)
+      const seg = findSceneObjectByName("Trace_2b_3").getChild(0).getComponent("Component.RenderMeshVisual") as RenderMeshVisual
+      const tc = seg.mainMaterial.mainPass.baseColor
+      expect(near(tc, 1, 0.549, 0), "active trace is orange #FF8C00: " + colorStr(tc)).toBe(true)
+      let wireSeg: RenderMeshVisual | null = null
+      for (let i = 0; i < trainer0.getChildrenCount(); i++) {
+        const w = trainer0.getChild(i)
+        if (w.name.indexOf("Wire_2b_") === 0 && w.getChildrenCount() > 0) wireSeg = w.getChild(0).getComponent("Component.RenderMeshVisual") as RenderMeshVisual
+      }
+      const wc = (wireSeg as RenderMeshVisual).mainMaterial.mainPass.baseColor
+      expect(wc.x >= 0.95 && wc.y <= 0.25, "supply wires are bright red: " + colorStr(wc)).toBe(true)
+      const plate = findSceneObjectByName("StepCardCard").getComponent("Component.ScriptComponent") as any
+      const fillA = plate && plate.roundedRectangle ? plate.roundedRectangle.backgroundColor.w : 0
+      ev("layout colors", {traceThicknessCm: tcomp.traceThicknessCm, traceColor: colorStr(tc), wireColor: colorStr(wc), cardFillAlpha: +fillA.toFixed(2)})
+      expect(fillA >= 0.85, "cards are nearly opaque: fill alpha " + fillA.toFixed(2)).toBe(true)
     }
 
     // Schematic: cropped to the active path, with a thick bright wire.

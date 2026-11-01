@@ -2,6 +2,7 @@
 
 import {scenariosIndex} from "Leaf.lspkg/Scenarios/decorator/ScenarioIndexDecorator"
 import {ScenarioMetadata} from "Leaf.lspkg/Scenarios/scenario/ScenarioMetadata"
+import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
 import {MWNPC1SymptomPathScenario} from "./MWNPC1SymptomPathScenario"
 import {MWNPC2ReadingInSpecScenario} from "./MWNPC2ReadingInSpecScenario"
 import {MWNPC3FaultFlaggedScenario} from "./MWNPC3FaultFlaggedScenario"
@@ -9,6 +10,8 @@ import {MWNPC4NoGuessScenario} from "./MWNPC4NoGuessScenario"
 import {MWNPC5FixAndSummaryScenario} from "./MWNPC5FixAndSummaryScenario"
 import {MWNPLayoutScenario} from "./MWNPLayoutScenario"
 import {MWNPLayoutCardsScenario} from "./MWNPLayoutCardsScenario"
+import {MWNPRetestControlsScenario} from "./MWNPRetestControlsScenario"
+import {MWNPDisplayToggleScenario} from "./MWNPDisplayToggleScenario"
 
 /** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
 const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
@@ -26,6 +29,8 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-c5-fix-and-summary", typename: MWNPC5FixAndSummaryScenario.getTypeName()},
     {id: "mwnp-layout-clear-view", typename: MWNPLayoutScenario.getTypeName()},
     {id: "mwnp-layout-cards", typename: MWNPLayoutCardsScenario.getTypeName(), parameters: {stop_at: "summary"}},
+    {id: "mwnp-retest-controls", typename: MWNPRetestControlsScenario.getTypeName(), parameters: {stop_after: ""}},
+    {id: "mwnp-display-toggle", typename: MWNPDisplayToggleScenario.getTypeName()},
   ]
 
   private overlays: {[name: string]: SceneObject} = {}
@@ -33,6 +38,35 @@ export class LeafIndex extends BaseScriptComponent {
   onAwake() {
     // Test banners and reports show only while a scenario is running, so a normal Preview is clean.
     this.createEvent("UpdateEvent").bind(() => this.gateLeafOverlays())
+    // Test aid: pressing P in the Preview prints the screen position of every enabled control, so real
+    // clicks (InjectPreviewGesture) can be aimed without estimating from screenshots.
+    this.createEvent("KeyPressEvent").bind((e: KeyPressEvent) => {
+      if (e.key === Keys.P) this.probeTargets()
+    })
+  }
+
+  private probeTargets(): void {
+    let cam: Camera | null = null
+    const find = (o: SceneObject) => {
+      if (cam) return
+      const c = o.getComponent("Component.Camera") as Camera
+      if (c && o.isEnabledInHierarchy) cam = c
+      for (let i = 0; i < o.getChildrenCount(); i++) find(o.getChild(i))
+    }
+    for (let i = 0; i < global.scene.getRootObjectsCount(); i++) find(global.scene.getRootObject(i))
+    if (!cam) return
+    const camera = cam as Camera
+    const lines: string[] = []
+    const scan = (o: SceneObject) => {
+      if (!o.isEnabledInHierarchy) return
+      if (/^(Key_|Btn_|S1_Toggle|Tag_TS-3)/.test(o.name) && o.getComponent(Interactable.getTypeName())) {
+        const sp = camera.worldSpaceToScreenSpace(o.getTransform().getWorldPosition())
+        lines.push(o.name + "=" + sp.x.toFixed(3) + "," + sp.y.toFixed(3))
+      }
+      for (let i = 0; i < o.getChildrenCount(); i++) scan(o.getChild(i))
+    }
+    for (let i = 0; i < global.scene.getRootObjectsCount(); i++) scan(global.scene.getRootObject(i))
+    print("[PROBE] " + lines.join(" "))
   }
 
   private findRoot(name: string): SceneObject | null {

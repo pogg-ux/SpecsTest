@@ -41,12 +41,13 @@ export function applyTextRole(t: Text, role: TextRole, distanceCm: number): void
 // ── Palette (additive display: nothing near-black) ──
 export const COLOR = {
   white: new vec4(1, 1, 1, 1),
-  dim: new vec4(1, 1, 1, 0.6),
-  faint: new vec4(1, 1, 1, 0.45),
-  green: new vec4(0.45, 0.95, 0.55, 1),
-  red: new vec4(1.0, 0.45, 0.42, 1),
-  amber: new vec4(1.0, 0.76, 0.28, 1),
-  cyan: new vec4(0.5, 0.88, 1.0, 1),
+  dim: new vec4(1, 1, 1, 1), // card text is pure white; "dim" is kept only so callers need no change
+  faint: new vec4(1, 1, 1, 1),
+  green: new vec4(0, 1, 0.4, 1), // #00FF66
+  red: new vec4(1, 0.231, 0.188, 1), // #FF3B30
+  amber: new vec4(1, 0.722, 0, 1), // #FFB800
+  orange: new vec4(1, 0.549, 0, 1), // #FF8C00 (traces, schematic highlight)
+  cyan: new vec4(0.2, 0.9, 1, 1),
 }
 
 export function colorForWord(word: string): vec4 {
@@ -124,7 +125,7 @@ export function addButton(
   w: number,
   h: number,
   onClick: () => void,
-  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number; wrap?: boolean}
+  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number; wrap?: boolean; bold?: boolean}
 ): ButtonHandle {
   const so = makeObj(parent, name)
   const btn = so.createComponent(Button.getTypeName()) as Button
@@ -141,6 +142,7 @@ export function addButton(
   t.verticalOverflow = VerticalOverflow.Overflow
   t.layoutRect = Rect.create(-(w - 0.5) / 2, (w - 0.5) / 2, -h / 2, h / 2)
   t.textFill.color = COLOR.white
+  if (opts?.bold) (t as Text & {weight?: number}).weight = 700
   btn.onTriggerUp.add(() => onClick())
   if (opts?.inFlex !== false) {
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
@@ -197,7 +199,7 @@ export type CardAnchor = "center" | "top" | "bottom"
  * its wire traces stay visible behind cards that float in front of the cabinet.
  */
 export const CARD_FILL_GRAY = 0.16
-export const CARD_FILL_ALPHA = 0.72
+export const CARD_FILL_ALPHA = 0.9
 const CARD_FILL = new vec4(CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_GRAY * CARD_FILL_ALPHA, CARD_FILL_ALPHA)
 
 /** Applies the translucent fill once the plate's RoundedRectangle has initialized (BackPlate sets its own color on start). */
@@ -321,8 +323,8 @@ export function textWidthCm(text: string, emCm: number, bold: boolean = false): 
 }
 
 /** Body text colors for cards: bright enough to read over a translucent plate in a screen recording. */
-export const TEXT_BODY = new vec4(1, 1, 1, 0.92)
-export const TEXT_SOFT = new vec4(1, 1, 1, 0.78)
+export const TEXT_BODY = new vec4(1, 1, 1, 1)
+export const TEXT_SOFT = new vec4(1, 1, 1, 1)
 
 /**
  * Converts a real-world text height (cm) into card units for a card hosted on `host`

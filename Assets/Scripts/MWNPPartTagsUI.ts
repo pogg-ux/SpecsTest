@@ -72,11 +72,11 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
   @input
   @widget(new ColorWidget())
   @hint("Wire label color for +12 V conductors")
-  supplyWireColor: vec4 = new vec4(0.8, 0.1, 0.1, 1)
+  supplyWireColor: vec4 = new vec4(1.0, 0.16, 0.12, 1)
   @input
   @widget(new ColorWidget())
   @hint("Wire label color for 0 V return conductors")
-  returnWireColor: vec4 = new vec4(0.15, 0.3, 0.85, 1)
+  returnWireColor: vec4 = new vec4(0.22, 0.42, 1.0, 1)
   @input
   @widget(new ColorWidget())
   @hint("Board footnote color")
@@ -135,6 +135,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       const shape = Shape.createBoxShape()
       shape.size = new vec3(w, h, 1.0)
       col.shape = shape
+      col.fitVisual = false // like UIKit's own colliders: never re-fit to a visual
       const tag = {so, label, hovered: false}
       const it = so.createComponent(Interactable.getTypeName()) as Interactable
       it.onTriggerEnd.add(() => this._onTagPinched.invoke(a.id))

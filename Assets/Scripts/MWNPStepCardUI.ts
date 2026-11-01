@@ -1,25 +1,28 @@
 // MWNPStepCardUI.ts — the step card: reasoning, current step, citation, result, readout, number pad.
 //
-// Owns: card layout and the number pad (0–9, ".", Del, Enter) plus the Schematic toggle.
-// Text is sized in real centimetres (textEmCm, default 1.0 cm text height) whatever the card's scale,
-// so it stays readable in a 1080p recording. Each text cell is sized to its words (fitText) and the
-// card grows DOWNWARD from its host's origin: the host sits at the card's top-center.
-// The number pad is unchanged (key size, layout).
+// Owns: card layout, the number pad (0–9, ".", Del, Enter), the Schematic toggle, and — during the retest step —
+// a row of switch buttons (e.g. "S1 UP" / "S1 DOWN") as a backup to pinching the switch on the model.
+// Text is sized in real centimetres (textEmCm, default 1.0 cm) whatever the card's scale, each text cell is
+// sized to its words (fitText), and the card grows DOWNWARD from its host's origin (host = top-center).
+// The number pad keys are about 3 cm wide with bold digits at least 1.2 cm tall.
 // API: show(), hide(), setReasoning(), setPathCitation(), setStep(), setResult(), setReadout(),
+//      setSwitchControls(component, positions, current),
 //      readable text fields (stepTitleText, resultText, readoutText, resultColorWord),
-//      events onKey(key: "0".."9" | "." | "back"), onEnter, onSchematic.
+//      events onKey(key: "0".."9" | "." | "back"), onEnter, onSchematic, onSwitch({component, position}).
 // Must not: parse readings, classify, or advance steps — Main/agent own that.
-// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "StepCardCard",
-//               text cells "Reasoning", "PathCitation", "StepTitle", "StepQuestion", "StepCitation",
-//               "Expected", "Result", "Readout".
+// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "Btn_<comp>_<pos>" (Btn_S1_UP,
+//               Btn_S1_DOWN), "StepCardCard", text cells "Reasoning", "PathCitation", "StepTitle", "StepQuestion",
+//               "StepCitation", "Expected", "Result", "Readout".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection, FlexJustify, FlexAlign} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
-import {addButton, addFlex, addText, COLOR, colorForWord, fitText, makeCardBody} from "./MWNPSharedUI"
+import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
+import {addButton, addFlex, addText, ButtonHandle, COLOR, colorForWord, fitText, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
-/** Body text on the card: bright enough to read over the translucent plate in a screen recording. */
-const BODY = new vec4(1, 1, 1, 0.92)
-const SOFT = new vec4(1, 1, 1, 0.78)
+export interface SwitchPick {
+  component: string
+  position: string
+}
 
 @component
 export class MWNPStepCardUI extends BaseScriptComponent {
@@ -31,10 +34,6 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   @hint("Card width in card units (cm before scaling)")
   widthCm: number = 32
   @input
-  @widget(new SliderWidget(2.4, 4.5, 0.1))
-  @hint("Number pad key width in card units (unchanged: about 3 cm before scaling)")
-  keyWidthCm: number = 3.2
-  @input
   @widget(new SliderWidget(0.6, 2.0, 0.05))
   @hint("Card text size: em height in real cm (1.0 reads in a 1080p recording)")
   textEmCm: number = 1.0
@@ -42,6 +41,18 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   @widget(new SliderWidget(0.6, 2.4, 0.05))
   @hint("Readout text size: em height in real cm")
   readoutEmCm: number = 1.2
+  @input
+  @widget(new SliderWidget(2.0, 4.5, 0.1))
+  @hint("Number pad key width in real cm (about 3)")
+  keyWidthRealCm: number = 3.0
+  @input
+  @widget(new SliderWidget(1.6, 3.5, 0.1))
+  @hint("Number pad key height in real cm")
+  keyHeightRealCm: number = 2.2
+  @input
+  @widget(new SliderWidget(1.0, 2.0, 0.05))
+  @hint("Number pad digits: em height in real cm, bold (at least 1.2)")
+  digitEmCm: number = 1.25
   @input
   @hint("Readout prefix")
   readoutPrefix: string = "Reading:"
@@ -57,11 +68,15 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   readoutText: string = ""
   /** Text height in card units (cm before scaling) actually used; times the card's world scale = real cm. */
   textEmLocal: number = 0
+  /** Switch row: shown during the retest step. */
+  switchRowVisible: boolean = false
+  switchCurrent: string = ""
   get isVisible(): boolean {
     return !!this.body && this.body.enabled
   }
 
   private body: SceneObject | null = null
+  private content: SceneObject | null = null
   private inner = 0
   private tReasoning: Text | null = null
   private tPathCite: Text | null = null
@@ -71,10 +86,14 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   private tExpected: Text | null = null
   private tResult: Text | null = null
   private tReadout: Text | null = null
+  private switchRow: SceneObject | null = null
+  private switchKey = ""
+  private switchButtons: {[position: string]: ButtonHandle} = {}
 
   private _onKey = new Event<string>()
   private _onEnter = new Event<void>()
   private _onSchematic = new Event<void>()
+  private _onSwitch = new Event<SwitchPick>()
   get onKey(): PublicApi<string> {
     return this._onKey.publicApi()
   }
@@ -83,6 +102,9 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   }
   get onSchematic(): PublicApi<void> {
     return this._onSchematic.publicApi()
+  }
+  get onSwitch(): PublicApi<SwitchPick> {
+    return this._onSwitch.publicApi()
   }
 
   onAwake() {
@@ -128,7 +150,53 @@ export class MWNPStepCardUI extends BaseScriptComponent {
 
   setReadout(text: string): void {
     this.readoutText = this.readoutPrefix + " " + text
-    if (this.tReadout) this.tReadout.text = this.readoutText
+    // Two short lines ("Reading:" / "12.1 V") so the value stays big inside the narrow side column.
+    if (this.tReadout) this.tReadout.text = this.readoutPrefix + "\n" + text
+  }
+
+  /**
+   * Shows the switch row (retest step) with one button per position, highlighting `current`; an empty
+   * `positions` list hides it. Buttons are named "Btn_<component>_<position>".
+   */
+  setSwitchControls(component: string, positions: string[], current: string): void {
+    this.switchCurrent = current
+    if (!this.content) return
+    if (positions.length === 0) {
+      if (this.switchRow) this.switchRow.enabled = false
+      this.switchRowVisible = false
+      return
+    }
+    const key = component + ":" + positions.join(",")
+    if (!this.switchRow || this.switchKey !== key) {
+      if (this.switchRow) this.switchRow.destroy()
+      this.buildSwitchRow(component, positions)
+      this.switchKey = key
+    }
+    ;(this.switchRow as SceneObject).enabled = true
+    this.switchRowVisible = true
+    for (const p of positions) {
+      const h = this.switchButtons[p]
+      if (h) h.label.textFill.color = p === current ? COLOR.amber : COLOR.white
+    }
+  }
+
+  private buildSwitchRow(component: string, positions: string[]): void {
+    const c = this.content as SceneObject
+    const em = this.textEmLocal
+    const labelW = 5.5
+    const gap = 0.8
+    const bw = (this.inner - labelW - gap * positions.length) / positions.length
+    const row = addFlex(c, "SwitchRow", FlexDirection.Row, this.inner, 3.8, gap, {align: FlexAlign.Center})
+    ;(row.getComponent(FlexItem.getTypeName()) as FlexItem).order = 1
+    addText(row, "SwitchLabel", component, labelW, 3.8, {emCm: em, color: TEXT_SOFT, align: "center"})
+    this.switchButtons = {}
+    for (const pos of positions) {
+      this.switchButtons[pos] = addButton(row, "Btn_" + component + "_" + pos, component + " " + pos, bw, 3.8, () => this._onSwitch.invoke({component, position: pos}), {
+        emCm: em,
+        bold: true,
+      })
+    }
+    this.switchRow = row
   }
 
   private build(): void {
@@ -142,26 +210,29 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const card = makeCardBody(this.sceneObject, "StepCardCard", w, 1.4, 0.5, "top")
     this.body = card.body
     const c = card.content
+    this.content = c
     const cell = (name: string, color: vec4): Text => addText(c, name, "", inner, 0.01, {emCm: em, color, wrap: true, valign: "top"})
-    this.tReasoning = cell("Reasoning", SOFT)
+    this.tReasoning = cell("Reasoning", TEXT_SOFT)
     this.tPathCite = cell("PathCitation", COLOR.amber)
     this.tTitle = cell("StepTitle", COLOR.white)
-    this.tQuestion = cell("StepQuestion", BODY)
-    this.tCite = cell("StepCitation", SOFT)
+    this.tQuestion = cell("StepQuestion", TEXT_BODY)
+    this.tCite = cell("StepCitation", TEXT_SOFT)
     this.tExpected = cell("Expected", COLOR.cyan)
-    this.tResult = cell("Result", BODY)
+    this.tResult = cell("Result", TEXT_BODY)
     for (const t of [this.tReasoning, this.tPathCite, this.tTitle, this.tQuestion, this.tCite, this.tExpected, this.tResult]) {
       fitText(t, "", inner, em, 0)
     }
     ;(this.tTitle as Text & {weight?: number}).weight = 700
 
-    // Bottom row: number pad (left) + readout / Enter / Schematic (right). Number pad unchanged.
-    const kw = this.keyWidthCm
-    const kh = 2.2
+    // Bottom row: number pad (left) + readout / Enter / Schematic (right).
+    const kw = this.keyWidthRealCm / scale
+    const kh = this.keyHeightRealCm / scale
+    const digitEm = this.digitEmCm / scale
     const kg = 0.35
     const padW = kw * 3 + kg * 2
     const padH = kh * 4 + kg * 3
     const row = addFlex(c, "PadRow", FlexDirection.Row, inner, padH, 1.0, {align: FlexAlign.Center})
+    ;(row.getComponent(FlexItem.getTypeName()) as FlexItem).order = 2
     const pad = addFlex(row, "NumPad", FlexDirection.Column, padW, padH, kg)
     const keys = [
       ["7", "8", "9"],
@@ -174,14 +245,14 @@ export class MWNPStepCardUI extends BaseScriptComponent {
       for (const k of rowKeys) {
         const name = k === "." ? "Key_Dot" : k === "back" ? "Key_Back" : "Key_" + k
         const label = k === "back" ? "Del" : k
-        addButton(kr, name, label, kw, kh, () => this._onKey.invoke(k), {role: "Subheadline"})
+        addButton(kr, name, label, kw, kh, () => this._onKey.invoke(k), {emCm: digitEm, bold: true})
       }
     })
     const sideW = inner - padW - 1.0
     const side = addFlex(row, "PadSide", FlexDirection.Column, sideW, padH, 0.8, {justify: FlexJustify.Center})
     const rem = this.readoutEmCm / scale
-    this.tReadout = addText(side, "Readout", this.readoutPrefix + " — V", sideW, rem * 1.4, {emCm: rem, align: "center"})
-    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: em})
-    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 2.6, () => this._onSchematic.invoke(), {emCm: em})
+    this.tReadout = addText(side, "Readout", this.readoutPrefix + "\n— V", sideW, rem * LINE_H * 2, {emCm: rem, align: "center", wrap: true, valign: "top"})
+    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.6, () => this._onEnter.invoke(), {emCm: em, bold: true})
+    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.6, () => this._onSchematic.invoke(), {emCm: em})
   }
 }

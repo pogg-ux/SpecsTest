@@ -9116,7 +9116,6 @@
   Enabled: true
   ScriptAsset: !<reference> 68a9f65c-6b09-4fa4-a9c1-5f7d2041ec2a
   ScriptInputsDefault:
-    highlightThicknessCm: true
     titleEmCm: true
     labelEmCm: true
   ScriptTypesDefault:
@@ -9126,7 +9125,7 @@
       schematicTexture: !<reference.Texture> f58014af-bdce-45c1-8064-0647d707f45b
       highlightIcon: !<reference.Texture> 1e5379ba-4a3a-4bed-9128-9cf16c6e395d
       widthCm: !<float> 42.000000
-      highlightThicknessCm: 0.500000
+      highlightThicknessCm: 0.600000
       titleEmCm: 0.800000
       labelEmCm: 0.900000
   ScriptTypes:
@@ -15477,7 +15476,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 7.600000, y: 10.900000, z: -56.200001}
+    Position: {x: 2.600000, y: 10.900000, z: -56.200001}
     Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
@@ -20293,7 +20292,6 @@
   ScriptAsset: !<reference> f22136c7-fc5f-4dfc-92c6-dfa9f6afd6c3
   ScriptInputsDefault:
     wireThicknessCm: true
-    traceThicknessCm: true
     leverAngleDeg: true
     debugColliders: true
   ScriptTypesDefault:
@@ -20304,7 +20302,7 @@
       sphereMesh: !<reference.RenderMesh> c2370efe-1049-4e5a-b319-38824da99150
       baseMaterial: !<reference.Material> 8ffb4432-aeba-410e-8289-dfbfbfaddd99
       wireThicknessCm: 0.300000
-      traceThicknessCm: 0.420000
+      traceThicknessCm: 0.750000
       leverAngleDeg: !<float> 35.000000
       debugColliders: false
   ScriptTypes:
@@ -22353,8 +22351,8 @@
       noteEmCm: 0.600000
       overlayMaxWidthCm: 8.600000
       dimAlpha: 0.550000
-      supplyWireColor: !<Vec4> {x: 0.800000, y: 0.100000, z: 0.100000, w: 1.000000}
-      returnWireColor: !<Vec4> {x: 0.150000, y: 0.300000, z: 0.850000, w: 1.000000}
+      supplyWireColor: !<Vec4> {x: 1.000000, y: 0.160000, z: 0.120000, w: 1.000000}
+      returnWireColor: !<Vec4> {x: 0.220000, y: 0.420000, z: 1.000000, w: 1.000000}
       noteColor: !<Vec4> {x: 0.300000, y: 0.320000, z: 0.360000, w: 1.000000}
   ScriptTypes:
     "":
@@ -22763,9 +22761,11 @@
   Enabled: true
   ScriptAsset: !<reference> 3c7f3175-1eaa-4496-b890-50feec6967b8
   ScriptInputsDefault:
-    keyWidthCm: true
     textEmCm: true
     readoutEmCm: true
+    keyWidthRealCm: true
+    keyHeightRealCm: true
+    digitEmCm: true
     readoutPrefix: true
     schematicLabel: true
   ScriptTypesDefault:
@@ -22773,9 +22773,11 @@
   ScriptInputs:
     "":
       widthCm: !<float> 32.000000
-      keyWidthCm: 3.200000
       textEmCm: !<float> 1.000000
       readoutEmCm: 1.200000
+      keyWidthRealCm: !<float> 3.000000
+      keyHeightRealCm: 2.200000
+      digitEmCm: 1.250000
       readoutPrefix: "Reading:"
       schematicLabel: Schematic
   ScriptTypes:

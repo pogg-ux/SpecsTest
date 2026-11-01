@@ -98,21 +98,21 @@ const PALETTE = {
   hole: c4(0.45, 0.46, 0.5),
   fuse: c4(0.85, 0.78, 0.88),
   openSpot: c4(0.45, 0.48, 0.52),
-  wireSupply: c4(0.85, 0.12, 0.12),
-  wireReturn: c4(0.15, 0.3, 0.85),
+  wireSupply: c4(1.0, 0.16, 0.12),
+  wireReturn: c4(0.22, 0.42, 1.0),
   s1: c4(0.75, 0.76, 0.8),
   l1Off: c4(0.18, 0.35, 0.18),
   l1On: c4(0.45, 1.0, 0.45),
   l2Off: c4(0.42, 0.3, 0.12),
   l2On: c4(1.0, 0.68, 0.2),
-  outlineAmber: c4(1.0, 0.6, 0.05),
+  outlineAmber: c4(1.0, 0.722, 0.0), // #FFB800
   outlineActive: c4(0.2, 0.75, 1.0),
-  outlineGreen: c4(0.1, 0.8, 0.25),
-  outlineRed: c4(1.0, 0.15, 0.12),
-  traceActive: c4(1.0, 0.6, 0.05),
-  traceGreen: c4(0.1, 0.8, 0.25),
+  outlineGreen: c4(0.0, 1.0, 0.4), // #00FF66
+  outlineRed: c4(1.0, 0.231, 0.188), // #FF3B30
+  traceActive: c4(1.0, 0.549, 0.0), // #FF8C00 orange
+  traceGreen: c4(0.0, 1.0, 0.4), // #00FF66
   traceGray: c4(0.5, 0.5, 0.52),
-  traceRed: c4(1.0, 0.15, 0.12),
+  traceRed: c4(1.0, 0.231, 0.188), // #FF3B30
   probeTest: c4(1.0, 0.3, 0.25),
   probeRef: c4(0.85, 0.85, 0.9),
 }
@@ -141,7 +141,7 @@ export class MWNPCabinet extends BaseScriptComponent {
   @input
   @widget(new SliderWidget(0.2, 0.8, 0.05))
   @hint("Trace line thickness in cm")
-  traceThicknessCm: number = 0.42
+  traceThicknessCm: number = 0.75
   @input
   @widget(new SliderWidget(10, 60, 1))
   @hint("S1 lever throw angle in degrees")
@@ -253,6 +253,8 @@ export class MWNPCabinet extends BaseScriptComponent {
     // Probe markers (hidden until a point is active)
     this.probeTest = this.sphere(root, "Probe_Test", [0, 0], 1.0, 2.0, PALETTE.probeTest, true)
     this.probeRef = this.sphere(root, "Probe_Ref", [0, 0], 1.0, 2.0, PALETTE.probeRef, true)
+    this.paint((this.probeTest.getComponent("Component.RenderMeshVisual") as RenderMeshVisual).mainMaterial, PALETTE.probeTest)
+    this.paint((this.probeRef.getComponent("Component.RenderMeshVisual") as RenderMeshVisual).mainMaterial, PALETTE.probeRef)
     this.probeTest.enabled = false
     this.probeRef.enabled = false
 
@@ -360,7 +362,7 @@ export class MWNPCabinet extends BaseScriptComponent {
     o.so.enabled = true
     const col =
       state === "active" ? PALETTE.outlineActive : state === "green" ? PALETTE.outlineGreen : state === "red" ? PALETTE.outlineRed : PALETTE.outlineAmber
-    for (const m of o.mats) m.mainPass.baseColor = col
+    for (const m of o.mats) this.paint(m, col)
   }
 
   clearOutlines(): void {
@@ -396,7 +398,7 @@ export class MWNPCabinet extends BaseScriptComponent {
     t.so.enabled = true
     const col =
       state === "green" ? PALETTE.traceGreen : state === "gray" ? PALETTE.traceGray : state === "red" ? PALETTE.traceRed : PALETTE.traceActive
-    for (const m of t.mats) m.mainPass.baseColor = col
+    for (const m of t.mats) this.paint(m, col)
   }
 
   hideTraces(): void {
@@ -420,6 +422,32 @@ export class MWNPCabinet extends BaseScriptComponent {
     } else {
       this.probeRef.enabled = false
     }
+  }
+
+  // ── Overlay fade (traces, outlines, probe markers) for the Hide / Show display control ──
+
+  private overlayAlpha = 1
+  private overlayBase = new Map<Material, vec4>()
+
+  /** Colors an overlay material and remembers the color so fadeOverlays can scale its alpha. */
+  private paint(m: Material, col: vec4): void {
+    if (!this.overlayBase.has(m)) m.mainPass.blendMode = BlendMode.PremultipliedAlphaAuto
+    this.overlayBase.set(m, col)
+    const a = col.w * this.overlayAlpha
+    m.mainPass.baseColor = new vec4(col.x * a, col.y * a, col.z * a, a)
+  }
+
+  /** 0..1: scales the alpha of every trace, outline and probe marker; the state behind them is untouched. */
+  fadeOverlays(alpha: number): void {
+    this.overlayAlpha = alpha
+    this.overlayBase.forEach((col, m) => {
+      const a = col.w * alpha
+      m.mainPass.baseColor = new vec4(col.x * a, col.y * a, col.z * a, a)
+    })
+  }
+
+  get overlayOpacity(): number {
+    return this.overlayAlpha
   }
 
   setLamp(id: string, lit: boolean): void {
@@ -485,8 +513,9 @@ export class MWNPCabinet extends BaseScriptComponent {
     toggle.getTransform().setLocalPosition(new vec3(p[0], p[1], 1.9))
     const col = toggle.createComponent("Physics.ColliderComponent") as ColliderComponent
     const shape = Shape.createBoxShape()
-    shape.size = new vec3(2.6, 2.6, 3.0)
+    shape.size = new vec3(3.4, 3.0, 3.0)
     col.shape = shape
+    col.fitVisual = false // UIKit sets this on its own colliders; the default (true) re-fits to child visuals
     col.debugDrawEnabled = this.debugColliders
     this.leverPivot = this.obj(toggle, "S1_LeverPivot")
     this.leverPivot.getTransform().setLocalPosition(new vec3(0, 0, -0.5))
