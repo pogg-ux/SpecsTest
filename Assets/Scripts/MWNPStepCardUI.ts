@@ -18,7 +18,7 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection, FlexJustify, FlexAlign} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
-import {addButton, addFlex, addText, ButtonHandle, COLOR, colorForWord, deferDestroy, fitText, getHostEmFactor, hostBaseScale, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFlex, addText, ButtonHandle, COLOR, colorForWord, deferDestroy, fitText, getHostEmFactor, hostBaseScale, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 export interface SwitchPick {
   component: string
@@ -258,6 +258,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     this.body = card.body
     const c = card.content
     this.content = c
+    addCardHeader(c, "StepHeader", "Step", inner, this.sceneObject)
     const cell = (name: string, color: vec4): Text => addText(c, name, "", inner, 0.01, {emCm: em, color, wrap: true, valign: "top"})
     this.tReasoning = cell("Reasoning", TEXT_SOFT)
     this.tPathCite = cell("PathCitation", COLOR.amber)
@@ -299,7 +300,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const side = addFlex(row, "PadSide", FlexDirection.Column, sideW, padH, 0.8, {justify: FlexJustify.Center})
     const rem = this.readoutEmCm / scale
     this.tReadout = addText(side, "Readout", this.readoutPrefix + "\n— V", sideW, rem * LINE_H * 2, {emCm: rem, align: "center", wrap: true, valign: "top"})
-    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: btnEm, bold: true})
+    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: btnEm, bold: true, primary: true})
     addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.0, () => this._onSchematic.invoke(), {emCm: btnEm})
     addButton(side, "Btn_Camera", this.cameraLabel, sideW - 1, 3.0, () => this._onCamera.invoke(), {emCm: btnEm})
   }

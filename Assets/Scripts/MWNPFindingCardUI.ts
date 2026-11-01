@@ -10,7 +10,7 @@
 //               "FindingEyebrow", "FindingEvidence", "NextActionHeading", "NextAction", "FindingCardCard".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {addButton, addFitText, cardEm, COLOR, deferDestroy, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, cardEm, COLOR, deferDestroy, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 @component
 export class MWNPFindingCardUI extends BaseScriptComponent {
@@ -71,12 +71,12 @@ export class MWNPFindingCardUI extends BaseScriptComponent {
     const card = makeCardBody(this.sceneObject, "FindingCardCard", w, 1.4, 0.6, "top")
     this.body = card.body
     const c = card.content
-    if (eyebrow) addFitText(c, "FindingEyebrow", eyebrow, inner, em, {color: TEXT_SOFT})
+    if (eyebrow) addCardHeader(c, "FindingEyebrow", eyebrow, inner, this.sceneObject)
     addFitText(c, "FindingTitle", headline, inner, big, {color: COLOR.red, bold: true})
     addFitText(c, "FindingEvidence", evidence, inner, em, {color: TEXT_BODY})
     addFitText(c, "NextActionHeading", this.nextActionHeading, inner, em, {color: COLOR.amber, bold: true})
     addFitText(c, "NextAction", nextAction, inner, em, {color: TEXT_BODY})
-    addButton(c, "Btn_Retest", buttonLabel, inner - 4, 3.6, () => this._onRetest.invoke(), {emCm: em})
+    addButton(c, "Btn_Retest", buttonLabel, inner - 4, 3.6, () => this._onRetest.invoke(), {emCm: em, primary: true})
   }
 
   get built(): boolean {

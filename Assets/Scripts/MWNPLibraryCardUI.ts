@@ -9,7 +9,12 @@
 // Test handles: "Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options", card "LibraryCardCard".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {addButton, cardEm, makeCardBody} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, cardEm, makeCardBody, TEXT_SOFT} from "./MWNPSharedUI"
+
+const iconJob = requireAsset("../Icons/build.png") as Texture
+const iconReport = requireAsset("../Icons/assignment.png") as Texture
+const iconCamera = requireAsset("../Icons/photo_camera.png") as Texture
+const iconOptions = requireAsset("../Icons/settings.png") as Texture
 
 @component
 export class MWNPLibraryCardUI extends BaseScriptComponent {
@@ -19,7 +24,7 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
   @input
   @widget(new SliderWidget(10, 24, 0.5))
   @hint("Menu width in card units (cm before scaling)")
-  widthCm: number = 15
+  widthCm: number = 17
   @input
   @widget(new SliderWidget(0.6, 2.0, 0.05))
   @hint("Menu text size: em height in real cm (at least 1.0)")
@@ -63,20 +68,22 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
 
   private build(): void {
     const w = this.menuWidth
-    const pad = 0.8
+    const pad = 1.4
     const inner = w - pad * 2
     const em = cardEm(this.sceneObject, this.textEmCm)
     const card = makeCardBody(this.sceneObject, "LibraryCardCard", w, pad, 0.5, "top")
     this.body = card.body
     const c = card.content
-    const items: [string, string][] = [
-      ["job", "Job"],
-      ["report", "Job report"],
-      ["camera", "Camera"],
-      ["options", "Options"],
+    addCardHeader(c, "LibraryTitle", "Library", inner, this.sceneObject)
+    addFitText(c, "LibraryAppName", "MWNP No-Guess Field Assistant", inner, em, {color: TEXT_SOFT})
+    const items: [string, string, Texture][] = [
+      ["job", "Job", iconJob],
+      ["report", "Job report", iconReport],
+      ["camera", "Camera", iconCamera],
+      ["options", "Options", iconOptions],
     ]
-    for (const [key, label] of items) {
-      addButton(c, "Btn_Lib_" + key.charAt(0).toUpperCase() + key.slice(1), label, inner, 3.0, () => this._onPick.invoke(key), {emCm: em, bold: true})
+    for (const [key, label, icon] of items) {
+      addButton(c, "Btn_Lib_" + key.charAt(0).toUpperCase() + key.slice(1), label, inner, 3.0, () => this._onPick.invoke(key), {emCm: em, bold: true, icon})
     }
   }
 }

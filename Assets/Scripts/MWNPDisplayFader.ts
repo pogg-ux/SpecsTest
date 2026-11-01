@@ -41,6 +41,15 @@ export class DisplayFader {
     return this.hidden && !this.isFading && this.alpha === 0
   }
 
+  /** Plays a short fade-in from invisible over the (already enabled) roots; used when a card opens. */
+  fadeIn(): void {
+    this.collect()
+    this.hidden = false
+    this.alpha = 0
+    this.apply(0)
+    this.isFading = true
+  }
+
   toggle(): void {
     this.setHidden(!this.hidden)
   }

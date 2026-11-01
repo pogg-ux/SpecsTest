@@ -11,7 +11,7 @@
 //               cards "JobCard" / "SymptomCard", texts "JobTitle", "FilesLoaded", "SymptomHeading".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {addButton, addFitText, cardEm, deferDestroy, estimateLines, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, cardEm, deferDestroy, estimateLines, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 export interface SymptomItem {
   key: string
@@ -66,6 +66,7 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     const em = cardEm(this.sceneObject, this.textEmCm)
     const card = makeCardBody(this.sceneObject, "JobCard", w, 1.4, 0.8, "top")
     this.body = card.body
+    addCardHeader(card.content, "JobHeader", "Job", inner, this.sceneObject)
     addFitText(card.content, "JobTitle", jobLine, inner, em, {bold: true})
     addFitText(card.content, "FilesLoaded", filesLine, inner, em, {color: TEXT_SOFT})
     addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em})
@@ -80,7 +81,8 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     const em = cardEm(this.sceneObject, this.textEmCm)
     const card = makeCardBody(this.sceneObject, "SymptomCard", w, 1.4, 0.8, "top")
     this.body = card.body
-    addFitText(card.content, "SymptomHeading", this.symptomHeading, inner, em, {bold: true, color: TEXT_BODY})
+    addCardHeader(card.content, "SymptomsHeader", "Symptoms", inner, this.sceneObject)
+    addFitText(card.content, "SymptomHeading", this.symptomHeading, inner, em, {color: TEXT_BODY})
     items.forEach((it, i) => {
       // Long labels wrap onto a second line and the button grows with them.
       const bw = inner - 2

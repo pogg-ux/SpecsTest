@@ -13,7 +13,7 @@
 
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addText, COLOR, hostBaseScale, makeCardBody, makeObj, sizeForEmCm, textWidthCm} from "./MWNPSharedUI"
+import {addText, COLOR, HEADER_EM_CM, hostBaseScale, makeCardBody, makeObj, sizeForEmCm, textWidthCm} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -339,10 +339,11 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
     this.scaleY = hostBaseScale(this.sceneObject)
     const card = makeCardBody(this.sceneObject, "SchematicCard", w, 1.2, 0.5, "bottom")
     this.body = card.body
-    addText(card.content, "SchematicTitle", "Schematic · MWNP_1.0_wiring.png", inner, (this.titleEmCm / this.scaleY) * 1.4, {
-      emCm: this.titleEmCm / this.scaleY,
-      color: COLOR.dim,
+    const title = addText(card.content, "SchematicTitle", "Schematic · MWNP_1.0_wiring.png", inner, (HEADER_EM_CM / this.scaleY) * 1.4, {
+      emCm: HEADER_EM_CM / this.scaleY,
+      color: COLOR.white,
     })
+    ;(title as Text & {weight?: number}).weight = 700
 
     // Image: a quad whose UVs select the crop window; same ImageMaterial as UI images.
     this.imageW = inner

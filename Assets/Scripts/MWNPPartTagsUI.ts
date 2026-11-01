@@ -220,6 +220,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     }
     b.so.enabled = true
     b.so.getTransform().setLocalPosition(pos)
+    this.popBadge(b.so)
     b.plate.setSize(textWidthCm(text, this.overlayEmCm, true) + PAD_X, this.overlayEmCm * 1.5)
     b.label.text = text
     const c = colorForWord(colorWord)
@@ -228,6 +229,30 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     this.badgeTexts[pointId] = text
     if (this.expectedPointId === pointId) this.hideExpected()
   }
+
+  private pops: {so: SceneObject; t0: number}[] = []
+
+  /** Badges pop in gently: scale 0.75 -> 1 with an ease-out over 0.2 s. */
+  private popBadge(so: SceneObject): void {
+    so.getTransform().setLocalScale(new vec3(0.75, 0.75, 0.75))
+    this.pops = this.pops.filter((p) => p.so !== so)
+    this.pops.push({so, t0: getTime()})
+    if (!this.popEvent) {
+      const ev = this.createEvent("UpdateEvent")
+      ev.bind(() => {
+        for (const p of this.pops) {
+          if (isNull(p.so)) continue
+          const k = Math.min(1, (getTime() - p.t0) / 0.2)
+          const s = 0.75 + 0.25 * (1 - (1 - k) * (1 - k))
+          p.so.getTransform().setLocalScale(new vec3(s, s, s))
+        }
+        this.pops = this.pops.filter((p) => !isNull(p.so) && getTime() - p.t0 < 0.2)
+        if (this.pops.length === 0) ev.enabled = false
+      })
+      this.popEvent = ev
+    } else this.popEvent.enabled = true
+  }
+  private popEvent: SceneEvent | null = null
 
   clearBadges(): void {
     for (const k of Object.keys(this.badges)) this.badges[k].so.enabled = false

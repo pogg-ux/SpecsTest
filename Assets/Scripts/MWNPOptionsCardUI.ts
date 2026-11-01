@@ -8,7 +8,7 @@
 // Test handles: "Opt_Labels", "Opt_HideButton", "Opt_CardStyle", "Opt_TextSize", "Opt_Schematic", card "OptionsCardCard".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {addButton, addFitText, ButtonHandle, cardEm, deferDestroy, makeCardBody} from "./MWNPSharedUI"
+import {addButton, addCardHeader, ButtonHandle, cardEm, deferDestroy, makeCardBody} from "./MWNPSharedUI"
 
 export interface OptionDef {
   key: string
@@ -119,7 +119,7 @@ export class MWNPOptionsCardUI extends BaseScriptComponent {
     const card = makeCardBody(this.sceneObject, "OptionsCardCard", w, 1.4, 0.8, "top")
     this.body = card.body
     const c = card.content
-    addFitText(c, "OptionsTitle", "Options", inner, cardEm(this.sceneObject, this.titleEmCm), {bold: true})
+    addCardHeader(c, "OptionsTitle", "Options", inner, this.sceneObject)
     for (const d of OPTION_DEFS) {
       const name = "Opt_" + d.key.charAt(0).toUpperCase() + d.key.slice(1)
       this.buttons[d.key] = addButton(

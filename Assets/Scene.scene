@@ -9144,7 +9144,7 @@
     "":
       schematicTexture: !<reference.Texture> f58014af-bdce-45c1-8064-0647d707f45b
       highlightIcon: !<reference.Texture> 1e5379ba-4a3a-4bed-9128-9cf16c6e395d
-      widthCm: !<float> 42.000000
+      widthCm: !<float> 36.000000
       highlightThicknessCm: 0.600000
       titleEmCm: 0.800000
       labelEmCm: 0.900000
@@ -15501,7 +15501,7 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 2.600000, y: 10.900000, z: -56.200001}
+    Position: {x: 5.500000, y: 12.900000, z: -56.200001}
     Rotation: {x: 0.000000, y: -8.200000, z: 0.000000}
     Scale: {x: 0.600000, y: 0.600000, z: 0.600000}
     HasSegmentScaleCompensation: false
@@ -15781,7 +15781,7 @@
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 15.000000
+      widthCm: !<float> 17.000000
       textEmCm: !<float> 1.000000
   ScriptTypes:
     "":

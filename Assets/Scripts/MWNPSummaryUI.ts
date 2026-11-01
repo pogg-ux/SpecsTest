@@ -15,8 +15,10 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {
   addButton,
+  addCardHeader,
   addFitText,
   addFlex,
+  addText,
   ButtonHandle,
   cardEm,
   COLOR,
@@ -37,6 +39,8 @@ export interface SummaryRow {
   colorWord: string
   /** Test point this reading belongs to; captures of the same point are listed right after its last reading. */
   pointId: string
+  /** Table cells: point, value + unit, status mark, then the range / time line. */
+  cells?: {point: string; value: string; status: string; detail: string}
 }
 
 /** A snapshot or photo for the report. `texture` null = placeholder (shown as a dark plate). */
@@ -118,11 +122,10 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     const w = this.widthCm
     const inner = w - 2.8
     const em = cardEm(this.sceneObject, this.textEmCm)
-    const big = cardEm(this.sceneObject, Math.max(this.titleEmCm, this.textEmCm * 1.3))
     const card = makeCardBody(this.sceneObject, "SummaryCardCard", w, 1.4, 0.5, "top")
     this.body = card.body
     const c = card.content
-    addFitText(c, "SummaryTitle", d.title, inner, big, {bold: true})
+    addCardHeader(c, "SummaryTitle", d.title, inner, this.sceneObject)
     addFitText(c, "SummaryJob", d.jobLine, inner, em, {color: TEXT_SOFT})
     addFitText(c, "SummarySymptom", d.symptomLine, inner, em, {color: TEXT_BODY})
     addFitText(c, "ReadingsHeading", d.readingsHeading, inner, em, {color: COLOR.cyan, bold: true})
@@ -134,7 +137,8 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     })
     const placed: {[id: number]: boolean} = {}
     d.rows.forEach((r, i) => {
-      addFitText(c, "ReadingRow_" + i, r.text, inner, em, {color: colorForWord(r.colorWord)})
+      if (r.cells) this.tableRow(c, "ReadingRow_" + i, r, inner, em)
+      else addFitText(c, "ReadingRow_" + i, r.text, inner, em, {color: colorForWord(r.colorWord)})
       if (r.pointId && lastRowOfPoint[r.pointId] === i) {
         for (const cap of d.captures) {
           if (cap.pointId === r.pointId) {
@@ -149,7 +153,28 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     addFitText(c, "SummaryFinding", d.findingLine, inner, em, {color: COLOR.red})
     addFitText(c, "SummaryAction", d.actionLine, inner, em, {color: TEXT_BODY})
     addFitText(c, "SummaryResult", d.resultLine, inner, em, {color: COLOR.green, bold: true})
-    this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, inner - 6, 3.6, () => this._onSave.invoke(), {emCm: em})
+    this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, inner - 6, 3.6, () => this._onSave.invoke(), {emCm: em, primary: true})
+  }
+
+  /**
+   * One reading as a small table row: line 1 = point (left) | value with unit (right-aligned, so digits and units line up
+   * down the column) | status; line 2 = expected range and time in white. Cells are left-aligned and never touch the edge.
+   */
+  private tableRow(c: SceneObject, name: string, r: SummaryRow, inner: number, em: number): void {
+    const cells = r.cells as {point: string; value: string; status: string; detail: string}
+    const lh = em * LINE_H
+    const detailLines = Math.max(1, estimateLines(cells.detail, inner, em))
+    const row = addFlex(c, name, FlexDirection.Column, inner, lh + detailLines * lh + 0.2, 0.2, {align: FlexAlign.Start})
+    const line = addFlex(row, name + "_Line", FlexDirection.Row, inner, lh, 0.8, {align: FlexAlign.Center})
+    const col = colorForWord(r.colorWord)
+    const pw = 7.5
+    const vw = 7.5
+    const sw = inner - pw - vw - 1.6
+    const t1 = addText(line, name + "_Point", cells.point, pw, lh, {emCm: em, color: col, align: "left"})
+    const t2 = addText(line, name + "_Value", cells.value, vw, lh, {emCm: em, color: col, align: "right"})
+    const t3 = addText(line, name + "_Status", cells.status, sw, lh, {emCm: em, color: col, align: "left"})
+    for (const t of [t1, t2, t3]) (t as Text & {weight?: number}).weight = 700
+    addFitText(row, name + "_Detail", cells.detail, inner, em, {color: TEXT_BODY})
   }
 
   /** [thumbnail][caption] row for one capture. */

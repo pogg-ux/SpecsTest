@@ -182,12 +182,12 @@ export class MWNPCabinet extends BaseScriptComponent {
     const bw = LAYOUT.board.w
     const bh = LAYOUT.board.h
 
-    // Bench (top surface just below the enclosure) and enclosure frame
+    // Enclosure frame
     // Everything stays inside the 46 × 46 board: gray 1 cm frame (as in the image) whose walls
     // give the cabinet depth, and a light-gray mounting panel inside it.
     const fr = LAYOUT.board.frame
     const wd = LAYOUT.board.wallDepth
-    this.box(root, "Bench", [0, -bh / 2 - 1.5], [bw + 44, 3, 44], 14, PALETTE.bench)
+    // (No bench slab under the cabinet: the user's real bench is the surface.)
     this.box(root, "Backboard", [0, 0], [bw, bh, 1.5], -0.85, PALETTE.frame)
     this.box(root, "MountingPanel", [0, 0], [bw - 2 * fr, bh - 2 * fr, 0.1], -0.05, PALETTE.board)
     this.box(root, "Wall_Top", [0, bh / 2 - fr / 2], [bw, fr, wd], wd / 2 - 1, PALETTE.frame)

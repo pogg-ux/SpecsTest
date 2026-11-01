@@ -9,7 +9,7 @@ import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addButton, addFlex, addText, COLOR, makeCardBody, makeObj} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, addFlex, addText, cardEm, COLOR, makeCardBody, makeObj, TEXT_SOFT} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -63,9 +63,12 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
   }
 
   private build(): void {
-    const card = makeCardBody(this.sceneObject, "SafetyNoticeCard", this.widthCm, 1.2, 0)
+    const card = makeCardBody(this.sceneObject, "SafetyNoticeCard", this.widthCm, 1.4, 0.6)
     this.body = card.body
-    const row = addFlex(card.content, "Row", FlexDirection.Row, this.widthCm - 2.4, 4.2, 0.8)
+    const inner = this.widthCm - 2.8
+    addCardHeader(card.content, "SafetyHeader", "Safety", inner, this.sceneObject)
+    addFitText(card.content, "SafetyAppName", "MWNP No-Guess Field Assistant", inner, cardEm(this.sceneObject, this.textEmCm), {color: TEXT_SOFT})
+    const row = addFlex(card.content, "Row", FlexDirection.Row, inner, 4.2, 0.8)
 
     // Warning icon
     const iconSO = makeObj(row, "WarningIcon")
@@ -80,7 +83,7 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
     const iconItem = iconSO.createComponent(FlexItem.getTypeName()) as FlexItem
     ;(row.getComponent(FlexLayout.getTypeName()) as FlexLayout).addItems([iconItem])
 
-    const textW = this.widthCm - 2.4 - 2.4 - 7 - 1.6
+    const textW = inner - 2.4 - 7 - 1.6 - 0.8
     addText(row, "NoticeText", this.noticeText, textW, 4, {role: "Body", color: COLOR.amber, emCm: this.textEmCm, wrap: true})
     addButton(row, "Btn_DismissSafety", this.dismissLabel, 7, 3.2, () => this._onDismiss.invoke(), {emCm: this.textEmCm})
   }

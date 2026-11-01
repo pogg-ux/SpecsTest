@@ -60,6 +60,9 @@ export function colorForWord(word: string): vec4 {
   }
 }
 
+const iconImageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
+let rulePixel: Texture | null = null
+
 /** Forward lift for content on top of a BackPlate / Button face (depth tie-break). */
 export const CONTENT_Z = 0.6
 export const BUTTON_LABEL_Z = 0.08
@@ -116,6 +119,8 @@ export interface ButtonHandle {
   so: SceneObject
   button: Button
   label: Text
+  /** Material of the optional icon on the button's left (swap its baseTex to change the icon). */
+  iconMat?: Material
 }
 
 /** UIKit Button with a width-budgeted raw Text label. The SceneObject gets `name` (stable for tests). */
@@ -126,7 +131,7 @@ export function addButton(
   w: number,
   h: number,
   onClick: () => void,
-  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number; wrap?: boolean; bold?: boolean}
+  opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number; wrap?: boolean; bold?: boolean; icon?: Texture; primary?: boolean}
 ): ButtonHandle {
   // A label too long for its button wraps and the button grows (large Text size option).
   if (opts?.emCm && !opts.wrap) {
@@ -149,9 +154,25 @@ export function addButton(
   t.verticalAlignment = VerticalAlignment.Center
   t.horizontalOverflow = opts?.wrap ? HorizontalOverflow.Wrap : HorizontalOverflow.Overflow
   t.verticalOverflow = VerticalOverflow.Overflow
-  t.layoutRect = Rect.create(-(w - 0.5) / 2, (w - 0.5) / 2, -h / 2, h / 2)
-  t.textFill.color = COLOR.white
-  if (opts?.bold) (t as Text & {weight?: number}).weight = 700
+  // With an icon on the left the label is centered in the space to its right.
+  const iconRoom = opts?.icon ? Math.min(1.7, h - 1.0) + 1.1 : 0
+  t.layoutRect = Rect.create(-(w - 0.5) / 2 + iconRoom, (w - 0.5) / 2, -h / 2, h / 2)
+  // Primary actions (Enter, retest, Save) read stronger: bold amber label (amber = the action to take next).
+  t.textFill.color = opts?.primary ? COLOR.amber : COLOR.white
+  if (opts?.bold || opts?.primary) (t as Text & {weight?: number}).weight = 700
+  let iconMat: Material | undefined
+  if (opts?.icon) {
+    const isz = Math.min(1.7, h - 1.0)
+    const iso = makeObj(so, "Icon", new vec3(-w / 2 + isz / 2 + 0.7, 0, BUTTON_LABEL_Z))
+    const img = iso.createComponent("Component.Image") as Image
+    iconMat = iconImageMaterial.clone()
+    iconMat.mainPass.baseTex = opts.icon
+    iconMat.mainPass.depthTest = true
+    iconMat.mainPass.depthWrite = false
+    img.clearMaterials()
+    img.addMaterial(iconMat)
+    iso.getTransform().setLocalScale(new vec3(isz, isz, 1))
+  }
   btn.onTriggerUp.add(() => onClick())
   if (opts?.inFlex !== false) {
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
@@ -160,7 +181,7 @@ export function addButton(
     item.flexShrink = 0
     register(parent, item)
   }
-  return {so, button: btn, label: t}
+  return {so, button: btn, label: t, iconMat}
 }
 
 /** Nested flex container registered as an item of its parent. */
@@ -460,4 +481,32 @@ export function styleLabelText(t: Text, color: vec4 = new vec4(1, 1, 1, 1)): voi
 /** The "Library" button every card (except the safety notice) carries; `cardKey` keeps names unique ("Btn_Library_Step"). */
 export function addLibraryButton(content: SceneObject, cardKey: string, inner: number, em: number, onClick: () => void): ButtonHandle {
   return addButton(content, "Btn_Library_" + cardKey, "Library", Math.min(10, inner - 2), 3.0, onClick, {emCm: em})
+}
+
+// ── Card header: every card starts with its name in bold, then a thin rule (title > headline > body > secondary) ──
+export const HEADER_EM_CM = 1.2
+
+/** Bold card title at the top of a card plus a thin rule under it. Returns the title Text. */
+export function addCardHeader(content: SceneObject, name: string, title: string, inner: number, host: SceneObject): Text {
+  const t = addFitText(content, name, title, inner, cardEm(host, HEADER_EM_CM), {bold: true})
+  if (!rulePixel) {
+    rulePixel = ProceduralTextureProvider.createWithFormat(1, 1, TextureFormat.RGBA8Unorm)
+    ;(rulePixel.control as ProceduralTextureProvider).setPixels(0, 0, 1, 1, new Uint8Array([255, 255, 255, 255]))
+  }
+  const so = makeObj(content, name + "Rule")
+  const img = so.createComponent("Component.Image") as Image
+  const mat = iconImageMaterial.clone()
+  mat.mainPass.baseTex = rulePixel
+  mat.mainPass.baseColor = new vec4(0.5, 0.5, 0.5, 0.5) // premultiplied: white at 50%
+  mat.mainPass.depthTest = true
+  mat.mainPass.depthWrite = false
+  img.clearMaterials()
+  img.addMaterial(mat)
+  so.getTransform().setLocalScale(new vec3(inner, 0.15, 1))
+  const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
+  item.overrideWidth = inner
+  item.overrideHeight = 0.15
+  item.flexShrink = 0
+  register(content, item)
+  return t
 }

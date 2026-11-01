@@ -12,7 +12,7 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addButton, addFitText, cardEm, colorForWord, deferDestroy, fitText, makeCardBody, makeObj, TEXT_BODY} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, cardEm, colorForWord, deferDestroy, fitText, makeCardBody, makeObj, TEXT_BODY} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -167,9 +167,9 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
     const card = makeCardBody(this.sceneObject, "CameraCardCard", w, 1.4, 0.6, "top")
     this.body = card.body
     const c = card.content
-    addFitText(c, "CameraTitle", "Camera", inner, cardEm(this.sceneObject, this.titleEmCm), {bold: true})
+    addCardHeader(c, "CameraTitle", "Camera", inner, this.sceneObject)
     this.tTarget = addFitText(c, "CameraTarget", "", inner, em, {color: TEXT_BODY})
-    addButton(c, "Btn_Snapshot", this.snapshotLabel, inner - 2, 3.6, () => this._onSnapshot.invoke(), {emCm: em, bold: true})
+    addButton(c, "Btn_Snapshot", this.snapshotLabel, inner - 2, 3.6, () => this._onSnapshot.invoke(), {emCm: em, bold: true, primary: true})
     addButton(c, "Btn_Photo", this.photoLabel, inner - 2, 3.6, () => this._onPhoto.invoke(), {emCm: em, bold: true})
     addButton(c, "Btn_CameraClose", this.closeLabel, inner - 2, 3.6, () => this._onClose.invoke(), {emCm: em})
     this.tStatus = addFitText(c, "CameraStatus", "", inner, em, {color: TEXT_BODY, minLines: 0})

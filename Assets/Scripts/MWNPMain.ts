@@ -24,6 +24,8 @@ import {MWNPStepCardUI} from "./MWNPStepCardUI"
 import {MWNPFindingCardUI} from "./MWNPFindingCardUI"
 import {MWNPSummaryUI, SummaryRow, ReportCapture} from "./MWNPSummaryUI"
 import {MWNPCameraCardUI} from "./MWNPCameraCardUI"
+const ICON_HIDE = requireAsset("../Icons/visibility_off.png") as Texture
+const ICON_SHOW = requireAsset("../Icons/visibility.png") as Texture
 import {MWNPLibraryCardUI} from "./MWNPLibraryCardUI"
 import {MWNPOptionsCardUI, OptionChange} from "./MWNPOptionsCardUI"
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
@@ -148,11 +150,11 @@ export class MWNPMain extends BaseScriptComponent {
   }
   private cameraReturn = "home"
   /** Screen offset (fraction of the view) of the menu's top-left from the cabinet's top-left corner. */
-  libraryDock = new vec2(-0.012, -0.075)
+  libraryDock = new vec2(-0.03, -0.115)
   private schematicWasOpen = false
   private textFactor = 1
   private schemFactor = 1
-  private placed: {so: SceneObject; basePos: vec3; baseScale: vec3; centered: boolean; width: number; factor: number}[] = []
+  private placed: {so: SceneObject; basePos: vec3; baseScale: vec3; centered: boolean; bottom: boolean; width: number; factor: number}[] = []
   private cardHosts: {so: SceneObject; ui: any; built: number; cap: number; settle: number}[] = []
   private displayBtnBase: vec3 | null = null
   private hiddenFlag = false
@@ -567,7 +569,7 @@ export class MWNPMain extends BaseScriptComponent {
     const em = cardEm(root, 1.0)
     const w = 8.0
     const h = 3.6
-    const btn = addButton(root, "Btn_LibraryToggle", "Hide", w, h, () => this.onLibraryToggle(), {emCm: em, bold: true, inFlex: false})
+    const btn = addButton(root, "Btn_LibraryToggle", "Hide", w, h, () => this.onLibraryToggle(), {emCm: em, bold: true, inFlex: false, icon: ICON_HIDE})
     btn.so.getTransform().setLocalPosition(new vec3(this.libraryCard.menuWidth / 2 - w / 2, h / 2 + 1.0, 0))
     this.libBtn = btn
     this.libFader = new DisplayFader(this, [this.libraryCard.sceneObject], null)
@@ -583,7 +585,10 @@ export class MWNPMain extends BaseScriptComponent {
     if (!this.libFader) return
     this.libHiddenFlag = hidden
     this.libFader.setHidden(hidden)
-    if (this.libBtn) this.libBtn.label.text = hidden ? "Show" : "Hide"
+    if (this.libBtn) {
+      this.libBtn.label.text = hidden ? "Show" : "Hide"
+      if (this.libBtn.iconMat) this.libBtn.iconMat.mainPass.baseTex = hidden ? ICON_SHOW : ICON_HIDE
+    }
     this.log(hidden ? "library-hidden" : "library-shown")
   }
 
@@ -761,7 +766,10 @@ export class MWNPMain extends BaseScriptComponent {
     if (!this.fader) return
     this.hiddenFlag = hidden
     this.applyHide()
-    if (this.displayBtn) this.displayBtn.label.text = hidden ? "Show" : "Hide"
+    if (this.displayBtn) {
+      this.displayBtn.label.text = hidden ? "Show" : "Hide"
+      if (this.displayBtn.iconMat) this.displayBtn.iconMat.mainPass.baseTex = hidden ? ICON_SHOW : ICON_HIDE
+    }
     this.log(hidden ? "display-hidden" : "display-shown")
   }
 
@@ -783,7 +791,7 @@ export class MWNPMain extends BaseScriptComponent {
     const em = cardEm(root, 1.0)
     const w = 8.0
     const h = 3.6
-    const btn = addButton(root, "Btn_DisplayToggle", "Hide", w, h, () => this.onDisplayToggle(), {emCm: em, bold: true, inFlex: false})
+    const btn = addButton(root, "Btn_DisplayToggle", "Hide", w, h, () => this.onDisplayToggle(), {emCm: em, bold: true, inFlex: false, icon: ICON_HIDE})
     // Flush with the step card's right edge, just above its top edge = the cabinet's top-right corner on screen.
     btn.so.getTransform().setLocalPosition(new vec3(this.stepCard.widthCm / 2 - w / 2, h / 2 + 1.0, 0))
     this.displayBtn = btn
@@ -917,6 +925,12 @@ export class MWNPMain extends BaseScriptComponent {
         text: nl.display(r.pointId) + "  ·  " + nl.fmtReading(r.value) + " V  ·  " + r.range + "  ·  " + r.time + "  ·  " + mark + (r.phase === "retest" ? " (retest)" : ""),
         colorWord: r.colorWord,
         pointId: r.pointId,
+        cells: {
+          point: nl.display(r.pointId),
+          value: nl.fmtReading(r.value) + " V",
+          status: mark,
+          detail: "range " + r.range + "  ·  " + r.time + (r.phase === "retest" ? "  ·  retest" : ""),
+        },
       }
     })
     const captures: ReportCapture[] = this.captures.map((c) => ({id: c.id, pointId: c.pointId, caption: c.caption, texture: c.texture, aspect: c.aspect}))
@@ -966,8 +980,38 @@ export class MWNPMain extends BaseScriptComponent {
       this.cardHosts.push({so: c.sceneObject, ui: c as any, built: 1, cap: 99, settle: 0})
     }
     const t = this.schematicPanel.sceneObject.getTransform()
-    this.placed.push({so: this.schematicPanel.sceneObject, basePos: t.getLocalPosition(), baseScale: t.getLocalScale(), centered: true, width: this.schematicPanel.widthCm, factor: 1})
+    this.placed.push({so: this.schematicPanel.sceneObject, basePos: t.getLocalPosition(), baseScale: t.getLocalScale(), centered: false, bottom: true, width: this.schematicPanel.widthCm, factor: 1})
+    this.setupMotion()
     this.createEvent("UpdateEvent").bind(() => this.updatePlacement())
+  }
+
+  // ── Motion: a card that opens (or swaps in) fades in and slides up a little over 0.2 s ──
+
+  private motion: {so: SceneObject; fader: DisplayFader; open: boolean; t0: number; slide: boolean; base: vec3}[] = []
+
+  private setupMotion(): void {
+    const hosts: [SceneObject, boolean][] = [[this.safetyNotice.sceneObject, false], [this.libraryCard.sceneObject, false], [this.schematicPanel.sceneObject, false]]
+    for (const h of this.cardHosts) hosts.push([h.so, true])
+    for (const [so, slide] of hosts) {
+      this.motion.push({so, fader: new DisplayFader(this, [so], null, 0.2), open: false, t0: -10, slide, base: so.getTransform().getLocalPosition()})
+    }
+  }
+
+  private updateMotion(): void {
+    const now = getTime()
+    for (const m of this.motion) {
+      const open = !!this.cardBodyOf(m.so)
+      if (open && !m.open) {
+        m.open = true
+        m.t0 = now
+        m.fader.fadeIn()
+      } else if (!open) m.open = false
+      if (m.slide) {
+        const k = Math.min(1, (now - m.t0) / 0.2)
+        const lift = 1.2 * (1 - k) * (1 - k)
+        m.so.getTransform().setLocalPosition(m.base.add(new vec3(0, -lift, 0)))
+      }
+    }
   }
 
   private cardBodyOf(host: SceneObject): {body: SceneObject; plate: BackPlate} | null {
@@ -1002,6 +1046,7 @@ export class MWNPMain extends BaseScriptComponent {
    * smaller factor. Schematic: the schematic host is scaled, shrinking until it fits the view.
    */
   private updatePlacement(): void {
+    this.updateMotion()
     const camSO = this.findUserCamera()
     if (!camSO) return
     const cam = camSO.getComponent("Component.Camera") as Camera
@@ -1038,9 +1083,9 @@ export class MWNPMain extends BaseScriptComponent {
         const hgt = Math.max(1e-4, r.y1 - r.y0)
         const wid = Math.max(1e-4, r.x1 - r.x0)
         const cx = (r.x0 + r.x1) / 2
-        // The schematic grows upward from its bottom edge and sideways about its center.
-        let lim = f * ((r.y1 - 0.03) / hgt)
-        lim = Math.min(lim, f * Math.min((0.97 - cx) / (wid / 2), (cx - 0.03) / (wid / 2)))
+        // The schematic grows upward from its bottom edge and to the right from its left edge (clear of the Library menu).
+        let lim = f * (h.bottom ? (r.y1 - 0.03) / hgt : (0.97 - r.y0) / hgt)
+        lim = Math.min(lim, h.centered ? f * Math.min((0.97 - cx) / (wid / 2), (cx - 0.03) / (wid / 2)) : f * ((0.97 - r.x0) / wid))
         const nf = Math.max(1, Math.min(target, lim))
         if (Math.abs(nf - f) < 1e-3) break
         f = nf
@@ -1050,10 +1095,13 @@ export class MWNPMain extends BaseScriptComponent {
     this.updateDisplayButtonPos()
   }
 
-  private applyFactor(h: {so: SceneObject; basePos: vec3; baseScale: vec3; factor: number}, f: number): void {
+  private applyFactor(h: {so: SceneObject; basePos: vec3; baseScale: vec3; centered: boolean; width: number; factor: number}, f: number): void {
     h.factor = f
     setHostFactor(h.so.name, f)
-    h.so.getTransform().setLocalScale(h.baseScale.uniformScale(f))
+    const t = h.so.getTransform()
+    t.setLocalScale(h.baseScale.uniformScale(f))
+    const shift = h.centered ? 0 : (h.baseScale.x * h.width * (f - 1)) / 2
+    t.setLocalPosition(h.basePos.add(t.getLocalRotation().multiplyVec3(new vec3(1, 0, 0)).uniformScale(shift)))
   }
 
   private findingEvidenceShort(): string {
