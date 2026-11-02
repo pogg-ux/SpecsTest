@@ -813,11 +813,11 @@ export class MWNPMain extends BaseScriptComponent {
       this.visibleCard = "camera"
     } else if (this.viewerPrevJob >= 0) {
       this.visibleCard = back
-      this.onPreviousPick(this.viewerPrevJob)
+      this.onPreviousPick(this.viewerPrevJob, true)
     } else if (back === "summary") {
       this.flowCard = "summary"
-      this.buildReport(true)
-    } else this.buildReport(false)
+      this.buildReport(true, true)
+    } else this.buildReport(false, true)
     this.viewerPrevJob = -1
     this.log("viewer-closed")
   }
@@ -840,10 +840,11 @@ export class MWNPMain extends BaseScriptComponent {
     this.log("note-edited")
   }
 
-  private onPreviousPick(i: number): void {
+  private onPreviousPick(i: number, keepTab: boolean = false): void {
     const p = this.previousJobs[i]
     if (!p) return
     this.click()
+    if (!keepTab) this.summaryCard.resetTab()
     this.viewingPrevious = i
     this.summaryCard.show({...p.data, statusLine: "Previous job · " + (p.data.statusLine || "").replace("Status: ", ""), previous: this.previousJobs.map((x) => ({label: x.label})), backToCurrent: true})
     this.log("previous-job " + i)
@@ -1295,8 +1296,9 @@ export class MWNPMain extends BaseScriptComponent {
   }
 
   /** Shows the Job report: final at the end of the job, partial when opened from the Library. */
-  private buildReport(final: boolean): void {
+  private buildReport(final: boolean, keepTab: boolean = false): void {
     const agent = this.agent as MWNPAgent
+    if (!keepTab) this.summaryCard.resetTab()
     // A final report that arrives while the Library / Camera / Options is open waits, hidden, for the Job button.
     const away = final && (this.visibleCard === "home" || this.visibleCard === "camera" || this.visibleCard === "options" || this.visibleCard === "notes")
     if (final && this.visibleCard === "camera") this.cameraCard.hide()
@@ -1628,6 +1630,9 @@ export class MWNPMain extends BaseScriptComponent {
       captures: this.captures.map((c) => ({id: c.id, pointId: c.pointId, kind: c.kind, time: c.time, hasTexture: !!c.texture, placeholder: c.placeholder})),
       cameraCardOpen: this.cameraCard.isVisible,
       reportCaptureIds: this.summaryCard.captureIds,
+      reportTab: this.summaryCard.tab,
+      reportPage: this.summaryCard.page,
+      reportPages: this.summaryCard.pageCount,
       summaryRows: this.summaryCard.rowTexts,
       summaryFinding: this.summaryCard.findingText,
       summaryResult: this.summaryCard.resultText,

@@ -323,6 +323,11 @@ export class MWNPWorkflowScenario extends Scenario {
     s = await waitFor((x) => x.jobEnded === true, 3000, "job C ended")
     check(s.previousJobs.length === 2, "two finished jobs are listed under Previous jobs")
     await sleep(700)
+    // The Summary page may be split over pages (Next page); Previous jobs are at the end of it.
+    for (let g = 0; g < 4 && !isEnabled("Btn_PrevJob_1") && isEnabled("Btn_ReportNextPage"); g++) {
+      await ui.tap("Btn_ReportNextPage")
+      await sleep(900)
+    }
     check(isEnabled("PreviousJobsHeading") && isEnabled("Btn_PrevJob_0") && isEnabled("Btn_PrevJob_1"), "Previous jobs lists A and B")
     await ui.tap("Btn_PrevJob_1")
     await waitFor((x) => x.viewingPrevious === 1, 3000, "view job A")

@@ -150,37 +150,27 @@ export class MWNPCameraCardScenario extends Scenario {
 
     expect(textOf("SummaryTitle"), "report title").toBe("Job report")
     expect(s.reportCaptureIds.length, "report lists every capture").toBe(3)
+    expect(s.reportTab, "the report opens on the Summary tab").toBe("summary")
+    expect(isEnabled("Btn_SaveJobLog") && isEnabled("ReadingRow_0"), "Summary page: readings and Save").toBe(true)
+    expect(isEnabled("ReportCapture_" + s.captures[0].id), "pictures are not on the Summary page").toBe(false)
+    await ui.tap("Btn_TabNotes")
+    s = await waitFor((x) => x.reportTab === "notes", 3000, "Notes & pictures tab")
+    await sleep(600)
     for (const cap of s.captures) {
       expect(isEnabled("ReportCapture_" + cap.id), "ReportCapture_" + cap.id + " on the report").toBe(true)
       expect(isEnabled("ReportCaptureThumb_" + cap.id), "thumbnail " + cap.id).toBe(true)
       expect(textOf("ReportCaptureCaption_" + cap.id).length > 0, "caption " + cap.id).toBe(true)
     }
-
-    // Order on the card: each capture sits after its point's last reading row and before the next point's rows.
-    const card = findSceneObjectByName("SummaryCardCard")
-    const order: string[] = []
+    // Pictures are listed newest first.
+    const order: number[] = []
     const collect = (o: SceneObject) => {
-      if (/^(ReadingRow_|ReportCapture_)\d+$/.test(o.name)) order.push(o.name)
+      const m = /^ReportCapture_(\d+)$/.exec(o.name)
+      if (m) order.push(parseInt(m[1]))
       for (let i = 0; i < o.getChildrenCount(); i++) collect(o.getChild(i))
     }
-    collect(card)
-    ev("report order", order)
-    const rowOfPoint = (p: string): number => {
-      let last = -1
-      s.readings.forEach((r: any, i: number) => {
-        if (r.point === p) last = i
-      })
-      return last
-    }
-    const pos = (n: string): number => order.indexOf(n)
-    for (const cap of s.captures) {
-      const lastRow = rowOfPoint(cap.pointId)
-      expect(lastRow >= 0, "point " + cap.pointId + " has a reading row").toBe(true)
-      expect(pos("ReportCapture_" + cap.id) > pos("ReadingRow_" + lastRow), cap.pointId + " capture is after its reading row").toBe(true)
-      if (lastRow + 1 < s.readings.length) {
-        expect(pos("ReportCapture_" + cap.id) < pos("ReadingRow_" + (lastRow + 1)), cap.pointId + " capture is before the next point's rows").toBe(true)
-      }
-    }
+    collect(findSceneObjectByName("SummaryCardCard"))
+    ev("report picture order", order)
+    expect(JSON.stringify(order), "newest first").toBe(JSON.stringify(s.captures.map((c: any) => c.id).reverse()))
     ev("CAMERA CARD PASS", {captures: s.captures.length})
   }
 }

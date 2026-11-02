@@ -122,7 +122,7 @@ export class MWNPGalleryScenario extends Scenario {
     await ui.enterReading("12.0")
     await waitFor((s) => s.visibleCard === "summary", 4000, "job report")
     await sleep(1400)
-    if (shot === "complete") {
+    if (shot === "complete" || shot === "complete-notes") {
       await ui.tap("Btn_Lib_Job")
       await waitFor((s) => s.visibleCard === "jobhome", 3000, "overview")
       await ui.tap("Btn_EndJob")
@@ -131,6 +131,11 @@ export class MWNPGalleryScenario extends Scenario {
       await ui.tap("Btn_ConfirmYes")
       await waitFor((s) => s.jobEnded === true && s.visibleCard === "summary", 3000, "job ended")
       await sleep(1400)
+    }
+    if (shot === "complete-notes") {
+      await ui.tap("Btn_TabNotes")
+      await waitFor((s) => s.reportTab === "notes", 3000, "notes tab")
+      await sleep(1200)
     }
     ev("GALLERY " + shot, {})
   }

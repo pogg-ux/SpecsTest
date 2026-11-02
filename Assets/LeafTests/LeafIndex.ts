@@ -18,6 +18,7 @@ import {MWNPGalleryScenario} from "./MWNPGalleryScenario"
 import {MWNPJobNotesScenario} from "./MWNPJobNotesScenario"
 import {MWNPPhotoViewerScenario} from "./MWNPPhotoViewerScenario"
 import {MWNPWorkflowScenario} from "./MWNPWorkflowScenario"
+import {MWNPReportPagesScenario} from "./MWNPReportPagesScenario"
 
 /** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
 const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
@@ -42,6 +43,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-job-notes", typename: MWNPJobNotesScenario.getTypeName()},
     {id: "mwnp-photo-viewer", typename: MWNPPhotoViewerScenario.getTypeName()},
     {id: "mwnp-workflow", typename: MWNPWorkflowScenario.getTypeName()},
+    {id: "mwnp-report-pages", typename: MWNPReportPagesScenario.getTypeName()},
     {id: "mwnp-gallery", typename: MWNPGalleryScenario.getTypeName(), parameters: {shot: "start"}},
   ]
 
