@@ -160,10 +160,14 @@ export class MWNPMain extends BaseScriptComponent {
   /** Notes of the current job, newest first (agent notes and the technician's). */
   notes: Note[] = []
   private nextNoteId = 1
-  jobEnded = false
+  /** True while a job is in progress (from the start until End job; New job starts one again). */
+  jobActive = true
+  get jobEnded(): boolean {
+    return !this.jobActive
+  }
   endTime = ""
   /** The previous job's report, kept viewable until the new job logs its first reading. */
-  previousJobs: {name: string; result: string; endTime: string; label: string; data: SummaryData}[] = []
+  previousJobs: {name: string; result: string; endTime: string; label: string; status: string; data: SummaryData}[] = []
   /** Index into previousJobs of the report being viewed, or -1 for the current job's. */
   viewingPrevious = -1
   private viewerReturn = "camera"
@@ -171,7 +175,6 @@ export class MWNPMain extends BaseScriptComponent {
   /** Index into previousJobs when the viewer shows a previous job's picture (view only), else -1. */
   private viewerPrevJob = -1
   private viewerConfirm = false
-  private confirmReturn = "job"
   /** Screen offset (fraction of the view) of the menu's top-left from the cabinet's top-left corner. */
   libraryDock = new vec2(-0.03, -0.15)
   private schematicWasOpen = false
@@ -283,6 +286,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.jobPanel.onEndRequest.add(() => this.onJobRequest("end"))
     this.jobPanel.onNewRequest.add(() => this.onJobRequest("new"))
     this.jobPanel.onConfirm.add((c) => this.onJobConfirm(c.kind, c.yes))
+    this.jobPanel.onStartJob.add(() => this.onStartJob())
     this.notesCard.onNote.add((n) => this.onNote(n.text, n.placeholder))
     this.notesCard.onEdit.add((e) => this.onNoteEdit(e.id, e.text))
     this.summaryCard.onPrevious.add((i) => this.onPreviousPick(i))
@@ -506,7 +510,7 @@ export class MWNPMain extends BaseScriptComponent {
     else if (v === "options") this.optionsCard.hide()
     else if (v === "notes") this.notesCard.hide()
     else if (v === "viewer") this.photoViewer.hide()
-    else if (v === "jobhome" || v === "confirm") this.jobPanel.hideAux()
+    else if (v === "jobcontrol" || v === "confirm") this.jobPanel.hideAux()
     this.visibleCard = "home"
   }
 
@@ -520,8 +524,8 @@ export class MWNPMain extends BaseScriptComponent {
     } else if (v === "notes") {
       this.notesCard.show(this.notes)
       this.visibleCard = "notes"
-    } else if (v === "jobhome") {
-      this.openOverview()
+    } else if (v === "jobcontrol") {
+      this.openJobControl()
     } else if (v === "home" || v === "confirm") {
       this.visibleCard = "home"
     } else {
@@ -555,17 +559,14 @@ export class MWNPMain extends BaseScriptComponent {
     const v = this.visibleCard
     this.click()
     if (key === "job") {
-      if (v === "jobhome") {
-        this.jobPanel.hideAux()
-        this.resumeFlow()
-      } else if (v === this.flowCard) {
-        // The flow card is already showing: the Job button now opens the Job overview (End job / New job).
-        if (v === "step" || v === "finding" || v === "summary") this.openOverview()
-        else return this.pulseCard(this.jobPanel.sceneObject)
-      } else {
-        this.hideOpenCard()
-        this.resumeFlow()
-      }
+      // The flow card is already showing: the press just pulses it.
+      if (v === this.flowCard) return this.pulseCard(this.flowHost())
+      this.hideOpenCard()
+      this.resumeFlow()
+    } else if (key === "control") {
+      if (v === "jobcontrol") return this.pulseCard(this.jobPanel.sceneObject)
+      this.hideOpenCard()
+      this.openJobControl()
     } else if (key === "report") {
       if (v === "report" || v === "summary") return this.pulseCard(this.summaryCard.sceneObject)
       this.hideOpenCard()
@@ -589,30 +590,45 @@ export class MWNPMain extends BaseScriptComponent {
     this.log("library-pick " + key)
   }
 
-  private overviewStatus(): string {
-    return this.jobEnded ? "Status: Complete · ended " + this.endTime : (this.agent as MWNPAgent).repaired ? "Status: Repaired · not yet ended" : "Status: In progress"
+  /** The card the Job button is showing for the current flow position. */
+  private flowHost(): SceneObject {
+    switch (this.flowCard) {
+      case "step":
+        return this.stepCard.sceneObject
+      case "finding":
+        return this.findingCard.sceneObject
+      case "summary":
+        return this.summaryCard.sceneObject
+      default:
+        return this.jobPanel.sceneObject
+    }
   }
 
-  private openOverview(): void {
+  private controlStatus(): string {
+    return !this.jobActive ? "Status: No job" : (this.agent as MWNPAgent).repaired ? "Status: Repaired · not yet ended" : "Status: In progress"
+  }
+
+  /** Library > Job control: the job's status with End job / New job. */
+  private openJobControl(): void {
     const nl = this.nl as Netlist
     this.hideOpenCard()
-    this.jobPanel.showOverview("Job: " + nl.data.machine + " " + nl.machineKind(), this.overviewStatus())
-    this.visibleCard = "jobhome"
+    this.jobPanel.showControl("Job: " + nl.data.machine + " " + nl.machineKind(), this.controlStatus(), this.jobActive)
+    this.visibleCard = "jobcontrol"
   }
 
   // ── End job / New job / Notes ─────────────────────────────────────────────
 
   private onJobRequest(kind: string): void {
-    const v = this.visibleCard
-    if (v !== "job" && v !== "jobhome") return
+    if (this.visibleCard !== "jobcontrol") return
     this.click()
-    this.confirmReturn = v
     this.hideOpenCard()
     this.jobPanel.showConfirm(
       kind,
       kind === "end"
-        ? "End this job? The Job report is marked Complete and the readings are locked."
-        : "Start a new job? Readings, badges, outlines and traces are cleared. The previous report stays in Job report until the new job logs its first reading."
+        ? "End this job? It is marked Complete and filed under Previous jobs with its readings, notes and pictures, and the board is cleared."
+        : this.jobActive
+        ? "Start a new job? The current job is filed under Previous jobs as Ended early, the board is cleared, and the symptom list opens."
+        : "Start a new job? The symptom list opens on a clean board."
     )
     this.visibleCard = "confirm"
     this.log("confirm-" + kind)
@@ -623,15 +639,18 @@ export class MWNPMain extends BaseScriptComponent {
     this.click()
     this.jobPanel.hideAux()
     if (!yes) {
-      if (this.confirmReturn === "job") {
-        this.jobPanel.setVisible(true)
-        this.visibleCard = "job"
-      } else this.openOverview()
+      this.openJobControl()
       this.log("confirm-no")
       return
     }
     if (kind === "end") this.endJob()
     else this.newJob()
+  }
+
+  /** "Start new job" on the Job card while no job is in progress (nothing to lose, so no confirmation). */
+  private onStartJob(): void {
+    this.click()
+    this.newJob()
   }
 
   private resultText(): string {
@@ -642,40 +661,30 @@ export class MWNPMain extends BaseScriptComponent {
     return f ? "not resolved — " + f.head : "no finding logged"
   }
 
-  /** Stamps the end time, marks the Job report Complete with the result and locks the readings. */
-  private endJob(): void {
-    const agent = this.agent as MWNPAgent
-    if (!this.jobEnded) {
-      this.jobEnded = true
-      this.endTime = clock()
-      agent.phase = "summary"
-      this.addNote("Agent", "Job ended: " + this.resultText() + ".")
-    }
-    this.stepCard.hide()
-    this.schematicPanel.close()
-    this.flowCard = "summary"
-    this.buildReport(true)
-    this.log("job-ended")
-  }
-
-  /** Clears the job (readings, badges, outlines, traces, notes, captures) and returns to the symptom list. */
-  private newJob(): void {
+  /**
+   * Files a copy of the current job's report under Previous jobs: "Complete" (End job), "Ended early" (New job while a job
+   * was in progress) or "Saved copy" (Save on the report; the job goes on). Notes and pictures go with it.
+   */
+  private archiveJob(status: "Complete" | "Ended early" | "Saved copy"): void {
     const nl = this.nl as Netlist
     const old = this.agent as MWNPAgent
-    if (old.readings.length > 0) {
-      const n = this.previousJobs.length + 1
-      const data = this.reportData(true)
-      data.statusLine = "Status: " + (this.jobEnded ? "Complete · ended " + this.endTime : "Not ended")
-      data.statusColor = this.jobEnded ? "green" : "amber"
-      const name = "Job " + n + " · " + (old.faultIndex >= 0 ? nl.symptomLabel(old.faultIndex) : "no symptom")
-      const result = this.resultText()
-      this.previousJobs.unshift({name, result, endTime: this.endTime, label: name + " — " + result + (this.endTime ? " · ended " + this.endTime : " · not ended"), data})
-    }
+    const stamp = clock()
+    const data = this.reportData(status !== "Saved copy")
+    data.statusLine = status === "Saved copy" ? "Status: Saved copy · job still in progress · saved " + stamp : "Status: " + status + " · ended " + stamp
+    data.statusColor = status === "Complete" ? "green" : status === "Ended early" ? "amber" : ""
+    const name = "Job " + (this.previousJobs.length + 1) + " · " + (old.faultIndex >= 0 ? nl.symptomLabel(old.faultIndex) : "no symptom")
+    const result = status === "Saved copy" ? "in progress" : this.resultText()
+    if (status !== "Saved copy") this.endTime = stamp
+    this.previousJobs.unshift({name, result, endTime: stamp, status, label: name + " — " + status + " · " + stamp, data})
+  }
+
+  /** Clears everything of the current job: readings, badges, outlines, traces, notes, pictures; a fresh agent at the Job card. */
+  private clearBoard(): void {
+    const nl = this.nl as Netlist
     this.viewingPrevious = -1
     this.captures = []
     this.notes = []
-    this.jobEnded = false
-    this.endTime = ""
+    this.notesCard.setNotes(this.notes)
     this.savedToJobLog = false
     this.lastMessage = ""
     this.lastResultColor = ""
@@ -700,15 +709,41 @@ export class MWNPMain extends BaseScriptComponent {
     const ctl = this.simulatedFaultFunction ? nl.controlOf(this.simulatedFaultFunction) : null
     this.cabinet.setS1(ctl ? ctl.position : "UP")
     this.updateLamps()
+  }
+
+  /** End job (after Yes): stamp the end time, file the report as Complete, clear the board, show the empty Job report. */
+  private endJob(): void {
+    if (!this.jobActive) return
+    this.addNote("Agent", "Job ended: " + this.resultText() + ".")
+    this.archiveJob("Complete")
+    this.clearBoard()
+    this.jobActive = false
+    const nl = this.nl as Netlist
+    this.jobPanel.showJob("Job: " + nl.data.machine + " " + nl.machineKind(), this.filesLoadedText, false)
+    this.jobPanel.setVisible(false)
+    this.flowCard = "job"
+    this.visibleCard = "home"
+    this.buildReport(false)
+    this.log("job-ended")
+  }
+
+  /** New job (after Yes): a job in progress is filed first as Ended early; then a clean job starts at the symptom list. */
+  private newJob(): void {
+    const nl = this.nl as Netlist
+    if (this.jobActive) {
+      this.addNote("Agent", "Job ended early: " + this.resultText() + ".")
+      this.archiveJob("Ended early")
+    }
+    this.clearBoard()
+    this.jobActive = true
+    this.endTime = ""
+    const agent = this.agent as MWNPAgent
     agent.openSymptoms()
     const items = []
     for (let i = 0; i < nl.faultCount(); i++) items.push({key: nl.symptomKey(i), label: nl.symptomLabel(i)})
     this.jobPanel.showSymptoms(items)
-    this.jobPanel.setVisible(false)
     this.flowCard = "symptoms"
-    // The Job report shows the new job right away (empty readings and notes, "In progress"); the finished job is listed under Previous jobs.
-    this.visibleCard = "home"
-    this.buildReport(false)
+    this.visibleCard = "symptoms"
     this.log("job-new")
   }
 
@@ -902,12 +937,34 @@ export class MWNPMain extends BaseScriptComponent {
     const btn = addButton(root, "Btn_LibraryToggle", "Hide", w, h, () => this.onLibraryToggle(), {emCm: em, bold: true, inFlex: false, icon: ICON_HIDE})
     btn.so.getTransform().setLocalPosition(new vec3(this.libraryCard.menuWidth / 2 - w / 2, h / 2 + 1.0, 0))
     this.libBtn = btn
-    this.libFader = new DisplayFader(this, [this.libraryCard.sceneObject], null)
+    this.libFader = new DisplayFader(this, [this.libraryCard.sceneObject], null, 0.35, true)
   }
 
   private onLibraryToggle(): void {
     this.click()
-    this.setLibraryHidden(!this.libHiddenFlag)
+    // Decide from what is really on screen, not from a remembered flag.
+    this.setLibraryHidden(this.libFader ? this.libFader.visible : !this.libHiddenFlag)
+  }
+
+  /** Both Hide / Show buttons always say what their display is actually doing (shown -> "Hide", hidden -> "Show"). */
+  private syncToggleLabels(): void {
+    if (this.libFader && this.libBtn) {
+      const hidden = !this.libFader.visible
+      this.libHiddenFlag = hidden
+      this.setToggleLabel(this.libBtn, hidden)
+    }
+    if (this.fader && this.displayBtn) {
+      this.hiddenFlag = !this.fader.visible
+      this.setToggleLabel(this.displayBtn, this.hiddenFlag)
+    }
+  }
+
+  private setToggleLabel(btn: ButtonHandle, hidden: boolean): void {
+    const want = hidden ? "Show" : "Hide"
+    if (btn.label.text !== want) {
+      btn.label.text = want
+      if (btn.iconMat) btn.iconMat.mainPass.baseTex = hidden ? ICON_SHOW : ICON_HIDE
+    }
   }
 
   /** Fades the Library menu out (true) or back in (false); its button stays where it is. */
@@ -1126,8 +1183,9 @@ export class MWNPMain extends BaseScriptComponent {
     btn.so.getTransform().setLocalPosition(new vec3(this.stepCard.widthCm / 2 - w / 2, h / 2 + 1.0, 0))
     this.displayBtn = btn
     this.displayBtnBase = btn.so.getTransform().getLocalPosition()
-    this.fader = new DisplayFader(this, [host.getParent() as SceneObject], null)
+    this.fader = new DisplayFader(this, [host.getParent() as SceneObject], null, 0.35, true)
     this.labelsFader = new DisplayFader(this, [this.partTags.sceneObject], this.cabinet)
+    this.createEvent("UpdateEvent").bind(() => this.syncToggleLabels())
   }
 
   /**
@@ -1166,11 +1224,15 @@ export class MWNPMain extends BaseScriptComponent {
     this.log("tag " + id)
   }
 
+  /** Save (this session): files a snapshot copy of the report under Previous jobs; the job goes on. */
   private onSave(): void {
+    if (!this.jobActive) return
     this.click()
     const agent = this.agent as MWNPAgent
     this.jobLog.push(JSON.stringify({readings: agent.readings, finding: agent.finding, repaired: agent.repaired, captures: this.captures.map((c) => ({id: c.id, point: c.pointId, kind: c.kind, time: c.time, image: !!c.texture}))}))
+    this.archiveJob("Saved copy")
     this.savedToJobLog = true
+    this.summaryCard.refresh(this.reportData(this.visibleCard === "summary"))
     this.summaryCard.setSaved("Saved (this session) " + CHECK)
     this.log("saved")
   }
@@ -1252,6 +1314,25 @@ export class MWNPMain extends BaseScriptComponent {
   private reportData(final: boolean): SummaryData {
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
+    if (!this.jobActive) {
+      return {
+        title: "Job report",
+        jobLine: "",
+        symptomLine: "",
+        statusLine: "No job in progress — start one from Job",
+        statusColor: "amber",
+        noJob: true,
+        readingsHeading: "",
+        rows: [],
+        captures: [],
+        notes: this.notes.map((n) => ({time: n.time, source: n.source, text: n.text})),
+        previous: this.previousJobs.map((x) => ({label: x.label})),
+        findingLine: "",
+        actionLine: "",
+        resultLine: "",
+        saveLabel: "Save (this session)",
+      }
+    }
     const rows: SummaryRow[] = agent.readings.map((r) => {
       const mark = r.cls === "in_spec" ? CHECK + " in spec" : r.cls === "open" ? CROSS + " open" : r.cls === "unexplained" ? "? unexplained" : "raw"
       return {
@@ -1281,8 +1362,8 @@ export class MWNPMain extends BaseScriptComponent {
       title: "Job report",
       jobLine: "Job: " + nl.data.machine + " " + nl.machineKind() + " · rev " + (nl.data.revision || "-"),
       symptomLine: "Symptom: " + (agent.faultIndex >= 0 ? nl.symptomLabel(agent.faultIndex) : "not reported yet"),
-      statusLine: "Status: " + (this.jobEnded ? "Complete · ended " + this.endTime : agent.repaired ? "Repaired · not yet ended" : "In progress"),
-      statusColor: this.jobEnded ? "green" : "amber",
+      statusLine: "Status: " + (agent.repaired ? "Repaired · not yet ended" : "In progress"),
+      statusColor: "amber",
       readingsHeading: "Readings (meter black lead on " + nl.referencePoint() + ")",
       rows,
       captures,
@@ -1662,7 +1743,8 @@ export class MWNPMain extends BaseScriptComponent {
       jobEnded: this.jobEnded,
       jobLog: this.jobLog,
       endTime: this.endTime,
-      previousJobs: this.previousJobs.map((p) => ({name: p.name, result: p.result, endTime: p.endTime})),
+      previousJobs: this.previousJobs.map((p) => ({name: p.name, result: p.result, endTime: p.endTime, status: p.status, label: p.label})),
+      jobActive: this.jobActive,
       viewingPrevious: this.viewingPrevious,
       notesPlaceholders: this.notes.filter((n) => n.placeholder).length,
       notesView: this.notesCard.view,

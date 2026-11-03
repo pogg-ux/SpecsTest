@@ -9,6 +9,7 @@
 // Test handles: "Btn_Snapshot", "Btn_Photo", "Btn_CameraClose", card "CameraCardCard", image "CameraThumb",
 //               texts "CameraTitle", "CameraTarget", "CameraStatus", "CameraThumbPlaceholder".
 
+import {DisplayFader} from "./MWNPDisplayFader"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
@@ -50,11 +51,17 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
   thumbShown: boolean = false
   thumbHasTexture: boolean = false
   thumbPlaceholder: string = ""
+  /** Open and not on its way out (a closing card already counts as closed). */
   get isVisible(): boolean {
-    return !!this.body && this.body.enabled
+    return !!this.body && this.body.enabled && !(this.closeFader && this.closeFader.hidden)
+  }
+  /** True while the card is still fading out (it is disabled the moment the fade reaches zero). */
+  get isClosing(): boolean {
+    return !!this.body && this.body.enabled && !!this.closeFader && this.closeFader.hidden
   }
 
   private body: SceneObject | null = null
+  private closeFader: DisplayFader | null = null
   private statusColor = ""
   private lastThumb: {texture: Texture | null; aspect: number; placeholder: string} | null = null
   private inner = 0
@@ -91,11 +98,16 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
   show(target: string): void {
     if (!this.body) this.build()
     this.setTarget(target)
+    if (this.closeFader) this.closeFader.snapShown()
     ;(this.body as SceneObject).enabled = true
   }
 
+  /** Closes the card: fades to zero over 0.2 s, then disables it, so nothing of it stays on screen. */
   hide(): void {
-    if (this.body) this.body.enabled = false
+    if (!this.body || !this.body.enabled) return
+    if (this.closeFader && this.closeFader.hidden) return
+    if (!this.closeFader) this.closeFader = new DisplayFader(this, [this.body], null, 0.2)
+    this.closeFader.setHidden(true)
   }
 
   get built(): boolean {
@@ -105,9 +117,10 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
   /** Rebuilds at the current Text size factor, keeping target, status, thumbnail and visibility. */
   rebuild(): void {
     if (!this.body) return
-    const vis = this.body.enabled
+    const vis = this.isVisible
     deferDestroy(this, this.body)
     this.body = null
+    this.closeFader = null
     this.tTarget = null
     this.tStatus = null
     this.tPlaceholder = null
@@ -123,7 +136,9 @@ export class MWNPCameraCardUI extends BaseScriptComponent {
 
   /** Keeps the card's content but makes it visible / invisible without touching its state (used around a snapshot). */
   setBodyEnabled(enabled: boolean): void {
-    if (this.body) this.body.enabled = enabled
+    if (!this.body) return
+    if (enabled && this.closeFader && this.closeFader.hidden) return // closed meanwhile: stay closed
+    this.body.enabled = enabled
   }
 
   setTarget(text: string): void {

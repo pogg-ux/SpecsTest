@@ -110,7 +110,7 @@ export class MWNPLibraryOptionsScenario extends Scenario {
     for (const n of ["JobCard", "SymptomCard", "StepCardCard", "FindingCardCard", "SummaryCardCard", "CameraCardCard", "OptionsCardCard"]) {
       expect(isEnabled(n), n + " closed at start").toBe(false)
     }
-    for (const n of ["Btn_LibraryToggle", "Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options"]) expect(isEnabled(n), n + " present").toBe(true)
+    for (const n of ["Btn_LibraryToggle", "Btn_Lib_Job", "Btn_Lib_Control", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options"]) expect(isEnabled(n), n + " present").toBe(true)
 
     // Docked at the upper left, over the cabinet's top-left corner: in view, clear of the key parts and PS1's label.
     checkCard(cam, "LibraryCardCard")
@@ -124,7 +124,7 @@ export class MWNPLibraryOptionsScenario extends Scenario {
     const ps1 = tagRect(cam, "Tag_PS1")
     expect(!!ps1, "PS1 label found").toBe(true)
     if (ps1) expect(overlaps(menu, ps1), "menu clear of PS1's label").toBe(false)
-    await reach("Btn_LibraryToggle", "Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options", "Btn_DisplayToggle")
+    await reach("Btn_LibraryToggle", "Btn_Lib_Job", "Btn_Lib_Control", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options", "Btn_DisplayToggle")
     // The Library's Hide / Show is the same button as the main one: label, size, style, and its place just outside the
     // card's top corner (flush with the corner's side, 1.0 above the top edge), clear of the key parts and PS1's label.
     {
@@ -203,7 +203,7 @@ export class MWNPLibraryOptionsScenario extends Scenario {
     ev("library fade samples", fadeSamples)
     s = await waitFor((x) => x.libraryHidden && !x.libraryFading && x.libraryAlpha === 0, 3000, "library hidden")
     expect(labelOf("Btn_LibraryToggle"), "button says Show while hidden").toBe("Show")
-    for (const n of ["Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options"]) expect(isEnabled(n), n + " hidden").toBe(false)
+    for (const n of ["Btn_Lib_Job", "Btn_Lib_Control", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options"]) expect(isEnabled(n), n + " hidden").toBe(false)
     expect(isEnabled("Btn_LibraryToggle"), "Show button stays").toBe(true)
     expect(findSceneObjectByName("Btn_LibraryToggle").getTransform().getWorldPosition().distance(libBtnPos) < 0.01, "Show button stays in the same spot").toBe(true)
     expect(isEnabled("Btn_DisplayToggle") && !mwnpState().display.hidden, "the main Hide is unaffected").toBe(true)
@@ -224,7 +224,7 @@ export class MWNPLibraryOptionsScenario extends Scenario {
     await ui.tap("Btn_LibraryToggle")
     await waitFor((x) => !x.libraryHidden && !x.libraryFading && x.libraryAlpha === 1, 3000, "library shown")
     expect(labelOf("Btn_LibraryToggle"), "button says Hide again").toBe("Hide")
-    for (const n of ["Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options"]) expect(isEnabled(n), n + " back").toBe(true)
+    for (const n of ["Btn_Lib_Job", "Btn_Lib_Control", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options"]) expect(isEnabled(n), n + " back").toBe(true)
     expect(fadeSamples.filter((v) => v > 0.02 && v < 0.98).length >= 3, "it fades, not a pop: " + fadeSamples.join(",")).toBe(true)
 
     // ── Job card and symptom list from the menu; leaving and returning keeps each ──

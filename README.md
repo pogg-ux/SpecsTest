@@ -7,8 +7,8 @@ The tech reports a symptom. The assistant answers **only from the machine's own 
 Demo machine: the **MWNP 1.0**, a 12 VDC bench trainer I designed (SPDT toggle, two fused branches, EXTEND / RETRACT lamps standing in for an actuator).
 
 ## What it does (v1)
-- **Library menu** docked upper left (collapsible, always reachable) → Job, Job report, Camera, Notes, Options
-- **Job lifecycle:** End job (stamps time, marks the report Complete, locks readings) and New job (clears the board, keeps the previous report viewable), each with a confirm
+- **Library menu** docked upper left (collapsible, always reachable) → Job, Job control, Job report, Camera, Notes, Options
+- **Job control:** End job files the report as Complete (readings, notes, pictures) and leaves a clean board and empty report; New job files any job in progress as "Ended early" and starts fresh; Save files a copy without ending the job. Every action has a Yes/No confirm, and previous jobs stay viewable read-only
 - **Notes:** time-stamped tech notes (quick picks in preview, keyboard on device) plus automatic "Agent" notes at key moments, all included in the Job report
 - **Symptom → path:** "EXTEND doesn't work" → outlines TS-4, F1, L1; draws the 2a/2b/2c trace; cites the schematic
 - **Guided check order** with a number pad for real meter readings (not pass/fail)

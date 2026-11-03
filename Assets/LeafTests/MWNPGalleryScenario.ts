@@ -1,5 +1,5 @@
 // Screenshot gallery driver (not a test of behavior): parameter `shot` drives the Lens to one documented state and
-// stops there so the Preview can be captured: start, library, symptoms, step-schematic, amber, finding, retest, report,
+// stops there so the Preview can be captured: start, library, job-control, symptoms, step-schematic, amber, finding, retest, report,
 // camera, options, hidden-labels, hidden-all.
 
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
@@ -38,6 +38,27 @@ export class MWNPGalleryScenario extends Scenario {
     await waitFor((s) => s.visibleCard === "symptoms", 3000, "symptoms")
     if (shot === "symptoms") {
       await settle()
+      return ev("GALLERY " + shot, {})
+    }
+    if (shot === "endnew-camera" || shot === "endnew-job") {
+      // A job, then End job -> Yes, then New job -> Yes; then the Camera or the Job card.
+      await ui.tap("Btn_Symptom_EXTEND")
+      await waitFor((s) => s.visibleCard === "step" && s.activePoint === "TS-4", 3000, "step at TS-4")
+      await ui.enterReading("12.1")
+      for (const kind of ["EndJob", "NewJob"]) {
+        await ui.tap("Btn_Lib_Control")
+        await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "job control")
+        await sleep(300)
+        await ui.tap("Btn_" + kind)
+        await waitFor((s) => s.visibleCard === "confirm", 3000, "confirm")
+        await sleep(300)
+        await ui.tap("Btn_ConfirmYes")
+        await waitFor((s) => (kind === "EndJob" ? s.jobActive === false : s.jobActive === true && s.visibleCard === "symptoms"), 3000, kind + " done")
+        await sleep(600)
+      }
+      await ui.tap(shot === "endnew-camera" ? "Btn_Lib_Camera" : "Btn_Lib_Job")
+      await waitFor((s) => s.visibleCard === (shot === "endnew-camera" ? "camera" : "symptoms"), 3000, "card")
+      await sleep(1400)
       return ev("GALLERY " + shot, {})
     }
     await ui.tap("Btn_Symptom_EXTEND")
@@ -122,15 +143,26 @@ export class MWNPGalleryScenario extends Scenario {
     await ui.enterReading("12.0")
     await waitFor((s) => s.visibleCard === "summary", 4000, "job report")
     await sleep(1400)
-    if (shot === "complete" || shot === "complete-notes") {
-      await ui.tap("Btn_Lib_Job")
-      await waitFor((s) => s.visibleCard === "jobhome", 3000, "overview")
+    if (shot === "job-control") {
+      await ui.tap("Btn_Lib_Control")
+      await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "job control")
+      await sleep(1400)
+    }
+    if (shot === "complete" || shot === "complete-filed" || shot === "complete-notes") {
+      await ui.tap("Btn_Lib_Control")
+      await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "job control")
       await ui.tap("Btn_EndJob")
       await waitFor((s) => s.visibleCard === "confirm", 3000, "confirm")
       await sleep(300)
       await ui.tap("Btn_ConfirmYes")
-      await waitFor((s) => s.jobEnded === true && s.visibleCard === "summary", 3000, "job ended")
+      await waitFor((s) => s.jobActive === false && s.visibleCard === "report", 3000, "job ended")
       await sleep(1400)
+      if (shot === "complete-filed" || shot === "complete-notes") {
+        // The filed report, read-only.
+        await ui.tap("Btn_PrevJob_0")
+        await waitFor((s) => s.viewingPrevious === 0, 3000, "filed report")
+        await sleep(900)
+      }
     }
     if (shot === "complete-notes") {
       await ui.tap("Btn_TabNotes")

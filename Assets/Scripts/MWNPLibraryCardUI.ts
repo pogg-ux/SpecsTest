@@ -1,17 +1,18 @@
 // MWNPLibraryCardUI.ts — the Library: a compact, persistent menu docked at the upper left of the view.
 //
-// Owns: one column of buttons (Job, Job report, Camera, Options). Its Hide / Show button is a separate button floating
+// Owns: one column of buttons (Job, Job control, Job report, Camera, Notes, Options). Its Hide / Show button is a separate button floating
 // outside the card's top-right corner (built by Main, like the Job side's), and the menu lives outside the UI root, so the
 // main Hide never fades it.
 // Text is >= 1.0 cm; the card grows downward from its host's top-center (the host sits at the menu's top edge).
 // Holds no job state: Main decides what each destination shows.
-// API: show(), hide(), built, menuWidth, event onPick(key: "job"|"report"|"camera"|"notes"|"options").
-// Test handles: "Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options", card "LibraryCardCard".
+// API: show(), hide(), built, menuWidth, event onPick(key: "job"|"control"|"report"|"camera"|"notes"|"options").
+// Test handles: "Btn_Lib_Job", "Btn_Lib_Control", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options", card "LibraryCardCard".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {addButton, addCardHeader, addFitText, cardEm, makeCardBody, TEXT_SOFT} from "./MWNPSharedUI"
 
 const iconJob = requireAsset("../Icons/build.png") as Texture
+const iconControl = requireAsset("../Icons/tune.png") as Texture
 const iconReport = requireAsset("../Icons/assignment.png") as Texture
 const iconCamera = requireAsset("../Icons/photo_camera.png") as Texture
 const iconNotes = requireAsset("../Icons/edit_note.png") as Texture
@@ -79,6 +80,7 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
     addFitText(c, "LibraryAppName", "MWNP No-Guess Field Assistant", inner, em, {color: TEXT_SOFT})
     const items: [string, string, Texture][] = [
       ["job", "Job", iconJob],
+      ["control", "Job control", iconControl],
       ["report", "Job report", iconReport],
       ["camera", "Camera", iconCamera],
       ["notes", "Notes", iconNotes],

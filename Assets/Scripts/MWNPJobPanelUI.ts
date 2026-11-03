@@ -7,11 +7,12 @@
 // API: showJob(jobLine, filesLine), showSymptoms(items), hide(), currentView,
 //      onReportSymptom, onSymptomPicked(index).
 // Must not: read the netlist or decide anything.
+// Job control view: "Btn_EndJob", "Btn_NewJob", confirm "Btn_ConfirmYes"/"Btn_ConfirmNo". No-job Job card: "Btn_StartJob".
 // Test handles: "Btn_ReportSymptom", "Btn_Symptom_<KEY>" (EXTEND / RETRACT / Neither),
 //               cards "JobCard" / "SymptomCard", texts "JobTitle", "FilesLoaded", "SymptomHeading".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {addButton, addCardHeader, addFitText, cardEm, deferDestroy, estimateLines, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, cardEm, COLOR, deferDestroy, estimateLines, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 export interface SymptomItem {
   key: string
@@ -58,6 +59,11 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   get onConfirm(): PublicApi<{kind: string; yes: boolean}> {
     return this._onConfirm.publicApi()
   }
+  private hasJob = true
+  private _onStartJob = new Event<void>()
+  get onStartJob(): PublicApi<void> {
+    return this._onStartJob.publicApi()
+  }
   private _onReportSymptom = new Event<void>()
   private _onSymptomPicked = new Event<number>()
   get onReportSymptom(): PublicApi<void> {
@@ -71,9 +77,10 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
   }
 
-  showJob(jobLine: string, filesLine: string): void {
+  showJob(jobLine: string, filesLine: string, hasJob: boolean = true): void {
     this.clear()
     this.jobArgs = [jobLine, filesLine]
+    this.hasJob = hasJob
     const w = this.widthCm
     const inner = w - 2.8
     const em = cardEm(this.sceneObject, this.textEmCm)
@@ -82,9 +89,11 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     addCardHeader(card.content, "JobHeader", "Job", inner, this.sceneObject)
     addFitText(card.content, "JobTitle", jobLine, inner, em, {bold: true})
     addFitText(card.content, "FilesLoaded", filesLine, inner, em, {color: TEXT_SOFT})
-    addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em, primary: true})
-    addButton(card.content, "Btn_EndJob", "End job", inner - 4, 3.6, () => this._onEndRequest.invoke(), {emCm: em})
-    addButton(card.content, "Btn_NewJob", "New job", inner - 4, 3.6, () => this._onNewRequest.invoke(), {emCm: em})
+    if (hasJob) addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em, primary: true})
+    else {
+      addFitText(card.content, "NoJobText", "No job in progress.", inner, em, {bold: true})
+      addButton(card.content, "Btn_StartJob", "Start new job", inner - 4, 3.6, () => this._onStartJob.invoke(), {emCm: em, primary: true})
+    }
     this.currentView = "job"
   }
 
@@ -108,19 +117,20 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     this.currentView = "symptoms"
   }
 
-  /** The Job overview (reachable any time from the Library): job line, status, End job / New job. */
-  showOverview(jobLine: string, status: string): void {
+  /** Job control (Library > Job control): job line, status, and End job / New job (End job only while a job is in progress). */
+  showControl(jobLine: string, status: string, hasJob: boolean): void {
     this.hideAux()
     const w = this.widthCm
     const inner = w - 2.8
     const em = cardEm(this.sceneObject, this.textEmCm)
-    const card = makeCardBody(this.sceneObject, "JobOverviewCard", w, 1.4, 0.8, "top")
+    const card = makeCardBody(this.sceneObject, "JobControlCard", w, 1.4, 0.8, "top")
     this.auxBody = card.body
-    addCardHeader(card.content, "JobOverviewHeader", "Job", inner, this.sceneObject)
-    addFitText(card.content, "JobOverviewTitle", jobLine, inner, em, {bold: true})
-    addFitText(card.content, "JobOverviewStatus", status, inner, em, {color: TEXT_SOFT})
-    addButton(card.content, "Btn_EndJob", "End job", inner - 4, 3.6, () => this._onEndRequest.invoke(), {emCm: em})
-    addButton(card.content, "Btn_NewJob", "New job", inner - 4, 3.6, () => this._onNewRequest.invoke(), {emCm: em})
+    addCardHeader(card.content, "JobControlHeader", "Job control", inner, this.sceneObject)
+    addFitText(card.content, "JobControlTitle", jobLine, inner, em, {bold: true})
+    addFitText(card.content, "JobControlStatus", status, inner, em, {color: hasJob ? COLOR.amber : TEXT_BODY, bold: true})
+    if (hasJob) addButton(card.content, "Btn_EndJob", "End job", inner - 4, 3.6, () => this._onEndRequest.invoke(), {emCm: em})
+    else addFitText(card.content, "JobControlNote", "Nothing to end. Press New job to start one.", inner, em, {color: TEXT_SOFT})
+    addButton(card.content, "Btn_NewJob", "New job", inner - 4, 3.6, () => this._onNewRequest.invoke(), {emCm: em, primary: !hasJob})
   }
 
   /** Yes / No confirmation for End job / New job. */
@@ -163,7 +173,7 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   rebuild(): void {
     if (!this.body) return
     const vis = this.body.enabled
-    if (this.currentView === "job") this.showJob(this.jobArgs[0], this.jobArgs[1])
+    if (this.currentView === "job") this.showJob(this.jobArgs[0], this.jobArgs[1], this.hasJob)
     else if (this.currentView === "symptoms") this.showSymptoms(this.symptomItems)
     if (this.body) (this.body as SceneObject).enabled = vis
   }

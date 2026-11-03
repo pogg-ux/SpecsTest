@@ -38,8 +38,8 @@
     "./Assets/**/*.ts",
     "./Packages/**/*.ts",
     "./Cache/TypeScript/Src/Packages/**/*.ts",
-    "./Cache/TypeScript/Src/Assets/Spatial Triggers.lspkg/Scripts/Behavior.lsc/**/*.ts",
     "./Cache/TypeScript/Src/Assets/Waypoint Tween.lspkg/Scripts/Tween.lsc/**/*.ts",
+    "./Cache/TypeScript/Src/Assets/Spatial Triggers.lspkg/Scripts/Behavior.lsc/**/*.ts",
     "./Cache/TypeScript/Src/Assets/Waypoint Tween.lspkg/Scripts/TweenManager.lsc/**/*.ts"
   ]
 }

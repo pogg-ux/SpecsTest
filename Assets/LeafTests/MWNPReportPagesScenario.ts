@@ -115,6 +115,55 @@ export class MWNPReportPagesScenario extends Scenario {
     await sleep(600)
     expect(s.reportTab, "back on Notes & pictures").toBe("notes")
 
+    // ── End job files the whole report (all notes, the picture); it pages the same way, read-only ──
+    await ui.tap("Btn_Lib_Control")
+    await waitFor((x) => x.visibleCard === "jobcontrol", 3000, "Job control")
+    await sleep(300)
+    await ui.tap("Btn_EndJob")
+    await waitFor((x) => x.visibleCard === "confirm", 3000, "end confirm")
+    await sleep(300)
+    await ui.tap("Btn_ConfirmYes")
+    s = await waitFor((x) => x.visibleCard === "report" && x.jobActive === false, 3000, "clean report after End job")
+    await sleep(600)
+    expect(s.reportTab, "the clean report opens on Summary").toBe("summary")
+    expect(textOf("SummaryStatus"), "clean report").toBe("No job in progress — start one from Job")
+    checkCard(cam, "SummaryCardCard")
+    await ui.tap("Btn_TabNotes")
+    await waitFor((x) => x.reportTab === "notes", 3000, "clean report: notes tab")
+    await sleep(600)
+    expect(isEnabled("NoteEmpty") && isEnabled("PictureEmpty"), "the clean report has no notes or pictures").toBe(true)
+    await ui.tap("Btn_TabSummary")
+    await waitFor((x) => x.reportTab === "summary", 3000, "clean report: summary tab")
+    await sleep(500)
+    await ui.tap("Btn_PrevJob_0")
+    s = await waitFor((x) => x.viewingPrevious === 0, 3000, "filed report")
+    await sleep(600)
+    await ui.tap("Btn_TabNotes")
+    await waitFor((x) => x.reportTab === "notes", 3000, "filed report: notes tab")
+    await sleep(700)
+    s = mwnpState()
+    expect(s.reportPages > 1, "the filed report is paged too (" + s.reportPages + ")").toBe(true)
+    let filedNotes = 0
+    let filedPics = 0
+    for (let p = 0; p < s.reportPages; p++) {
+      checkCard(cam, "SummaryCardCard")
+      for (let i = 0; i < total + 1; i++) if (isEnabled("ReportNote_" + i)) filedNotes++
+      if (isEnabled("ReportCaptureThumb_" + picId)) filedPics++
+      if (p < s.reportPages - 1) {
+        await ui.tap("Btn_ReportNextPage")
+        await sleep(700)
+      }
+    }
+    expect(filedNotes, "all " + (total + 1) + " notes (the 18 plus the Job ended note) went with the filed report").toBe(total + 1)
+    expect(filedPics, "and its picture").toBe(1)
+    await ui.tap("Btn_Lib_Camera")
+    await waitFor((x) => x.visibleCard === "camera", 3000, "camera")
+    await ui.tap("Btn_CameraClose")
+    await sleep(500)
+    await ui.tap("Btn_Lib_Report")
+    await waitFor((x) => x.visibleCard === "report", 3000, "report")
+    await sleep(600)
+
     // ── Text size: still paged, still in view ──
     app.optionsCard.set("textSize", 2)
     await sleep(2200)

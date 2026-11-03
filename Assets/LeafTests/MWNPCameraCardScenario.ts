@@ -79,6 +79,7 @@ export class MWNPCameraCardScenario extends Scenario {
     expect(textOf("CameraTarget").indexOf("TS-4") >= 0, "card says it attaches to TS-4: " + textOf("CameraTarget")).toBe(true)
     await ui.tap("Btn_CameraClose")
     s = await waitFor((x) => x.visibleCard === "step", 3000, "back to step card")
+    await sleep(500)
     expect(isEnabled("StepCardCard"), "step card is back").toBe(true)
     expect(isEnabled("CameraCardCard"), "camera card closed").toBe(false)
     expect(stepSnapshot(), "same step, same state after Close").toBe(before)

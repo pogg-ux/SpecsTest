@@ -78,8 +78,10 @@ export interface SummaryData {
   notes?: {time: string; source: string; text: string}[]
   /** Finished jobs of this session, newest first: one collapsed line each, tap to view. */
   previous?: {label: string}[]
-  /** True while a previous job's report is showing: adds the "Back to current job" button. */
+  /** True while a previous job's report is showing: adds the "Back to current job" button; the report is read-only (no Save). */
   backToCurrent?: boolean
+  /** No job in progress: the Summary tab shows only the status line (the message) and Previous jobs. */
+  noJob?: boolean
   findingLine: string
   actionLine: string
   resultLine: string
@@ -222,6 +224,12 @@ export class MWNPSummaryUI extends BaseScriptComponent {
       return out
     }
     if (d.backToCurrent) out.push({h: this.buttonH("Back to current job", inner - 6, em), build: (c) => addButton(c, "Btn_BackToCurrent", "Back to current job", inner - 6, 3.6, () => this._onBack.invoke(), {emCm: em, bold: true})})
+    if (d.noJob) {
+      const st = d.statusLine || "No job in progress"
+      out.push({h: this.textH(st, inner, em, true), build: (c) => addFitText(c, "SummaryStatus", st, inner, em, {color: colorForWord(d.statusColor || ""), bold: true})})
+      this.appendPrevious(out, d, inner, em)
+      return out
+    }
     out.push({h: this.textH(d.jobLine, inner, em), build: (c) => addFitText(c, "SummaryJob", d.jobLine, inner, em, {color: TEXT_SOFT})})
     out.push({h: this.textH(d.symptomLine, inner, em), build: (c) => addFitText(c, "SummarySymptom", d.symptomLine, inner, em, {color: TEXT_BODY})})
     if (d.statusLine) {
@@ -243,11 +251,14 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     out.push({h: this.textH(d.findingLine, inner, em), build: (c) => addFitText(c, "SummaryFinding", d.findingLine, inner, em, {color: COLOR.red})})
     out.push({h: this.textH(d.actionLine, inner, em), build: (c) => addFitText(c, "SummaryAction", d.actionLine, inner, em, {color: TEXT_BODY})})
     out.push({h: this.textH(d.resultLine, inner, em, true), build: (c) => addFitText(c, "SummaryResult", d.resultLine, inner, em, {color: COLOR.green, bold: true})})
+    const readOnly = !!d.backToCurrent
     out.push({
-      h: 3.75 + this.buttonH("Export report — coming in v2", inner, em) + this.textH(EXPORT_NOTE, inner, em),
+      h: (readOnly ? 0 : 3.75) + this.buttonH("Export report — coming in v2", inner, em) + this.textH(EXPORT_NOTE, inner, em),
       build: (c) => {
-        this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, inner - 6, 3.6, () => this._onSave.invoke(), {emCm: em, primary: true})
-        if (this.savedLabel) this.saveBtn.label.text = this.savedLabel
+        if (!readOnly) {
+          this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, inner - 6, 3.6, () => this._onSave.invoke(), {emCm: em, primary: true})
+          if (this.savedLabel) this.saveBtn.label.text = this.savedLabel
+        }
         // Placeholder: there is no real export in v1; the button says so and shows what is planned.
         addButton(c, "Btn_ExportReport", "Export report — coming in v2", inner, 3.6, () => this.showExportNote(), {emCm: em})
         this.tExport = addFitText(c, "ExportNote", this.exportShown ? EXPORT_NOTE : "", inner, em, {color: TEXT_SOFT, minLines: 0})
@@ -255,13 +266,34 @@ export class MWNPSummaryUI extends BaseScriptComponent {
         this.exportInner = inner
       },
     })
-    if (d.previous && d.previous.length > 0) {
-      out.push({h: this.textH("Previous jobs", inner, em, true), keepNext: true, build: (c) => addFitText(c, "PreviousJobsHeading", "Previous jobs", inner, em, {bold: true})})
-      d.previous.forEach((p, i) =>
-        out.push({h: this.buttonH(p.label, inner - 2, em) - 0.6, build: (c) => addButton(c, "Btn_PrevJob_" + i, p.label, inner - 2, 3.0, () => this._onPrevious.invoke(i), {emCm: em})})
-      )
-    }
+    this.appendPrevious(out, d, inner, em)
     return out
+  }
+
+  private appendPrevious(out: {h: number; build: (c: SceneObject) => void; keepNext?: boolean}[], d: SummaryData, inner: number, em: number): void {
+    if (!d.previous || d.previous.length === 0) return
+    out.push({h: this.textH("Previous jobs", inner, em, true), keepNext: true, build: (c) => addFitText(c, "PreviousJobsHeading", "Previous jobs", inner, em, {bold: true})})
+    d.previous.forEach((p, i) =>
+      out.push({h: this.buttonH(p.label, inner - 2, em) - 0.6, build: (c) => addButton(c, "Btn_PrevJob_" + i, p.label, inner - 2, 3.0, () => this._onPrevious.invoke(i), {emCm: em})})
+    )
+  }
+
+  /** Same report with fresh data (a new Previous jobs list, say), keeping the tab, the page and the Saved label. */
+  refresh(d: SummaryData): void {
+    this.lastData = d
+    this.rowTexts = d.rows.map((r) => r.text)
+    this.findingText = d.findingLine
+    this.resultText = d.resultLine
+    this.captureIds = d.captures.map((c) => c.id).reverse()
+    this.render()
+    // The longer list can push the Save button onto another page: follow it, so its "Saved" feedback stays in view.
+    if (this.tab === "summary" && !this.saveBtn && !d.noJob && !d.backToCurrent) {
+      const n = this.pageCount
+      for (let k = 0; k < n && !this.saveBtn; k++) {
+        this.page = k
+        this.render()
+      }
+    }
   }
 
   /** Builds the current tab and page of the report. */
