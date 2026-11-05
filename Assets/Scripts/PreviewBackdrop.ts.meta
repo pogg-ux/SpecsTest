@@ -1,0 +1,46 @@
+- !<AssetImportMetadata/c4fb9cca-b025-4179-9a4c-4c05182215f6>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> cbc8ebae-0a82-4a48-95b7-4385fe33b328
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> cbc8ebae-0a82-4a48-95b7-4385fe33b328
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> cb149deb-93d2-44a3-b48b-07479dd4eba7
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/cb149deb-93d2-44a3-b48b-07479dd4eba7>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: c752e339-732b-47c6-91c5-dcf02e38a3a9
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    backdrop: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - backdrop: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @input SceneObject backdrop {"hint":"The BenchBackdrop scene object. Defaults to this object."}'

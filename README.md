@@ -24,7 +24,7 @@ Demo machine: the **MWNP 1.0**, a 12 VDC bench trainer I designed (SPDT toggle, 
 ## How to open it
 1. Lens Studio **5.23.2** (SPECS).
 2. Open `SpecsTest.esproj`.
-3. Preview panel → Interactive Preview, device SPECS. For the demo backdrop: Multimedia mode with `Media/bench_backdrop.jpg`.
+3. Preview panel → Interactive Preview, device SPECS. The workbench backdrop loads automatically (the `BenchBackdrop` object under the camera, preview only; it is disabled on Spectacles). No Multimedia mode setup needed.
 4. Mouse click = pinch. Right-drag to look, scroll to move closer.
 
 No SPECS glasses needed — everything runs in the Lens Studio preview.
