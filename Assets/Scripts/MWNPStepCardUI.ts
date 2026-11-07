@@ -18,7 +18,7 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection, FlexJustify, FlexAlign} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
-import {addButton, addCardHeader, addFlex, addText, ButtonHandle, COLOR, colorForWord, deferDestroy, fitText, getHostEmFactor, hostBaseScale, LINE_H, makeCardBody, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFlex, addText, ButtonHandle, COLOR, colorForWord, deferDestroy, fitText, getHostEmFactor, hostBaseScale, LINE_H, makeCardBody, minEmCm, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 export interface SwitchPick {
   component: string
@@ -250,9 +250,9 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     // Real-cm text size → card units, so the text stays the same physical size if the card is rescaled.
     const scale = hostBaseScale(this.sceneObject)
     // Text cells follow the Text size option; keys and side buttons keep their size (narrow column).
-    const em = (this.textEmCm * getHostEmFactor(this.sceneObject.name)) / scale
+    const em = (minEmCm(this.textEmCm) * getHostEmFactor(this.sceneObject.name)) / scale
     this.textEmLocal = em
-    const btnEm = this.textEmCm / scale
+    const btnEm = minEmCm(this.textEmCm) / scale
     this.btnEmLocal = btnEm
     const card = makeCardBody(this.sceneObject, "StepCardCard", w, 1.4, 0.5, "top")
     this.body = card.body
@@ -275,7 +275,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     // Bottom row: number pad (left) + readout / Enter / Schematic (right).
     const kw = this.keyWidthRealCm / scale
     const kh = this.keyHeightRealCm / scale
-    const digitEm = this.digitEmCm / scale
+    const digitEm = minEmCm(this.digitEmCm) / scale
     const kg = 0.35
     const padW = kw * 3 + kg * 2
     const padH = kh * 4 + kg * 3
@@ -298,7 +298,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     })
     const sideW = inner - padW - 1.0
     const side = addFlex(row, "PadSide", FlexDirection.Column, sideW, padH, 0.8, {justify: FlexJustify.Center})
-    const rem = this.readoutEmCm / scale
+    const rem = minEmCm(this.readoutEmCm) / scale
     this.tReadout = addText(side, "Readout", this.readoutPrefix + "\n— V", sideW, rem * LINE_H * 2, {emCm: rem, align: "center", wrap: true, valign: "top"})
     addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: btnEm, bold: true, primary: true})
     addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.0, () => this._onSchematic.invoke(), {emCm: btnEm})

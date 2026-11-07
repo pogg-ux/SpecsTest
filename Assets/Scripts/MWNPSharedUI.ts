@@ -30,6 +30,14 @@ const TYPE_SCALE: Record<TextRole, {size: number; weight: number}> = {
 export function roleSize(role: TextRole, distanceCm: number): number {
   return TYPE_SCALE[role].size * FONT_SIZE_SCALE * (distanceCm / 110)
 }
+/**
+ * Minimum real text height (em, cm) for any text on a card. Card text sizes go through cardEm() (or minEmCm() where a
+ * card derives its own size), so nothing on a card renders smaller than this.
+ */
+export const MIN_TEXT_EM_CM = 1.0
+export function minEmCm(realCm: number): number {
+  return Math.max(realCm, MIN_TEXT_EM_CM)
+}
 /** World-space Text: em-square height in cm = size / 43.886 (StudioLib Text.size docs). */
 export const TEXT_SIZE_PER_CM = 43.886
 export function sizeForEmCm(emCm: number): number {
@@ -279,11 +287,11 @@ export function hostBaseScale(host: SceneObject): number {
 }
 
 /** Applies the translucent fill once the plate's RoundedRectangle has initialized (BackPlate sets its own color on start). */
-function applyTranslucentFill(owner: SceneObject, plate: BackPlate): void {
+function applyTranslucentFill(owner: SceneObject, plate: BackPlate, forceOpaque: boolean = false): void {
   const apply = (): boolean => {
     const rr = (plate as any).roundedRectangle
     if (!plate.initialized || !rr) return false
-    rr.backgroundColor = cardFill()
+    rr.backgroundColor = forceOpaque ? CARD_FILL_OPAQUE : cardFill()
     return true
   }
   if (apply()) return
@@ -295,12 +303,12 @@ function applyTranslucentFill(owner: SceneObject, plate: BackPlate): void {
 }
 
 /** A BackPlate card: body (plate) + content (column FlexLayout lifted +0.6). Plate hugs content. */
-export function makeCardBody(host: SceneObject, name: string, width: number, pad: number, gap: number, anchor: CardAnchor = "center"): CardBody {
+export function makeCardBody(host: SceneObject, name: string, width: number, pad: number, gap: number, anchor: CardAnchor = "center", forceOpaque: boolean = false): CardBody {
   const body = makeObj(host, name)
   const plate = body.createComponent(BackPlate.getTypeName()) as BackPlate
   plate.style = "simple"
-  applyTranslucentFill(body, plate)
-  allPlates.push(plate)
+  applyTranslucentFill(body, plate, forceOpaque)
+  if (!forceOpaque) allPlates.push(plate) // forced-opaque plates ignore the session "Card style" option
   const content = makeObj(body, "Content", new vec3(0, 0, CONTENT_Z))
   const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
   flex.autoDiscoverItemsOnStart = false // children are registered explicitly via addItems
@@ -409,7 +417,7 @@ export const TEXT_SOFT = new vec4(1, 1, 1, 1)
  * (card units are cm before the host's scale), so text keeps its physical size if the card is rescaled.
  */
 export function cardEm(host: SceneObject, realCm: number): number {
-  return (realCm * getHostEmFactor(host.name)) / hostBaseScale(host)
+  return (Math.max(realCm, MIN_TEXT_EM_CM) * getHostEmFactor(host.name)) / hostBaseScale(host)
 }
 
 /** A wrapped text cell sized to its words (emLocal in card units). */

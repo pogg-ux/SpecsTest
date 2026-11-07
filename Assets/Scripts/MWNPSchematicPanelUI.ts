@@ -13,7 +13,7 @@
 
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addText, COLOR, HEADER_EM_CM, hostBaseScale, makeCardBody, makeObj, sizeForEmCm, textWidthCm} from "./MWNPSharedUI"
+import {addText, COLOR, HEADER_EM_CM, hostBaseScale, makeCardBody, makeObj, minEmCm, sizeForEmCm, textWidthCm} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -297,7 +297,7 @@ export class MWNPSchematicPanelUI extends BaseScriptComponent {
 
   /** Builds the large labels for each crop under labelsRoot (card units, image center = origin). */
   private buildLabels(): void {
-    const em = this.labelEmCm / this.scaleY
+    const em = minEmCm(this.labelEmCm) / this.scaleY
     for (const crop of Object.keys(LABELS)) {
       const r = CROPS[crop]
       const kx = this.imageW / (r.x1 - r.x0) // card units per PNG pixel

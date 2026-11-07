@@ -32,7 +32,7 @@
     - !<own> 72039524-7c48-4755-9126-a77864d6349b
     - !<own> 713050e2-4b4e-4763-b472-1b4b4a997121
     - !<own> d34b2e8a-e335-4be8-bdea-486c0ffe857a
-    - !<own> 214bfaa0-f45c-4c72-8d43-a406f7f3578f
+    - !<own> c74833e5-c08f-4ca0-b67f-bd5bc3328469
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 17
@@ -181,7 +181,7 @@
   Enabled: true
   renderLayer: 1310719
   LightType: EnvMap
-  Intensity: 1.000000
+  Intensity: 0.600000
   ShadowDensity: 1.000000
   ShadowBlurRadius: 0.000000
   ShadowTextureSize: 512
@@ -1712,6 +1712,22 @@
   RotationAngle: 0
   Pivot: {x: 0.000000, y: 0.000000}
   ExtentsTarget: !<reference> 00000000-0000-0000-0000-000000000000
+- !<ScriptComponent/0a3e9be1-5962-4273-8922-3dd60eae5d24>
+  PrefabRemaps:
+    []
+  Name: MessagingBridge
+  Enabled: true
+  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/0a74fc85-f9ef-432b-94f3-58eec6e722b5>
   PrefabRemaps:
     []
@@ -3909,21 +3925,6 @@
   MaskTexture: !<reference> 00000000-0000-0000-0000-000000000000
   RayTracing: !<reference> 00000000-0000-0000-0000-000000000000
   DevicePropertiesSource: !<reference> 00000000-0000-0000-0000-000000000000
-- !<SceneObject/214bfaa0-f45c-4c72-8d43-a406f7f3578f>
-  PrefabRemaps:
-    []
-  Name: LEAF Plugin Bridge
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 2858fdde-d033-4ee1-b043-8e6c4e156813
 - !<ScriptComponent/2157d169-6af7-4653-8f5d-a3dd8f1c2f6e>
   PrefabRemaps:
     []
@@ -3974,9 +3975,9 @@
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: -3.000000, z: -52.000000}
+    Position: {x: 8.000000, y: 18.000000, z: -56.200001}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    Scale: {x: 0.500000, y: 0.500000, z: 0.500000}
     HasSegmentScaleCompensation: false
   Children:
     []
@@ -4517,22 +4518,6 @@
       delay: !<float> 0.000000
       easingFunction: Quadratic
       easingType: Out
-  ScriptTypes:
-    "":
-      {}
-- !<ScriptComponent/2858fdde-d033-4ee1-b043-8e6c4e156813>
-  PrefabRemaps:
-    []
-  Name: MessagingBridge
-  Enabled: true
-  ScriptAsset: !<reference> 9aa407db-2872-4afc-a162-cf7faf2a0f29
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
   ScriptTypes:
     "":
       {}
@@ -10083,7 +10068,7 @@
       warningIcon: !<reference.Texture> 7c474fc3-0c3d-41e0-b6c5-1ebdd4324865
       noticeText: Reference aid only. Verify with a meter. Follow lockout/tagout.
       dismissLabel: Dismiss
-      widthCm: !<float> 32.000000
+      widthCm: !<float> 48.000000
       textEmCm: !<float> 1.000000
   ScriptTypes:
     "":
@@ -14793,7 +14778,7 @@
   PrefabRemaps:
     []
   Name: BenchBackdrop
-  Enabled: true
+  Enabled: false
   Layers: 1
   LocalTransform: !<TransformEntity>
     Position: {x: 0.000000, y: 0.000000, z: -990.000000}
@@ -19030,6 +19015,21 @@
     CapitalizationOverride: None
   DepthTest: false
   TwoSided: false
+- !<SceneObject/c74833e5-c08f-4ca0-b67f-bd5bc3328469>
+  PrefabRemaps:
+    []
+  Name: LEAF Plugin Bridge
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 0a3e9be1-5962-4273-8922-3dd60eae5d24
 - !<ScriptComponent/c7b02e17-b345-44dd-b32a-b5d60cc82a94>
   PrefabRemaps:
     []

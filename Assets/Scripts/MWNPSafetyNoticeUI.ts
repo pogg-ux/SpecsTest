@@ -9,7 +9,7 @@ import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addButton, addCardHeader, addFitText, addFlex, addText, cardEm, COLOR, makeCardBody, makeObj, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, addFlex, addText, cardEm, COLOR, estimateLines, LINE_H, makeCardBody, makeObj, TEXT_SOFT, textWidthCm} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -33,7 +33,7 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
   @input
   @widget(new SliderWidget(30, 70, 1))
   @hint("Card width in cm")
-  widthCm: number = 32
+  widthCm: number = 48
   @input
   @widget(new SliderWidget(0.5, 1.6, 0.05))
   @hint("Notice text size: em height in cm (1.0 reads well at ~70 cm)")
@@ -63,12 +63,23 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
   }
 
   private build(): void {
-    const card = makeCardBody(this.sceneObject, "SafetyNoticeCard", this.widthCm, 1.4, 0.6)
+    const card = makeCardBody(this.sceneObject, "SafetyNoticeCard", this.widthCm, 1.4, 0.6, "center", true)
     this.body = card.body
     const inner = this.widthCm - 2.8
+    // Two text sizes only: header (HEADER_EM_CM) and body (textEmCm, default 1.0 cm). Body covers the app name,
+    // the notice line and the Dismiss label; all are in real cm via cardEm so they keep their size if the card is rescaled.
+    const em = cardEm(this.sceneObject, this.textEmCm)
     addCardHeader(card.content, "SafetyHeader", "Safety", inner, this.sceneObject)
-    addFitText(card.content, "SafetyAppName", "MWNP No-Guess Field Assistant", inner, cardEm(this.sceneObject, this.textEmCm), {color: TEXT_SOFT})
-    const row = addFlex(card.content, "Row", FlexDirection.Row, inner, 4.2, 0.8)
+    addFitText(card.content, "SafetyAppName", "MWNP No-Guess Field Assistant", inner, em, {color: TEXT_SOFT})
+
+    const gap = 0.8
+    const iconW = Math.max(2.4, em * 1.3)
+    const btnW = textWidthCm(this.dismissLabel, em) + 3
+    const btnH = em * LINE_H + 1.6
+    const textW = inner - iconW - btnW - gap * 2 - 0.4
+    const noticeLines = estimateLines(this.noticeText, textW, em)
+    const noticeH = noticeLines * em * LINE_H
+    const row = addFlex(card.content, "Row", FlexDirection.Row, inner, Math.max(btnH, noticeH), gap)
 
     // Warning icon
     const iconSO = makeObj(row, "WarningIcon")
@@ -79,12 +90,11 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
     mat.mainPass.depthWrite = false
     img.clearMaterials()
     img.addMaterial(mat)
-    iconSO.getTransform().setLocalScale(new vec3(2.4, 2.4, 1))
+    iconSO.getTransform().setLocalScale(new vec3(iconW, iconW, 1))
     const iconItem = iconSO.createComponent(FlexItem.getTypeName()) as FlexItem
     ;(row.getComponent(FlexLayout.getTypeName()) as FlexLayout).addItems([iconItem])
 
-    const textW = inner - 2.4 - 7 - 1.6 - 0.8
-    addText(row, "NoticeText", this.noticeText, textW, 4, {role: "Body", color: COLOR.amber, emCm: this.textEmCm, wrap: true})
-    addButton(row, "Btn_DismissSafety", this.dismissLabel, 7, 3.2, () => this._onDismiss.invoke(), {emCm: this.textEmCm})
+    addText(row, "NoticeText", this.noticeText, textW, noticeH, {role: "Body", color: COLOR.amber, emCm: em, wrap: true})
+    addButton(row, "Btn_DismissSafety", this.dismissLabel, btnW, btnH, () => this._onDismiss.invoke(), {emCm: em})
   }
 }
