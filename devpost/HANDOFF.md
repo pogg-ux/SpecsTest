@@ -19,7 +19,7 @@ Then: save.bat → move tag → FEATURE FREEZE.
 ### Discord how-to (for the Nov 5 review — post by Wed)
 1. Join Devpost Discord (link on the hackathon page / Resources tab), accept rules.
 2. Left sidebar → find channel #devpost-learn-feedback (it may be a Forum channel).
-3. Click "New Post", title "MWNP No-Guess Field Assistant", paste the drafted text, drag in 2–3 screenshots, add tags "Will It Ship" + "Learn AR with SPECS", Post.
+3. Click "New Post", title "FaultLens", paste the drafted text, drag in 2–3 screenshots, add tags "Will It Ship" + "Learn AR with SPECS", Post.
 
 ### Then
 OBS (Window Capture, crop to Preview, 1080p/30) → silent takes → Clipchamp narration per VIDEO_SCRIPT → YouTube Public → Devpost submit before Mon Nov 9, 5 PM ET (video, repo URL, description).

@@ -1,4 +1,6 @@
-# MWNP No-Guess Field Assistant — a SPECS Lens
+# FaultLens — a SPECS Lens
+
+**FaultLens: Hands-Free AR Field Assistant**
 
 A hands-free troubleshooting assistant for industrial machine technicians, built for **Learn AR with SPECS** (Devpost × Snap).
 
@@ -41,7 +43,7 @@ No SPECS glasses needed — everything runs in the Lens Studio preview.
 
 ## Preview stand-ins
 - The 3D trainer stands in for a real cabinet; the tech marks parts by pinching (no live recognition in preview).
-- Voice commands, grab gesture and camera photos are device-only; every voice action has a button.
+- Grab gesture and camera photos are device-only. Voice is planned, not in this build: the assistant is called **Sparky** and is addressed as "Sparky, <command>" (for example "Sparky, highlight wire 2a"). Every action already has a button.
 - The agent is rule-based by design — no live AI decides anything, so it can't invent an answer.
 
 ## Where the data goes

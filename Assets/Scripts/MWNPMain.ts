@@ -1,4 +1,4 @@
-// MWNPMain.ts — orchestrator for the MWNP No-Guess Field Assistant.
+// MWNPMain.ts — orchestrator for the FaultLens.
 //
 // Owns: loading Assets/MWNP/netlist.json, wiring UI events to the rule-based agent
 // (MWNPAgent), composing every agent sentence from netlist facts, and pushing visual
@@ -54,7 +54,7 @@ function clock(): string {
 
 @component
 export class MWNPMain extends BaseScriptComponent {
-  @ui.label('<span style="color: #60A5FA;">MWNP Field Assistant – rule-based agent driven by netlist.json</span>')
+  @ui.label('<span style="color: #60A5FA;">FaultLens – rule-based agent driven by netlist.json</span>')
   @ui.separator
   @ui.group_start("References")
   @input

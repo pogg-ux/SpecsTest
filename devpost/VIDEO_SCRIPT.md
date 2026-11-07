@@ -1,4 +1,4 @@
-# MWNP No-Guess Field Assistant — Demo Video Script (target 2:45)
+# FaultLens — Demo Video Script (target 2:45)
 
 Record: Lens Studio Preview, Multimedia backdrop, Win+Alt+R. Mouse = pinch. Scroll-zoom in on cards when reading matters.
 Rule: the Lens is working in the first 10 seconds.
@@ -44,7 +44,7 @@ VO: "Retest, lamp's on, logged. I add a note, end the job, and the report has ev
 
 **2:35–2:45 — Close**
 SCREEN: Full view of the cabinet with labels. (Optional: 3-second clip of the real MWNP 1.0 bench unit.)
-VO: "Rule-based, so it never invents an answer. Next: live part recognition, manual lookup and job history. MWNP No-Guess Field Assistant."
+VO: "Rule-based, so it never invents an answer. Next: live part recognition, manual lookup and job history. FaultLens."
 
 ---
 Checklist before recording: Options = Normal text, Translucent cards; Preview reset; window maximized; mic test; no personal info on screen.

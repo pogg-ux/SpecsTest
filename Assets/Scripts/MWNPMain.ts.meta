@@ -91,7 +91,7 @@
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Field Assistant – rule-based agent driven by netlist.json</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">FaultLens – rule-based agent driven by netlist.json</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"References"}'
     - '// @input Asset.JsonAsset netlistAsset {"hint":"Job file: Assets/MWNP/netlist.json (the only source of circuit facts)"}'

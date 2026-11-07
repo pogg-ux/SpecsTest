@@ -77,7 +77,7 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
     this.body = card.body
     const c = card.content
     addCardHeader(c, "LibraryTitle", "Library", inner, this.sceneObject)
-    addFitText(c, "LibraryAppName", "MWNP No-Guess Field Assistant", inner, em, {color: TEXT_SOFT})
+    addFitText(c, "LibraryAppName", "FaultLens", inner, em, {color: TEXT_SOFT})
     const items: [string, string, Texture][] = [
       ["job", "Job", iconJob],
       ["control", "Job control", iconControl],

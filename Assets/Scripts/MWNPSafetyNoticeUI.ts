@@ -70,7 +70,7 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
     // the notice line and the Dismiss label; all are in real cm via cardEm so they keep their size if the card is rescaled.
     const em = cardEm(this.sceneObject, this.textEmCm)
     addCardHeader(card.content, "SafetyHeader", "Safety", inner, this.sceneObject)
-    addFitText(card.content, "SafetyAppName", "MWNP No-Guess Field Assistant", inner, em, {color: TEXT_SOFT})
+    addFitText(card.content, "SafetyAppName", "FaultLens", inner, em, {color: TEXT_SOFT})
 
     const gap = 0.8
     const iconW = Math.max(2.4, em * 1.3)

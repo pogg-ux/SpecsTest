@@ -1,4 +1,4 @@
-# Voiceover lines for ElevenLabs — MWNP No-Guess Field Assistant
+# Voiceover lines for ElevenLabs — FaultLens
 
 How to use:
 1. Paste each clip into ElevenLabs separately and download as MP3 (name it VO01.mp3, VO02.mp3 ...).
@@ -51,7 +51,7 @@ Screen: Hide cards; labels stay on parts. Then Show.
 
 **VO11 — Close (~12 s)**
 Screen: Full view of the cabinet with labels.
-> It's rule based, so it never invents an answer. Next up: live part recognition, manual lookup, and job history. The M W N P No-Guess Field Assistant.
+> It's rule based, so it never invents an answer. Next up: live part recognition, manual lookup, and job history. Fault Lens, the hands-free AR field assistant.
 
 ---
 
