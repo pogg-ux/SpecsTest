@@ -48,7 +48,8 @@ function fmt(r: R): string {
 /** Every Text under `so` with its real-cm em height and whether its words fit its cell. */
 function collectTexts(so: SceneObject, out: {name: string; emCm: number; fits: boolean; chars: number}[]): void {
   const t = so.getComponent("Component.Text") as Text
-  if (t && so.isEnabledInHierarchy) {
+  // Rich-text cells (the colored status words in the Job report) cannot report a bounding box; they are sized from plain text.
+  if (t && so.isEnabledInHierarchy && !t.enableRichText) {
     const emCm = (t.size / 43.886) * so.getTransform().getWorldScale().y
     const lr = t.layoutRect
     const bb = t.getBoundingBox()
@@ -185,8 +186,11 @@ export class MWNPLayoutCardsScenario extends Scenario {
     await waitFor((x) => x.visibleCard === "summary", 4000, "findings summary")
     await sleep(700)
     checkCard(cam, "SummaryCardCard")
-    const gc = (findSceneObjectByName("SummaryResult").getComponent("Component.Text") as Text).textFill.color
-    expect(Math.abs(gc.x - 0) < 0.012 && Math.abs(gc.y - 1) < 0.012 && Math.abs(gc.z - 0.4) < 0.012, "result is green #00FF66").toBe(true)
+    // Report text is white; only the status words are colored (rich text): "Result: " white, "<fixed part> restored" green.
+    const rt = findSceneObjectByName("SummaryResult").getComponent("Component.Text") as Text
+    const gc = rt.textFill.color
+    expect(gc.x > 0.98 && gc.y > 0.98 && gc.z > 0.98, "result cell base color is white").toBe(true)
+    expect(rt.text.indexOf("<color=#00ff66>") >= 0, "result words are green #00FF66: " + rt.text).toBe(true)
     ev("CARDS PASS", {})
   }
 }

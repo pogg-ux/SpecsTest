@@ -1374,6 +1374,7 @@ export class MWNPMain extends BaseScriptComponent {
       findingLine: f ? "Finding: " + f.head + " (" + this.findingEvidenceShort() + ")" : "Finding: none",
       actionLine: action,
       resultLine: !final ? "Result: in progress" : "Result: " + this.resultText(),
+      resultColor: final && agent.repaired ? "green" : "",
       saveLabel: "Save (this session)",
     }
   }
@@ -1394,19 +1395,48 @@ export class MWNPMain extends BaseScriptComponent {
     this.log(final ? "summary" : "report")
   }
 
-  /** The Job report is taller than the step card, so the Hide / Show button moves to the report's top-left outside edge. */
+  /**
+   * Hide / Show buttons sit inside the top-right corner of their own card's header (not floating above it): the main
+   * button follows whichever card is open, the Library's follows the Library. `k` = button units per card unit.
+   */
   private updateDisplayButtonPos(): void {
     if (!this.displayBtn || !this.displayBtnBase) return
     const t = this.displayBtn.so.getTransform()
-    if (this._visible === "summary" || this._visible === "report") {
-      const host = this.summaryCard.sceneObject.getTransform().getWorldTransform()
-      const w = 8.0
-      const h = 3.6
-      const local = new vec3(-(this.summaryCard.widthCm / 2 + w / 2 + 0.5), -h / 2, 0)
-      t.setWorldPosition(host.multiplyPoint(local))
-    } else {
-      t.setLocalPosition(this.displayBtnBase)
+    let hostSO: SceneObject | null = null
+    let cb: {body: SceneObject; plate: BackPlate} | null = null
+    for (const h of this.cardHosts) {
+      if (!h.so.isEnabledInHierarchy) continue
+      const b = this.cardBodyOf(h.so)
+      if (b && b.plate.size && b.plate.size.x > 1) {
+        hostSO = h.so
+        cb = b
+        break
+      }
     }
+    if (!hostSO || !cb) {
+      t.setLocalPosition(this.displayBtnBase)
+      return
+    }
+    const hostT = hostSO.getTransform()
+    const k = (this.displayBtn.so.getParent() as SceneObject).getTransform().getWorldScale().x / hostT.getWorldScale().x
+    const local = this.headerCornerLocal(cb, 8.0 * k, 3.6 * k)
+    t.setWorldPosition(hostT.getWorldTransform().multiplyPoint(local))
+    t.setWorldRotation(hostT.getWorldRotation())
+  }
+
+  /** Where a w x h button (card units) sits inside the top-right corner of a card's header, in the card host's local space. */
+  private headerCornerLocal(cb: {body: SceneObject; plate: BackPlate}, w: number, h: number): vec3 {
+    const s = cb.plate.size
+    const p = cb.body.getTransform().getLocalPosition()
+    return new vec3(p.x + s.x / 2 - w / 2 - 0.8, p.y + s.y / 2 - h / 2 - 0.2, p.z + 1.2)
+  }
+
+  /** The Library's own Hide / Show button, attached to the top-right corner of the Library's header. */
+  private updateLibraryButtonPos(): void {
+    if (!this.libBtn) return
+    const cb = this.cardBodyOf(this.libraryCard.sceneObject)
+    if (!cb || !cb.plate.size || cb.plate.size.x < 1) return
+    this.libBtn.so.getTransform().setLocalPosition(this.headerCornerLocal(cb, 8.0, 3.6))
   }
 
   // ── Card placement for the Text size / Schematic options ──────────────────
@@ -1539,6 +1569,7 @@ export class MWNPMain extends BaseScriptComponent {
       this.applyFactor(h, f)
     }
     this.updateDisplayButtonPos()
+    this.updateLibraryButtonPos()
   }
 
   private applyFactor(h: {so: SceneObject; basePos: vec3; baseScale: vec3; centered: boolean; width: number; factor: number}, f: number): void {

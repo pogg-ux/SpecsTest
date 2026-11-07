@@ -19,6 +19,7 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {
   addButton,
   addCardHeader,
+  addFitMixed,
   addFitText,
   addFlex,
   addText,
@@ -85,6 +86,8 @@ export interface SummaryData {
   findingLine: string
   actionLine: string
   resultLine: string
+  /** "green" when the fault was fixed (the Result words turn green); anything else leaves the Result white. */
+  resultColor?: string
   saveLabel: string
 }
 
@@ -233,10 +236,12 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     out.push({h: this.textH(d.jobLine, inner, em), build: (c) => addFitText(c, "SummaryJob", d.jobLine, inner, em, {color: TEXT_SOFT})})
     out.push({h: this.textH(d.symptomLine, inner, em), build: (c) => addFitText(c, "SummarySymptom", d.symptomLine, inner, em, {color: TEXT_BODY})})
     if (d.statusLine) {
+      // Report text is white; only the status words are colored ("Status: " stays white, "In progress" is amber).
       const st = d.statusLine
-      out.push({h: this.textH(st, inner, em, true), build: (c) => addFitText(c, "SummaryStatus", st, inner, em, {color: colorForWord(d.statusColor || ""), bold: true})})
+      const cut = st.indexOf(": ") >= 0 ? st.indexOf(": ") + 2 : 0
+      out.push({h: this.textH(st, inner, em, true), build: (c) => addFitMixed(c, "SummaryStatus", st.substring(0, cut), st.substring(cut), colorForWord(d.statusColor || ""), inner, em, {bold: true})})
     }
-    out.push({h: this.textH(d.readingsHeading, inner, em, true), keepNext: true, build: (c) => addFitText(c, "ReadingsHeading", d.readingsHeading, inner, em, {color: COLOR.cyan, bold: true})})
+    out.push({h: this.textH(d.readingsHeading, inner, em, true), keepNext: true, build: (c) => addFitText(c, "ReadingsHeading", d.readingsHeading, inner, em, {color: COLOR.white, bold: true})})
     d.rows.forEach((r, i) => {
       const detailLines = r.cells ? Math.max(1, estimateLines(r.cells.detail, inner, em)) : Math.max(1, estimateLines(r.text, inner, em))
       const h = (r.cells ? lh + detailLines * lh + 0.2 : detailLines * lh) + 0.15
@@ -244,13 +249,20 @@ export class MWNPSummaryUI extends BaseScriptComponent {
         h,
         build: (c) => {
           if (r.cells) this.tableRow(c, "ReadingRow_" + i, r, inner, em)
-          else addFitText(c, "ReadingRow_" + i, r.text, inner, em, {color: colorForWord(r.colorWord)})
+          else addFitText(c, "ReadingRow_" + i, r.text, inner, em, {color: COLOR.white})
         },
       })
     })
-    out.push({h: this.textH(d.findingLine, inner, em), build: (c) => addFitText(c, "SummaryFinding", d.findingLine, inner, em, {color: COLOR.red})})
+    // Finding is red only when a fault was found; Result is green only when it was fixed. Labels stay white.
+    const found = d.findingLine.length > 0 && d.findingLine.indexOf("Finding: none") !== 0
+    const fCut = d.findingLine.indexOf(": ") >= 0 ? d.findingLine.indexOf(": ") + 2 : 0
+    out.push({h: this.textH(d.findingLine, inner, em), build: (c) => addFitMixed(c, "SummaryFinding", d.findingLine.substring(0, fCut), d.findingLine.substring(fCut), found ? COLOR.red : null, inner, em)})
     out.push({h: this.textH(d.actionLine, inner, em), build: (c) => addFitText(c, "SummaryAction", d.actionLine, inner, em, {color: TEXT_BODY})})
-    out.push({h: this.textH(d.resultLine, inner, em, true), build: (c) => addFitText(c, "SummaryResult", d.resultLine, inner, em, {color: COLOR.green, bold: true})})
+    const rCut = d.resultLine.indexOf(": ") >= 0 ? d.resultLine.indexOf(": ") + 2 : 0
+    out.push({
+      h: this.textH(d.resultLine, inner, em, true),
+      build: (c) => addFitMixed(c, "SummaryResult", d.resultLine.substring(0, rCut), d.resultLine.substring(rCut), d.resultColor === "green" ? COLOR.green : null, inner, em, {bold: true}),
+    })
     const readOnly = !!d.backToCurrent
     out.push({
       h: (readOnly ? 0 : 3.75) + this.buttonH("Export report — coming in v2", inner, em) + this.textH(EXPORT_NOTE, inner, em),
@@ -366,8 +378,9 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     const pw = 7.5
     const vw = 7.5
     const sw = inner - pw - vw - 1.6
-    const t1 = addText(line, name + "_Point", cells.point, pw, lh, {emCm: em, color: col, align: "left"})
-    const t2 = addText(line, name + "_Value", cells.value, vw, lh, {emCm: em, color: col, align: "right"})
+    // Point and value are white; the status mark (✓ in spec / ✗ open) keeps its color.
+    const t1 = addText(line, name + "_Point", cells.point, pw, lh, {emCm: em, color: COLOR.white, align: "left"})
+    const t2 = addText(line, name + "_Value", cells.value, vw, lh, {emCm: em, color: COLOR.white, align: "right"})
     const t3 = addText(line, name + "_Status", cells.status, sw, lh, {emCm: em, color: col, align: "left"})
     for (const t of [t1, t2, t3]) (t as Text & {weight?: number}).weight = 700
     addFitText(row, name + "_Detail", cells.detail, inner, em, {color: TEXT_BODY})

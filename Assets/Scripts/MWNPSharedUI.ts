@@ -435,6 +435,36 @@ export function addFitText(
   return t
 }
 
+/** "#RRGGBB" for a rich-text <color> tag. */
+export function hexColor(c: vec4): string {
+  const h = (v: number) => ("0" + Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)).slice(-2)
+  return "#" + h(c.x) + h(c.y) + h(c.z)
+}
+
+/**
+ * A wrapped text cell that is white except for `colored`, which is drawn in `color` after the white `prefix`
+ * (e.g. prefix "Status: ", colored "In progress"). The cell is sized from the plain text, not the markup.
+ * With an empty `colored` or no color it is plain white text.
+ */
+export function addFitMixed(
+  parent: SceneObject,
+  name: string,
+  prefix: string,
+  colored: string,
+  color: vec4 | null,
+  widthCm: number,
+  emLocal: number,
+  opts?: {bold?: boolean; minLines?: number}
+): Text {
+  const plain = prefix + colored
+  const t = addFitText(parent, name, plain, widthCm, emLocal, {color: COLOR.white, bold: opts?.bold, minLines: opts?.minLines})
+  if (color && colored.length > 0) {
+    t.enableRichText = true
+    t.text = prefix + "<color=" + hexColor(color) + ">" + colored + "</color>"
+  }
+  return t
+}
+
 // ── Label plates: the backing for every label printed on the model ──
 
 /** Thin bright edge of a label plate when the label is idle (amber when it is active / relevant). */
