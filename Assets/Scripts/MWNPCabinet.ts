@@ -78,6 +78,9 @@ const ROUTES: {[key: string]: {pts: V2[]; label: V2}} = {
 const WIRE_Z = 1.0
 /** Opacity of every wire that is not part of the current step (~30%). */
 const DIM_WIRE_ALPHA = 0.3
+/** The current step's wire is drawn this much thicker than the others, just above them (between WIRE_Z and TRACE_Z). */
+const FOCUS_THICKNESS = 1.5
+const FOCUS_Z = 1.2
 const TRACE_Z = 1.35
 
 function c4(r: number, g: number, b: number, a: number = 1): vec4 {
@@ -102,7 +105,7 @@ const PALETTE = {
   openSpot: c4(0.45, 0.48, 0.52),
   wireSupply: c4(1.0, 0.16, 0.12),
   wireReturn: c4(0.22, 0.42, 1.0),
-  wireFocus: c4(1.0, 0.1, 0.08), // bright red: the current step's wire(s)
+  wireFocus: c4(0.2, 0.9, 1.0), // bright cyan: the current step's wire
   s1: c4(0.75, 0.76, 0.8),
   l1Off: c4(0.18, 0.35, 0.18),
   l1On: c4(0.45, 1.0, 0.45),
@@ -252,7 +255,12 @@ export class MWNPCabinet extends BaseScriptComponent {
       const wso = this.obj(root, "Wire_" + w.id + "_" + i)
       const wm = this.mat(color)
       this.polyline(wso, r.pts, this.wireThicknessCm, WIRE_Z, [wm])
-      this.wireBase[i] = {mat: wm, color}
+      // Focus copy: cyan, thicker, hidden until this wire is the current step's wire.
+      const fso = this.obj(root, "WireFocus_" + w.id + "_" + i)
+      const fm = this.mat(PALETTE.wireFocus)
+      this.polyline(fso, r.pts, this.wireThicknessCm * FOCUS_THICKNESS, FOCUS_Z, [fm])
+      fso.enabled = false
+      this.wireBase[i] = {mat: wm, color, focusSO: fso, focusMat: fm}
     })
     this.applyWireFocus()
 
@@ -420,16 +428,22 @@ export class MWNPCabinet extends BaseScriptComponent {
       t.so.enabled = false
       return
     }
+    const isFocus = this.focusWire === wireIndex
+    // The current wire in the plain "active" state is the cyan focus wire itself (no extra trace over it).
+    if (isFocus && state === "active") {
+      t.so.enabled = false
+      return
+    }
     t.so.enabled = true
-    let col =
+    // Fault red, good green and untested gray keep their colors; only wires that are not the current step's are dimmed.
+    const col =
       state === "green" ? PALETTE.traceGreen : state === "gray" ? PALETTE.traceGray : state === "red" ? PALETTE.traceRed : PALETTE.traceActive
-    col = this.focusWire === wireIndex ? PALETTE.wireFocus : this.dim(col)
-    for (const m of t.mats) this.paint(m, col)
+    for (const m of t.mats) this.paint(m, isFocus ? col : this.dim(col))
   }
 
-  // ── Wire focus: only the current step's wire(s) are bright red; every other wire is dimmed ──
+  // ── Wire focus: the current step's wire is bright cyan and 1.5x thicker; every other wire is dimmed to 30% ──
 
-  private wireBase: {[wireIndex: number]: {mat: Material; color: vec4}} = {}
+  private wireBase: {[wireIndex: number]: {mat: Material; color: vec4; focusSO: SceneObject; focusMat: Material}} = {}
   private focusWire = -1
 
   private dim(c: vec4): vec4 {
@@ -446,10 +460,15 @@ export class MWNPCabinet extends BaseScriptComponent {
     for (const k of Object.keys(this.wireBase)) {
       const i = parseInt(k)
       const b = this.wireBase[i]
-      const c = i === this.focusWire ? PALETTE.wireFocus : this.dim(b.color)
+      const focus = i === this.focusWire
       // Set directly (not through paint): the model's wires are not overlays, so the Hide / Show display fade leaves them alone.
-      b.mat.mainPass.blendMode = BlendMode.PremultipliedAlphaAuto
-      b.mat.mainPass.baseColor = new vec4(c.x * c.w, c.y * c.w, c.z * c.w, c.w)
+      const set = (m: Material, c: vec4) => {
+        m.mainPass.blendMode = BlendMode.PremultipliedAlphaAuto
+        m.mainPass.baseColor = new vec4(c.x * c.w, c.y * c.w, c.z * c.w, c.w)
+      }
+      set(b.mat, this.dim(b.color))
+      set(b.focusMat, PALETTE.wireFocus)
+      b.focusSO.enabled = focus
     }
   }
 

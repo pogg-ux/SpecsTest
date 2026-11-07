@@ -7,11 +7,12 @@
 // sized to its words (fitText), and the card grows DOWNWARD from its host's origin (host = top-center).
 // The number pad keys are about 3 cm wide with bold digits at least 1.2 cm tall.
 // API: show(), hide(), setReasoning(), setPathCitation(), setStep(), setResult(), setReadout(),
-//      setSwitchControls(component, positions, current),
+//      setSwitchControls(component, positions, current), setMore(open) / isMoreOpen,
+//      events also onMore(open) (Main shows the board footnote with it),
 //      readable text fields (stepTitleText, resultText, readoutText, resultColorWord),
 //      events onKey(key: "0".."9" | "." | "back"), onEnter, onSchematic, onCamera, onSwitch({component, position}).
 // Must not: parse readings, classify, or advance steps — Main/agent own that.
-// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "Btn_Camera", "Btn_<comp>_<pos>" (Btn_S1_UP,
+// Test handles: "Key_0".."Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic", "Btn_Camera", "Btn_More", "Btn_<comp>_<pos>" (Btn_S1_UP,
 //               Btn_S1_DOWN), "StepCardCard", text cells "Reasoning", "PathCitation", "StepTitle", "StepQuestion",
 //               "StepCitation", "Expected", "Result", "Readout".
 
@@ -94,6 +95,17 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   private switchKey = ""
   private switchButtons: {[position: string]: ButtonHandle} = {}
   private btnEmLocal = 0
+  // "More" view: secondary detail (the reasoning line, plus the board footnote via onMore) is hidden until the tech
+  // opens it. Citations (schematic path and the step's own), the question and the expected value always show.
+  private moreOpen = false
+  private moreBtn: ButtonHandle | null = null
+  private _onMore = new Event<boolean>()
+  get onMore(): PublicApi<boolean> {
+    return this._onMore.publicApi()
+  }
+  get isMoreOpen(): boolean {
+    return this.moreOpen
+  }
   // Last values given to the setters, so rebuild() (Text size option) can put them back.
   private sReasoning = ""
   private sPathCite = ""
@@ -149,6 +161,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     this.switchRow = null
     this.switchKey = ""
     this.switchButtons = {}
+    this.moreBtn = null
     this.build()
     this.setReasoning(this.sReasoning)
     this.setPathCitation(this.sPathCite)
@@ -161,12 +174,20 @@ export class MWNPStepCardUI extends BaseScriptComponent {
 
   setReasoning(text: string): void {
     this.sReasoning = text
-    if (this.tReasoning) fitText(this.tReasoning, text, this.inner, this.textEmLocal)
+    if (this.tReasoning) fitText(this.tReasoning, this.moreOpen ? text : "", this.inner, this.textEmLocal, this.moreOpen ? 1 : 0)
   }
 
   setPathCitation(text: string): void {
     this.sPathCite = text
     if (this.tPathCite) fitText(this.tPathCite, text, this.inner, this.textEmLocal)
+  }
+
+  /** Opens / closes the "More" view: shows or hides the reasoning line and tells Main (which shows the board footnote). */
+  setMore(open: boolean): void {
+    this.moreOpen = open
+    if (this.moreBtn) this.moreBtn.label.text = open ? "Less" : "More"
+    this.setReasoning(this.sReasoning)
+    this._onMore.invoke(open)
   }
 
   setStep(title: string, question: string, citation: string, expected: string): void {
@@ -303,5 +324,9 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: btnEm, bold: true, primary: true})
     addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.0, () => this._onSchematic.invoke(), {emCm: btnEm})
     addButton(side, "Btn_Camera", this.cameraLabel, sideW - 1, 3.0, () => this._onCamera.invoke(), {emCm: btnEm})
+
+    // "More" toggle: full-width, large, last on the card (after the pad row).
+    this.moreBtn = addButton(c, "Btn_More", this.moreOpen ? "Less" : "More", inner - 4, 4.4, () => this.setMore(!this.moreOpen), {emCm: btnEm * 1.2, bold: true})
+    ;(this.moreBtn.so.getComponent(FlexItem.getTypeName()) as FlexItem).order = 3
   }
 }

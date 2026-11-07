@@ -280,6 +280,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.jobPanel.onSymptomPicked.add((i) => this.onSymptomPicked(i))
     this.stepCard.onKey.add((k) => this.onKey(k))
     this.stepCard.onEnter.add(() => this.onEnter())
+    this.stepCard.onMore.add((open) => this.partTags.setBoardNoteVisible(open))
     this.stepCard.onSchematic.add(() => this.onSchematic())
     this.stepCard.onCamera.add(() => this.openCamera())
     this.libraryCard.onPick.add((k) => this.onLibraryPick(k))

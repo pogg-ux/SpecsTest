@@ -277,7 +277,8 @@ export class MWNPLayoutScenario extends Scenario {
       expect(tcomp.traceThicknessCm >= 0.7, "trace lines are thick: " + tcomp.traceThicknessCm + " cm").toBe(true)
       const seg = findSceneObjectByName("Trace_2b_3").getChild(0).getComponent("Component.RenderMeshVisual") as RenderMeshVisual
       const tc = seg.mainMaterial.mainPass.baseColor
-      expect(near(tc, 1, 0.549, 0), "active trace is orange #FF8C00: " + colorStr(tc)).toBe(true)
+      // Not the current step's wire: orange #FF8C00 at 30% opacity (premultiplied).
+      expect(near(tc, 0.3, 0.165, 0), "dimmed active trace is orange #FF8C00 at 30%: " + colorStr(tc)).toBe(true)
       let wireSeg: RenderMeshVisual | null = null
       for (let i = 0; i < trainer0.getChildrenCount(); i++) {
         const w = trainer0.getChild(i)

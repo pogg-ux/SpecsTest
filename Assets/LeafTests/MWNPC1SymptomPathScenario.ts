@@ -33,11 +33,16 @@ export class MWNPC1SymptomPathScenario extends Scenario {
       expect(citeText.includes(needle), "citation contains '" + needle + "': " + citeText).toBe(true)
     }
 
-    // Trace segments on the model are enabled.
-    for (const name of ["Trace_2a_2", "Trace_2b_3", "Trace_2c_4"]) {
-      const so = findSceneObjectByName(name)
-      expect(!!so && so.isEnabledInHierarchy, name + " visible").toBe(true)
+    // Every path wire is shown: as a dimmed trace, or — for the current step's wire — as the thicker cyan focus wire.
+    let focusShown = 0
+    for (const name of ["2a_2", "2b_3", "2c_4"]) {
+      const trace = findSceneObjectByName("Trace_" + name)
+      const focus = findSceneObjectByName("WireFocus_" + name)
+      const focused = !!focus && focus.isEnabledInHierarchy
+      if (focused) focusShown++
+      expect((!!trace && trace.isEnabledInHierarchy) || focused, name + " visible (trace or focus wire)").toBe(true)
     }
+    expect(focusShown, "exactly one path wire is the current step's cyan focus wire").toBe(1)
     ev("C1 PASS", {})
   }
 }
