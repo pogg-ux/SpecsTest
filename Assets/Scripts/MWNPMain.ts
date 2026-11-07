@@ -694,6 +694,7 @@ export class MWNPMain extends BaseScriptComponent {
     const agent = this.agent as MWNPAgent
     agent.dismissNotice()
     this.cabinet.clearOutlines()
+    this.cabinet.setFocusWire(-1)
     this.cabinet.hideTraces()
     this.cabinet.setActivePoint(null, null)
     this.partTags.clearBadges()
@@ -1619,6 +1620,7 @@ export class MWNPMain extends BaseScriptComponent {
 
   private applyTrace(): void {
     const agent = this.agent as MWNPAgent
+    this.cabinet.setFocusWire(this.currentWireIndex())
     this.cabinet.hideTraces()
     for (const k of Object.keys(agent.wireStates)) this.cabinet.setTrace(parseInt(k), agent.wireStates[parseInt(k)])
   }
@@ -1635,15 +1637,19 @@ export class MWNPMain extends BaseScriptComponent {
     }
   }
 
-  private currentWireId(): string {
+  /** Netlist index of the wire the current step measures (into the active point, else out of it); -1 if none. */
+  private currentWireIndex(): number {
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
     const p = agent.activePoint() || agent.retestPointId
-    if (!p) return ""
+    if (!p) return -1
     const into = nl.wireInto(p)
-    if (into >= 0) return nl.data.wires[into].id
-    const out = nl.wireOutOf(p)
-    return out >= 0 ? nl.data.wires[out].id : ""
+    return into >= 0 ? into : nl.wireOutOf(p)
+  }
+
+  private currentWireId(): string {
+    const i = this.currentWireIndex()
+    return i >= 0 ? (this.nl as Netlist).data.wires[i].id : ""
   }
 
   /** "F1:OUT" -> "F1 OUT" inside free text from the file. */

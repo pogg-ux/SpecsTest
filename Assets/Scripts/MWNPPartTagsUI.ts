@@ -71,7 +71,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
   @input
   @widget(new SliderWidget(0.3, 1.5, 0.05))
   @hint("Board footnote text size: em height in cm")
-  noteEmCm: number = 0.6
+  noteEmCm: number = 1.0
   @input
   @widget(new SliderWidget(6, 16, 0.5))
   @hint("Max width of the expected tag / info bubble before wrapping (cm)")
@@ -112,6 +112,17 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
   }
 
+  private boardNoteSO: SceneObject | null = null
+
+  /** The "Not drawn: ..." footnote along the board's bottom edge. Off by default; the "More" view turns it on. */
+  setBoardNoteVisible(visible: boolean): void {
+    if (this.boardNoteSO) this.boardNoteSO.enabled = visible
+  }
+
+  get boardNoteVisible(): boolean {
+    return !!this.boardNoteSO && this.boardNoteSO.enabled
+  }
+
   /** Footprints of the ID tags and wire-number plates in cabinet-local cm (for layout checks). */
   labelBoxes(): LabelBox[] {
     return this.boxes
@@ -128,10 +139,15 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       this.boxes.push({name: wl.name, cx: wl.pos.x, cy: wl.pos.y, w, h})
     }
     if (note) {
+      // Footnote: hidden in the default view, shown only through setBoardNoteVisible (the "More" view).
       const so = makeObj(this.sceneObject, "BoardNote", note.pos)
-      const t = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), note.text, this.noteEmCm, 44)
+      const box = this.boxFor(note.text, this.noteEmCm, 44)
+      const t = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), note.text, this.noteEmCm, box.w, box.h > this.noteEmCm * 1.5)
+      t.layoutRect = Rect.create(-box.w / 2, box.w / 2, -box.h / 2, box.h / 2)
       styleLabelText(t)
-      makeLabelPlate(so, textWidthCm(note.text, this.noteEmCm, true) + 1.0, this.noteEmCm * 1.7)
+      makeLabelPlate(so, box.w + 0.4, box.h)
+      so.enabled = false
+      this.boardNoteSO = so
     }
     const em = this.tagEmCm
     for (const a of anchors) {

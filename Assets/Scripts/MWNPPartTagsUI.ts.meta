@@ -61,7 +61,7 @@
     - '// @input float tagEmCm = 1.5 {"hint":"ID tag text size: em height in cm (≥1.5 to read from 100 cm)", "widget":"slider", "min":1, "max":2.5, "step":0.1}'
     - '// @input float overlayEmCm = 1 {"hint":"Expected tag / badge / info text size: em height in cm", "widget":"slider", "min":0.6, "max":2, "step":0.1}'
     - '// @input float wireEmCm = 1 {"hint":"Wire number text size: em height in cm", "widget":"slider", "min":0.6, "max":2, "step":0.1}'
-    - '// @input float noteEmCm = 0.6 {"hint":"Board footnote text size: em height in cm", "widget":"slider", "min":0.3, "max":1.5, "step":0.05}'
+    - '// @input float noteEmCm = 1 {"hint":"Board footnote text size: em height in cm", "widget":"slider", "min":0.3, "max":1.5, "step":0.05}'
     - '// @input float overlayMaxWidthCm = 8.6 {"hint":"Max width of the expected tag / info bubble before wrapping (cm)", "widget":"slider", "min":6, "max":16, "step":0.5}'
     - '// @input vec4 supplyWireColor = {1,0.16,0.12,1} {"hint":"Edge color of the plate behind +12 V wire numbers", "widget":"color"}'
     - '// @input vec4 returnWireColor = {0.22,0.42,1,1} {"hint":"Edge color of the plate behind 0 V return wire numbers", "widget":"color"}'

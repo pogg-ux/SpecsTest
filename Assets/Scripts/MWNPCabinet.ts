@@ -76,6 +76,8 @@ const ROUTES: {[key: string]: {pts: V2[]; label: V2}} = {
 }
 
 const WIRE_Z = 1.0
+/** Opacity of every wire that is not part of the current step (~30%). */
+const DIM_WIRE_ALPHA = 0.3
 const TRACE_Z = 1.35
 
 function c4(r: number, g: number, b: number, a: number = 1): vec4 {
@@ -100,6 +102,7 @@ const PALETTE = {
   openSpot: c4(0.45, 0.48, 0.52),
   wireSupply: c4(1.0, 0.16, 0.12),
   wireReturn: c4(0.22, 0.42, 1.0),
+  wireFocus: c4(1.0, 0.1, 0.08), // bright red: the current step's wire(s)
   s1: c4(0.75, 0.76, 0.8),
   l1Off: c4(0.18, 0.35, 0.18),
   l1On: c4(0.45, 1.0, 0.45),
@@ -247,8 +250,11 @@ export class MWNPCabinet extends BaseScriptComponent {
       if (!r) return
       const color = netlist.isReturnWire(i) ? PALETTE.wireReturn : PALETTE.wireSupply
       const wso = this.obj(root, "Wire_" + w.id + "_" + i)
-      this.polyline(wso, r.pts, this.wireThicknessCm, WIRE_Z, [this.mat(color)])
+      const wm = this.mat(color)
+      this.polyline(wso, r.pts, this.wireThicknessCm, WIRE_Z, [wm])
+      this.wireBase[i] = {mat: wm, color}
     })
+    this.applyWireFocus()
 
     // Probe markers (hidden until a point is active)
     this.probeTest = this.sphere(root, "Probe_Test", [0, 0], 1.0, 2.0, PALETTE.probeTest, true)
@@ -415,9 +421,36 @@ export class MWNPCabinet extends BaseScriptComponent {
       return
     }
     t.so.enabled = true
-    const col =
+    let col =
       state === "green" ? PALETTE.traceGreen : state === "gray" ? PALETTE.traceGray : state === "red" ? PALETTE.traceRed : PALETTE.traceActive
+    col = this.focusWire === wireIndex ? PALETTE.wireFocus : this.dim(col)
     for (const m of t.mats) this.paint(m, col)
+  }
+
+  // ── Wire focus: only the current step's wire(s) are bright red; every other wire is dimmed ──
+
+  private wireBase: {[wireIndex: number]: {mat: Material; color: vec4}} = {}
+  private focusWire = -1
+
+  private dim(c: vec4): vec4 {
+    return new vec4(c.x, c.y, c.z, c.w * DIM_WIRE_ALPHA)
+  }
+
+  /** Netlist wire index of the current step's wire (-1 = none: every wire dimmed). Call before setTrace. */
+  setFocusWire(wireIndex: number): void {
+    this.focusWire = wireIndex
+    this.applyWireFocus()
+  }
+
+  private applyWireFocus(): void {
+    for (const k of Object.keys(this.wireBase)) {
+      const i = parseInt(k)
+      const b = this.wireBase[i]
+      const c = i === this.focusWire ? PALETTE.wireFocus : this.dim(b.color)
+      // Set directly (not through paint): the model's wires are not overlays, so the Hide / Show display fade leaves them alone.
+      b.mat.mainPass.blendMode = BlendMode.PremultipliedAlphaAuto
+      b.mat.mainPass.baseColor = new vec4(c.x * c.w, c.y * c.w, c.z * c.w, c.w)
+    }
   }
 
   hideTraces(): void {

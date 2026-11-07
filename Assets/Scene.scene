@@ -22575,7 +22575,6 @@
     tagEmCm: true
     overlayEmCm: true
     wireEmCm: true
-    noteEmCm: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -22583,7 +22582,7 @@
       tagEmCm: 1.500000
       overlayEmCm: !<float> 1.000000
       wireEmCm: !<float> 1.000000
-      noteEmCm: 0.600000
+      noteEmCm: !<float> 1.000000
       overlayMaxWidthCm: 8.600000
       supplyWireColor: !<Vec4> {x: 1.000000, y: 0.160000, z: 0.120000, w: 1.000000}
       returnWireColor: !<Vec4> {x: 0.220000, y: 0.420000, z: 1.000000, w: 1.000000}
