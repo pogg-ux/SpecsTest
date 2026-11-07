@@ -1669,8 +1669,39 @@ export class MWNPMain extends BaseScriptComponent {
    * the card grows downward; if the grown card would leave the bottom of the view, that card steps down to the next
    * smaller factor. Schematic: the schematic host is scaled, shrinking until it fits the view.
    */
+  /** Labels: "This step only" shows just the current step's tags and wire number once a symptom is picked; otherwise all labels show. */
+  private labelFocusKey = "?"
+  private updateLabelFocus(): void {
+    if (!this.partTags || !this.agent || !this.nl || !this.optionsCard) return
+    const agent = this.agent as MWNPAgent
+    const nl = this.nl as Netlist
+    const ph = agent.phase
+    let ids: string[] | null = null
+    let wire: string | null = null
+    const inStep = ph === "steps" || ph === "retest" || ph === "retest_wait" || ph === "finding"
+    if (this.optionsCard.value("labels") === "This step only" && this.jobActive && inStep) {
+      ids = []
+      const p = ph === "finding" && agent.finding ? agent.finding.pointId : agent.activePoint() || agent.retestPointId
+      if (p) ids.push(nl.baseId(p))
+      const ref = nl.referencePoint()
+      if (ref) ids.push(nl.baseId(ref))
+      if (ph === "finding" && agent.finding) ids.push(agent.finding.id)
+      if (ph === "retest_wait" && agent.functionKey) {
+        const ctl = nl.controlOf(agent.functionKey)
+        if (ctl) ids.push(ctl.component)
+      }
+      const wi = this.currentWireIndex()
+      wire = wi >= 0 ? "WireLabel_" + nl.data.wires[wi].id + "_" + wi : ""
+    }
+    const key = JSON.stringify([ids, wire])
+    if (key === this.labelFocusKey) return
+    this.labelFocusKey = key
+    this.partTags.setLabelFocus(ids, wire)
+  }
+
   private updatePlacement(): void {
     this.updateMotion()
+    this.updateLabelFocus()
     const camSO = this.findUserCamera()
     if (!camSO) return
     const cam = camSO.getComponent("Component.Camera") as Camera

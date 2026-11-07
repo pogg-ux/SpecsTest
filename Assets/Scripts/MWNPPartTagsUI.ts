@@ -26,6 +26,8 @@ export interface TagAnchor {
   pos: vec3
   rotDeg: number
   infoPos: vec3
+  /** Terminal tags only: the terminal strip's top and bottom edges (cabinet cm) and the terminal's order, so the tags can be staggered. */
+  strip?: {top: number; bottom: number; index: number}
 }
 
 export interface WireLabel {
@@ -46,6 +48,8 @@ export interface LabelBox {
 
 /** Approximate advance width of one character, as a fraction of the em height (for wrapped bubbles). */
 const CHAR_W = 0.6
+/** Right edge (cabinet cm) of the terminal tags, so bubbles and badges for terminals can sit to their right. */
+const TS_TAGS_RIGHT = -3.8
 const LINE_H = 1.2
 /** Padding around label text inside its plate, cm. */
 const PAD_X = 0.7
@@ -93,7 +97,8 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
   tagStates: {[id: string]: string} = {}
   tagInfoText: string = ""
 
-  private tags: {[id: string]: {so: SceneObject; label: Text; plate: LabelPlate; hovered: boolean}} = {}
+  private tags: {[id: string]: {so: SceneObject; label: Text; plate: LabelPlate; hovered: boolean; leader: SceneObject | null}} = {}
+  private wireLabelSOs: {[name: string]: SceneObject} = {}
   private anchors: {[id: string]: TagAnchor} = {}
   private boxes: LabelBox[] = []
   private expectedSO: SceneObject | null = null
@@ -140,6 +145,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     this.overlayMaxWidthCm = this.overlayMaxWidthCm / Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
     for (const wl of wireLabels) {
       const so = makeObj(this.sceneObject, wl.name, wl.pos)
+      this.wireLabelSOs[wl.name] = so
       const t = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), wl.text, this.wireEmCm, 4)
       styleLabelText(t)
       const w = textWidthCm(wl.text, this.wireEmCm, true) + PAD_X
@@ -162,21 +168,48 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     for (const a of anchors) {
       const w = textWidthCm(a.id, em, true) + PAD_X
       const h = em * PLATE_H
-      const so = makeObj(this.sceneObject, "Tag_" + a.id, a.pos)
+      // Where the tag actually sits (cabinet cm). With every label showing, tags must stay off the probe points, F1 IN / OUT and
+      // the S1 toggle, and off each other: the terminal tags are staggered above and below the strip (the far ones get a
+      // leader line to their terminal); F1's tag moves beside its fuse; the L1 / L2 tags clear the S1 toggle.
+      let pos = a.pos
+      let leader: {x: number; y0: number; y1: number} | null = null
+      if (a.strip) {
+        const gap = 0.3
+        const len = w // the tag is vertical: its length is the plate's width
+        if (a.strip.index === 0) {
+          pos = new vec3(a.pos.x - 0.5, a.strip.bottom - gap - len / 2, a.pos.z) // below the strip, nudged away from S1
+        } else if (a.strip.index % 2 === 1) {
+          pos = new vec3(a.pos.x, a.strip.top + gap + len / 2, a.pos.z + 1.5) // just above the strip (in front of the PS1 box)
+        } else {
+          const y = a.strip.top + gap + len + gap + len / 2 // a second row above, with a leader line down to the terminal
+          pos = new vec3(a.pos.x, y, a.pos.z + 1.5)
+          leader = {x: a.pos.x, y0: a.strip.top, y1: y - len / 2}
+        }
+      } else if (a.id === "F1") {
+        pos = new vec3(a.pos.x - 0.75 - 0.3 - w / 2, a.pos.y, a.pos.z) // beside the fuse, off F1 IN / OUT
+      } else if (a.id === "L1" || a.id === "L2") {
+        pos = new vec3(Math.max(a.pos.x, -8.5 + w / 2), a.pos.y, a.pos.z) // clear of the S1 toggle
+      }
+      const so = makeObj(this.sceneObject, "Tag_" + a.id, pos)
+      let leaderSO: SceneObject | null = null
+      if (leader) {
+        leaderSO = makeObj(this.sceneObject, "TagLeader_" + a.id, new vec3(leader.x, (leader.y0 + leader.y1) / 2, a.pos.z - 0.8))
+        makeLabelPlate(leaderSO, 0.16, Math.max(0.2, leader.y1 - leader.y0), PLATE_EDGE_IDLE, 0)
+      }
       if (a.rotDeg !== 0) so.getTransform().setLocalRotation(quat.fromEulerAngles(0, 0, (a.rotDeg * Math.PI) / 180))
       // Printed label: pure white bold text on a dark plate (terminal labels are vertical, as on the panel drawing).
       const plate = makeLabelPlate(so, w, h)
       const label = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), a.id, em, w)
       styleLabelText(label)
       const rotated = Math.abs(a.rotDeg % 180) === 90
-      this.boxes.push({name: "Tag_" + a.id, cx: a.pos.x, cy: a.pos.y, w: rotated ? h : w, h: rotated ? w : h})
+      this.boxes.push({name: "Tag_" + a.id, cx: pos.x, cy: pos.y, w: rotated ? h : w, h: rotated ? w : h})
       // Invisible pinch target the size of the plate.
       const col = so.createComponent("Physics.ColliderComponent") as ColliderComponent
       const shape = Shape.createBoxShape()
       shape.size = new vec3(w, h, 1.0)
       col.shape = shape
       col.fitVisual = false // like UIKit's own colliders: never re-fit to a visual
-      const tag = {so, label, plate, hovered: false}
+      const tag = {so, label, plate, hovered: false, leader: leaderSO}
       const it = so.createComponent(Interactable.getTypeName()) as Interactable
       it.onTriggerEnd.add(() => this._onTagPinched.invoke(a.id))
       it.onHoverEnter.add(() => {
@@ -206,6 +239,20 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     h.plate.setEdge(lit ? COLOR.amber : PLATE_EDGE_IDLE)
   }
 
+  /**
+   * Label focus ("Labels: This step only"): only the tags in `tagIds` and the wire label named `wireName` show; every
+   * other tag and wire label hides. `null` shows them all (start screen, "Always on").
+   */
+  setLabelFocus(tagIds: string[] | null, wireName: string | null): void {
+    for (const id of Object.keys(this.tags)) {
+      const on = !tagIds || tagIds.indexOf(id) >= 0
+      this.tags[id].so.enabled = on
+      const l = this.tags[id].leader
+      if (l) l.enabled = on
+    }
+    for (const name of Object.keys(this.wireLabelSOs)) this.wireLabelSOs[name].enabled = !tagIds || name === wireName
+  }
+
   /** Back to the idle look for every tag (New job). */
   resetTags(): void {
     for (const id of Object.keys(this.tags)) this.setTagState(id, "dim")
@@ -221,6 +268,8 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     }
     const box = this.boxFor(text, this.overlayEmCm, this.overlayMaxWidthCm)
     this.expectedSO.enabled = true
+    // Terminal readings: the bubble sits to the right of the terminal tags, not over them.
+    if (pointId.indexOf("TS-") === 0) pos = new vec3(TS_TAGS_RIGHT + 0.5 + box.w / 2, pos.y, pos.z + 0.5)
     this.expectedSO.getTransform().setLocalPosition(pos)
     ;(this.expectedPlate as LabelPlate).setSize(box.w, box.h)
     const lbl = this.expectedLabel as Text
@@ -249,9 +298,12 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       this.badges[pointId] = b
     }
     b.so.enabled = true
+    const bw = textWidthCm(text, this.overlayEmCm, true) + PAD_X
+    // Terminal readings sit to the right of the terminal tags (which are staggered above the strip), not on them.
+    if (pointId.indexOf("TS-") === 0) pos = new vec3(TS_TAGS_RIGHT + 0.5 + bw / 2, pos.y, pos.z + 0.5)
     b.so.getTransform().setLocalPosition(pos)
     this.popBadge(b.so)
-    b.plate.setSize(textWidthCm(text, this.overlayEmCm, true) + PAD_X, this.overlayEmCm * 1.5)
+    b.plate.setSize(bw, this.overlayEmCm * 1.5)
     b.label.text = text
     const c = colorForWord(colorWord)
     b.label.textFill.color = c

@@ -308,14 +308,17 @@ export class MWNPCabinet extends BaseScriptComponent {
   }
 
   /** ID tag per component: position, rotation (terminals are labeled vertically, as on the panel), info bubble spot. */
-  getTagAnchors(): {id: string; pos: vec3; rotDeg: number; infoPos: vec3}[] {
-    const out: {id: string; pos: vec3; rotDeg: number; infoPos: vec3}[] = []
+  getTagAnchors(): {id: string; pos: vec3; rotDeg: number; infoPos: vec3; strip?: {top: number; bottom: number; index: number}}[] {
+    const out: {id: string; pos: vec3; rotDeg: number; infoPos: vec3; strip?: {top: number; bottom: number; index: number}}[] = []
     if (!this.netlist) return out
     const z = LAYOUT.tagZ
     for (const id of this.netlist.componentIds()) {
       const tx = LAYOUT.terminalX[id]
       if (id === "PS1") out.push({id, pos: new vec3(LAYOUT.ps1.c[0], LAYOUT.ps1.c[1] + 0.7, z.ps1), rotDeg: 0, infoPos: new vec3(0, 12.3, 6.0)})
-      else if (tx !== undefined) out.push({id, pos: new vec3(tx, LAYOUT.terminal.y, z.terminal), rotDeg: 90, infoPos: new vec3(-6.0, 0.75, 5.0)})
+      else if (tx !== undefined) {
+        const half = LAYOUT.terminal.s[1] / 2
+        out.push({id, pos: new vec3(tx, LAYOUT.terminal.y, z.terminal), rotDeg: 90, infoPos: new vec3(-6.0, 0.75, 5.0), strip: {top: LAYOUT.terminal.y + half, bottom: LAYOUT.terminal.y - half, index: parseInt(id.split("-")[1]) - 1}})
+      }
       else if (LAYOUT.fuses[id]) out.push({id, pos: new vec3(LAYOUT.fuses[id][0], LAYOUT.fuses[id][1], z.fuse), rotDeg: 0, infoPos: new vec3(-12.0, -18.3, 3.0)})
       else if (LAYOUT.switchTagX[id] !== undefined) {
         const y = id === "S1" ? LAYOUT.s1[1] : LAYOUT.lamps[id][1]

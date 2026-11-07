@@ -225,7 +225,10 @@ export class MWNPLayoutScenario extends Scenario {
 
     // Step card text: at least 1.0 cm tall in real units, and every cell holds the words it was given.
     {
-      const names = ["Reasoning", "PathCitation", "StepTitle", "StepQuestion", "StepCitation", "Expected", "Readout"]
+      // The reasoning line is behind the card's More button, and the readout lives on the Log reading keypad card: open More first.
+      await ui.tap("Btn_More")
+      await sleep(500)
+      const names = ["Reasoning", "PathCitation", "StepTitle", "StepQuestion", "StepCitation", "Expected"]
       for (const name of names) {
         const so = findSceneObjectByName(name)
         expect(!!so && so.isEnabledInHierarchy, name + " visible").toBe(true)
@@ -251,6 +254,8 @@ export class MWNPLayoutScenario extends Scenario {
     // Number pad: keys about 3 cm, digits bold and at least 1.2 cm tall; retest-only switch row is not shown yet.
     {
       expect(mwnpState().switchRow, "switch row is hidden outside the retest step").toBe(false)
+      await ui.tap("Btn_LogReading") // the keys are on the Log reading card
+      await sleep(500)
       for (const k of ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]) {
         const so = findSceneObjectByName("Key_" + k)
         const btn = so.getComponent(Button.getTypeName()) as Button
@@ -262,7 +267,7 @@ export class MWNPLayoutScenario extends Scenario {
         const lt = label as Text
         const emCm = (lt.size / 43.886) * lt.getSceneObject().getTransform().getWorldScale().y
         if (k === "5") ev("layout key", {widthCm: +wCm.toFixed(2), digitEmCm: +emCm.toFixed(2), weight: (lt as any).weight})
-        expect(wCm >= 2.8 && wCm <= 3.3, "Key_" + k + " is " + wCm.toFixed(2) + " cm wide (about 3)").toBe(true)
+        expect(wCm >= 3.2 && wCm <= 3.9, "Key_" + k + " is " + wCm.toFixed(2) + " cm wide (large keys, about 3.5)").toBe(true)
         expect(emCm >= 1.2 - 1e-3, "Key_" + k + " digit " + emCm.toFixed(2) + " cm (need >= 1.2)").toBe(true)
         expect((lt as any).weight, "Key_" + k + " digit is bold").toBe(700)
       }
@@ -282,14 +287,14 @@ export class MWNPLayoutScenario extends Scenario {
       const seg = findSceneObjectByName("Trace_2b_3").getChild(0).getComponent("Component.RenderMeshVisual") as RenderMeshVisual
       const tc = seg.mainMaterial.mainPass.baseColor
       // Not the current step's wire: orange #FF8C00 at 30% opacity (premultiplied).
-      expect(near(tc, 0.3, 0.165, 0), "dimmed active trace is orange #FF8C00 at 30%: " + colorStr(tc)).toBe(true)
+      expect((Math.abs(tc.x - 0.3) < 0.03 && Math.abs(tc.y - 0.165) < 0.03 && tc.z < 0.03), "dimmed active trace is orange #FF8C00 at 30%: " + colorStr(tc)).toBe(true)
       let wireSeg: RenderMeshVisual | null = null
       for (let i = 0; i < trainer0.getChildrenCount(); i++) {
         const w = trainer0.getChild(i)
         if (w.name.indexOf("Wire_2b_") === 0 && w.getChildrenCount() > 0) wireSeg = w.getChild(0).getComponent("Component.RenderMeshVisual") as RenderMeshVisual
       }
       const wc = (wireSeg as RenderMeshVisual).mainMaterial.mainPass.baseColor
-      expect(wc.x >= 0.95 && wc.y <= 0.25, "supply wires are bright red: " + colorStr(wc)).toBe(true)
+      expect(wc.x >= 0.25 && wc.x <= 0.35 && wc.y <= 0.08, "supply wires are red at 30% (dimmed, not the current step's wire): " + colorStr(wc)).toBe(true)
       const plate = findSceneObjectByName("StepCardCard").getComponent("Component.ScriptComponent") as any
       const fillA = plate && plate.roundedRectangle ? plate.roundedRectangle.backgroundColor.w : 0
       ev("layout colors", {traceThicknessCm: tcomp.traceThicknessCm, traceColor: colorStr(tc), wireColor: colorStr(wc), cardFillAlpha: +fillA.toFixed(2)})

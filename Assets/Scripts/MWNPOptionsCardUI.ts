@@ -17,7 +17,7 @@ export interface OptionDef {
 }
 
 export const OPTION_DEFS: OptionDef[] = [
-  {key: "labels", title: "Labels", values: ["Always on", "Hide with cards"]},
+  {key: "labels", title: "Labels", values: ["This step only", "Always on", "Hide with cards"]},
   {key: "hideButton", title: "Hide button", values: ["Cards only", "Everything"]},
   {key: "cardStyle", title: "Card style", values: ["Translucent", "Opaque"]},
   {key: "textSize", title: "Text size", values: ["Normal", "Large", "Extra large"]},
