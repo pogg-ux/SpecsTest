@@ -213,6 +213,8 @@ export class MWNPLayoutScenario extends Scenario {
     }
     await ui.tap("Btn_Schematic")
     await waitFor((s) => s.schematicOpen === true, 3000, "schematic open")
+    // One card at a time: while the schematic is open the step card is its chip.
+    expect(((global as any).mwnpAssistant.stepCard as any).isCollapsed, "step card shrinks to its chip while the schematic is open").toBe(true)
     await sleep(300) // let the cards finish laying out
 
     const app = (global as any).mwnpAssistant
@@ -271,6 +273,8 @@ export class MWNPLayoutScenario extends Scenario {
         expect(emCm >= 1.2 - 1e-3, "Key_" + k + " digit " + emCm.toFixed(2) + " cm (need >= 1.2)").toBe(true)
         expect((lt as any).weight, "Key_" + k + " digit is bold").toBe(700)
       }
+      await ui.tap("Btn_KeypadCancel") // back to the step card
+      await sleep(500)
     }
 
     // Vivid colors: pure white card text, #FFB800 amber, orange trace, brighter wires, thicker trace, opaque cards.
@@ -342,7 +346,7 @@ export class MWNPLayoutScenario extends Scenario {
     expect(!!cam, "camera found").toBe(true)
 
     const cards: {[n: string]: R} = {}
-    for (const name of ["StepCardCard", "SchematicCard"]) {
+    for (const name of ["SchematicCard"]) {
       const so = findSceneObjectByName(name)
       expect(!!so && so.isEnabledInHierarchy, name + " visible").toBe(true)
       const plate = so.getComponent("Component.ScriptComponent") as any
@@ -359,8 +363,6 @@ export class MWNPLayoutScenario extends Scenario {
       const sc = cards.SchematicCard
       expect(sp2.x > sc.x0 && sp2.x < sc.x1 && sp2.y > sc.y0 && sp2.y < sc.y1, "label " + text + " inside the schematic card").toBe(true)
     }
-    expect(cards.SchematicCard.y1 <= cards.StepCardCard.y0, "schematic above step card").toBe(true)
-    expect(overlaps(cards.SchematicCard, cards.StepCardCard), "schematic overlaps step card").toBe(false)
 
     // Key parts: box parts use their scale as size; lamps/S1 use their outline size from the cabinet.
     const parts: [string, string][] = [["TS-4", "Part_TS-4"], ["F1", "Part_F1"], ["L1", "Lamp_L1"], ["S1", "S1_Toggle"]]

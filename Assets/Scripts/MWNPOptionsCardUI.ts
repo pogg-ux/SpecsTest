@@ -3,7 +3,7 @@
 // Owns: the card and one button per option; each button says its current value ("Text size: Large") and
 // cycles to the next value when pressed. Holds the values for the session; Main applies them.
 // API: show(), hide(), values (readable), set(key, index), events onChange({key, index, value}).
-// Options (first value is the default): labels [Always on, Hide with cards], hideButton [Cards only, Everything],
+// Options (first value is the default): labels [This step only, Always on], hideButton [Cards only, Everything],
 //   cardStyle [Translucent, Opaque], textSize [Normal, Large, Extra large], schematic [Normal, Enlarged].
 // Test handles: "Opt_Labels", "Opt_HideButton", "Opt_CardStyle", "Opt_TextSize", "Opt_Schematic", card "OptionsCardCard".
 
@@ -17,7 +17,7 @@ export interface OptionDef {
 }
 
 export const OPTION_DEFS: OptionDef[] = [
-  {key: "labels", title: "Labels", values: ["This step only", "Always on", "Hide with cards"]},
+  {key: "labels", title: "Labels", values: ["This step only", "Always on"]},
   {key: "hideButton", title: "Hide button", values: ["Cards only", "Everything"]},
   {key: "cardStyle", title: "Card style", values: ["Translucent", "Opaque"]},
   {key: "textSize", title: "Text size", values: ["Normal", "Large", "Extra large"]},

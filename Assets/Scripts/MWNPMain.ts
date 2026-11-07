@@ -304,6 +304,8 @@ export class MWNPMain extends BaseScriptComponent {
     })
     this.stepCard.onChip.add(() => {
       this.click()
+      // One card at a time: the step card coming back closes the schematic that was open beside its chip.
+      if (this.schematicPanel.isOpen) this.schematicPanel.close()
       this.stepCard.expand()
     })
     this.stepCard.onSchematic.add(() => this.onSchematic())
@@ -1287,7 +1289,7 @@ export class MWNPMain extends BaseScriptComponent {
 
   /** Whether the labels (tags, badges, outlines, traces) follow the Hide button right now. */
   private labelsHide(): boolean {
-    return this.hiddenFlag && (this.optionsCard.value("hideButton") === "Everything" || this.optionsCard.value("labels") === "Hide with cards")
+    return this.hiddenFlag && this.optionsCard.value("hideButton") === "Everything"
   }
 
   private applyHide(): void {
@@ -1560,9 +1562,15 @@ export class MWNPMain extends BaseScriptComponent {
       }
     }
     if (!hostSO || !cb) {
+      // No card is open (start screen, or only the Library menu): the main Hide button has nothing to hide, so it stays
+      // away. It stays while the step card is a chip (the cabinet's labels still follow it) and while the display is
+      // already hidden (it must be there to say "Show").
+      const keep = this.hiddenFlag || this.stepCard.isCollapsed
+      this.displayBtn.so.enabled = keep
       t.setLocalPosition(this.displayBtnBase)
       return
     }
+    this.displayBtn.so.enabled = true
     const hostT = hostSO.getTransform()
     const k = (this.displayBtn.so.getParent() as SceneObject).getTransform().getWorldScale().x / hostT.getWorldScale().x
     const local = this.headerCornerLocal(cb, 8.0 * k, 3.6 * k)
