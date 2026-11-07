@@ -139,6 +139,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   private tKeypadStep: Text | null = null
   private tKeypadHint: Text | null = null
   private chip: ButtonHandle | null = null
+  private chipOffset: vec3 | null = null
   private _onLogReading = new Event<void>()
   private _onKeypadCancel = new Event<void>()
   private _onChip = new Event<void>()
@@ -247,6 +248,12 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     if (m) return m[0]
     const head = t.split(":")[0]
     return head.length > 0 ? head : "Step"
+  }
+
+  /** Where the chip sits, in this host's own space (Main puts it above the cabinet, inside the default frame). */
+  setChipOffset(offset: vec3): void {
+    this.chipOffset = offset
+    if (this.chip) this.chip.so.getTransform().setLocalPosition(offset)
   }
 
   private applyMode(): void {
@@ -489,6 +496,6 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const h = Math.max(this.btnEmLocal * LINE_H + 1.6, realToLocal(host, MIN_TARGET_CM))
     const w = Math.max(16, realToLocal(host, CHIP_WIDTH_CM))
     this.chip = addButton(host, "Btn_StepChip", this.chipLabel(), w, h, () => this._onChip.invoke(), {emCm: this.btnEmLocal, bold: true, primary: true, inFlex: false})
-    this.chip.so.getTransform().setLocalPosition(new vec3(CHIP_OFFSET.x, -h / 2, CHIP_OFFSET.z))
+    this.chip.so.getTransform().setLocalPosition(this.chipOffset ?? new vec3(CHIP_OFFSET.x, -h / 2, CHIP_OFFSET.z))
   }
 }

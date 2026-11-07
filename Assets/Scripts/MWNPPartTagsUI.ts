@@ -270,6 +270,8 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     this.expectedSO.enabled = true
     // Terminal readings: the bubble sits to the right of the terminal tags, not over them.
     if (pointId.indexOf("TS-") === 0) pos = new vec3(TS_TAGS_RIGHT + 0.5 + box.w / 2, pos.y, pos.z + 0.5)
+    // F1's tag sits beside its fuse (left): the bubble goes to the right of the fuse row, over the empty fuse spots, not over the tag.
+    if (pointId.indexOf("F1:") === 0) pos = new vec3(-6.8 + box.w / 2, pos.y, pos.z + 0.5)
     this.expectedSO.getTransform().setLocalPosition(pos)
     ;(this.expectedPlate as LabelPlate).setSize(box.w, box.h)
     const lbl = this.expectedLabel as Text
@@ -301,6 +303,8 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     const bw = textWidthCm(text, this.overlayEmCm, true) + PAD_X
     // Terminal readings sit to the right of the terminal tags (which are staggered above the strip), not on them.
     if (pointId.indexOf("TS-") === 0) pos = new vec3(TS_TAGS_RIGHT + 0.5 + bw / 2, pos.y, pos.z + 0.5)
+    const f1Tag = pointId.indexOf("F1:") === 0 ? this.boxes.filter((b) => b.name === "Tag_F1")[0] : null
+    if (f1Tag) pos = new vec3(f1Tag.cx - f1Tag.w / 2 - 0.3 - bw / 2, pos.y, pos.z + 0.5)
     b.so.getTransform().setLocalPosition(pos)
     this.popBadge(b.so)
     b.plate.setSize(bw, this.overlayEmCm * 1.5)

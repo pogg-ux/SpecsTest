@@ -35,6 +35,7 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
   /** Test aid: number of times the menu has been shown. */
   shownCount: number = 0
   private collapsed = false
+  private chipOffset: vec3 | null = null
   private chip: ButtonHandle | null = null
   get isVisible(): boolean {
     return (!!this.body && this.body.enabled) || (!!this.chip && this.chip.so.enabled)
@@ -102,6 +103,12 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
     this.applyMode()
   }
 
+  /** Where the chip sits, in this host's own space (Main puts it above the cabinet, inside the default frame). */
+  setChipOffset(offset: vec3): void {
+    this.chipOffset = offset
+    if (this.chip) this.chip.so.getTransform().setLocalPosition(offset)
+  }
+
   private applyMode(): void {
     if (this.collapsed && !this.chip) this.buildChip()
     if (this.body) this.body.enabled = !this.collapsed
@@ -118,7 +125,7 @@ export class MWNPLibraryCardUI extends BaseScriptComponent {
       inFlex: false,
       icon: iconJob,
     })
-    this.chip.so.getTransform().setLocalPosition(new vec3(0, -h / 2, 0.6))
+    this.chip.so.getTransform().setLocalPosition(this.chipOffset ?? new vec3(0, -h / 2, 0.6))
   }
 
   private build(): void {
