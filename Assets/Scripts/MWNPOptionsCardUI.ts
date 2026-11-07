@@ -4,7 +4,7 @@
 // cycles to the next value when pressed. Holds the values for the session; Main applies them.
 // API: show(), hide(), values (readable), set(key, index), events onChange({key, index, value}).
 // Options (first value is the default): labels [This step only, Always on], hideButton [Cards only, Everything],
-//   cardStyle [Translucent, Opaque], textSize [Normal, Large, Extra large], schematic [Normal, Enlarged].
+//   cardStyle [Translucent, Opaque] (starts on Opaque), textSize [Normal, Large, Extra large], schematic [Normal, Enlarged].
 // Test handles: "Opt_Labels", "Opt_HideButton", "Opt_CardStyle", "Opt_TextSize", "Opt_Schematic", card "OptionsCardCard".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
@@ -50,7 +50,7 @@ export class MWNPOptionsCardUI extends BaseScriptComponent {
   @ui.group_end
 
   /** Current value index per option key. */
-  indexes: {[key: string]: number} = {labels: 0, hideButton: 0, cardStyle: 0, textSize: 0, schematic: 0}
+  indexes: {[key: string]: number} = {labels: 0, hideButton: 0, cardStyle: 1, textSize: 0, schematic: 0}
   get isVisible(): boolean {
     return !!this.body && this.body.enabled
   }

@@ -53,6 +53,11 @@ function clock(): string {
 }
 
 
+/** Real cm kept between the display area's edge and the card column; chip widths (real cm) for left-aligning the chips with it. */
+const FRAME_MARGIN_CM = 1.0
+const LIBRARY_CHIP_CM = 7.5
+const STEP_CHIP_CM = 9.6
+
 @component
 export class MWNPMain extends BaseScriptComponent {
   @ui.label('<span style="color: #60A5FA;">FaultLens – rule-based agent driven by netlist.json</span>')
@@ -280,6 +285,8 @@ export class MWNPMain extends BaseScriptComponent {
     }
     const nl = this.nl
     this.readViewAngle()
+    // Cards are opaque by default (they sit in front of the cabinet); the Options card style can switch back to translucent.
+    setCardOpaque(this.optionsCard.value("cardStyle") === "Opaque")
     this.cabinet.build(nl)
     this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels(), this.cabinet.getBoardNote())
     this.placeLeftColumn()
@@ -968,10 +975,14 @@ export class MWNPMain extends BaseScriptComponent {
   private readViewAngle(): void {
     const camSO = this.findUserCamera()
     const cam = camSO ? (camSO.getComponent("Component.Camera") as Camera) : null
-    if (cam && cam.fov > 0.01) this.viewTanV = Math.tan(cam.fov / 2)
+    if (cam && cam.fov > 0.01) {
+      this.viewTanV = Math.tan(cam.fov / 2)
+      if (cam.aspect > 0.01) this.viewTanH = this.viewTanV * cam.aspect
+    }
   }
 
   private viewTanV = 0.33
+  private viewTanH = 0.289
 
   /**
    * Places the two chips (Library, Step) inside the default frame, in the empty band above the cabinet (the Safety notice has
@@ -990,17 +1001,14 @@ export class MWNPMain extends BaseScriptComponent {
     const yTop = eye.y + this.viewTanV * dist - 1.0 // top of the frame at the cards' plane, less a margin
     const chipH = this.libraryCard.chipHeight * s // real cm
     const gap = MIN_GAP_CM
-    const x = -8
-    this.libraryCard.setChipOffset(toHost(libHost, new vec3(x, yTop - chipH / 2, lp.z + 0.6 * s)))
-    this.stepCard.setChipOffset(toHost(stepHost, new vec3(x, yTop - chipH - gap - chipH / 2, lp.z + 0.6 * s)))
+    // Left-aligned with the card column, at the top of the display area.
+    const leftX = eye.x - this.viewTanH * dist + FRAME_MARGIN_CM
+    this.libraryCard.setChipOffset(toHost(libHost, new vec3(leftX + LIBRARY_CHIP_CM / 2, yTop - chipH / 2, lp.z + 0.6 * s)))
+    this.stepCard.setChipOffset(toHost(stepHost, new vec3(leftX + STEP_CHIP_CM / 2, yTop - chipH - gap - chipH / 2, lp.z + 0.6 * s)))
   }
 
   private placeLeftColumn(): void {
-    const half = this.cabinet.getBoardHalfSize()
-    const rootInv = this.sceneObject.getTransform().getInvertedWorldTransform()
-    const corner = rootInv.multiplyPoint(this.cabinet.sceneObject.getTransform().getWorldTransform().multiplyPoint(new vec3(-half.x, half.y, 0)))
     const eye = this.authoredEyePos
-    const cabDist = eye.z - corner.z
     const stepT = this.stepCard.sceneObject.getTransform()
     const libT = this.libraryCard.sceneObject.getTransform()
     libT.setWorldRotation(stepT.getWorldRotation())
@@ -1022,13 +1030,14 @@ export class MWNPMain extends BaseScriptComponent {
       const t = host.getTransform()
       const lp = t.getLocalPosition()
       const s = t.getLocalScale().x
-      const k = (eye.z - lp.z) / cabDist // the cabinet's edge, seen from the eye, at this card's distance
-      const edgeX = eye.x + (corner.x - eye.x) * k - this.columnGapCm
+      // The column starts at the left edge of the display area (the camera's view at this card's distance), a margin in, and
+      // runs right over the left side of the cabinet as far as the cards are wide (they sit in front of it, opaque).
+      const leftX = eye.x - this.viewTanH * (eye.z - lp.z) + FRAME_MARGIN_CM
       // The column starts at the top of the view (the cards are tall), not at the cabinet's top.
       const topY = eye.y + this.viewTanV * (eye.z - lp.z) - 1.0
       // The Library menu (or its chip) is the top row; the open card sits right below it.
       const y = keepY ? lp.y : isLibrary ? topY : topY - chipRowLocal * s
-      t.setLocalPosition(new vec3(edgeX - (widthLocal * s) / 2, y, lp.z))
+      t.setLocalPosition(new vec3(leftX + (widthLocal * s) / 2, y, lp.z))
     }
   }
 

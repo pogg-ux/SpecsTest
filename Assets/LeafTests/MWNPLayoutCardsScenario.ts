@@ -85,13 +85,9 @@ export function checkCard(cam: Camera, cardName: string): {name: string; emCm: n
     expect(t.emCm >= 1.0 - 1e-3, cardName + "/" + t.name + " text " + t.emCm.toFixed(2) + " cm (need >= 1.0)").toBe(true)
     expect(t.fits, cardName + "/" + t.name + " text does not fit its cell").toBe(true)
   }
-  // Cards live in the column to the left of the cabinet (outside the preview's frame at this scale): the card must be
-  // left of the cabinet's left edge, and must not cover any part of the model (that check stays strict).
-  const tr = findSceneObjectByName("MWNPTrainer")
-  const bh = (tr.getComponent("Component.ScriptComponent") as any).getBoardHalfSize() as vec2
-  const cabLeft = cam.worldSpaceToScreenSpace(tr.getTransform().getWorldTransform().multiplyPoint(new vec3(-bh.x, 0, 0))).x
-  expect(r.x1 <= cabLeft + 0.005, cardName + " is left of the cabinet (card right edge " + r.x1.toFixed(3) + ", cabinet left edge " + cabLeft.toFixed(3) + ")").toBe(true)
-  for (const p of partRects(cam)) expect(overlaps(p.r, r), p.id + " covered by " + cardName).toBe(false)
+  // Cards live in a column at the left of the display area, in front of (and over) the left side of the cabinet: every card must
+  // be fully inside the display area. (Cards covering parts of the model is expected now, so there is no covering check.)
+  expect(r.x0 >= 0 && r.x1 <= 1 && r.y0 >= 0 && r.y1 <= 1, cardName + " inside the display area " + fmt(r)).toBe(true)
   return texts
 }
 
