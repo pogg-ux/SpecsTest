@@ -134,7 +134,7 @@ export class MWNPLayoutScenario extends Scenario {
       ev("layout labels", {count: labels.length})
     }
 
-    // ID tags: text em height ≥ 1.5 cm in world space.
+    // ID tags: text em height >= 1.0 cm in world space (the cabinet is scaled to fit the frame; 1.0 cm is the minimum for any label).
     {
       const tags = findSceneObjectByName("PartTags")
       for (let i = 0; i < tags.getChildrenCount(); i++) {
@@ -147,7 +147,7 @@ export class MWNPLayoutScenario extends Scenario {
         expect(!!label, t.name + " has a label").toBe(true)
         if (!label) continue
         const emCm = (label.size / 43.886) * t.getTransform().getWorldScale().y
-        expect(emCm >= 1.5 - 1e-3, t.name + " text " + emCm.toFixed(2) + " cm").toBe(true)
+        expect(emCm >= 1.0 - 1e-3, t.name + " text " + emCm.toFixed(2) + " cm").toBe(true)
       }
       ev("layout tags", {checked: tags.getChildrenCount()})
     }

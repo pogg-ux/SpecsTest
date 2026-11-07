@@ -52,6 +52,10 @@ function clock(): string {
   return two(d.getHours()) + ":" + two(d.getMinutes()) + ":" + two(d.getSeconds())
 }
 
+/** The cabinet is scaled between these (fitCabinet): 70% at most, so the left column of cards fits in the frame beside it. */
+const CABINET_SCALE_MAX = 0.7
+const CABINET_SCALE_MIN = 0.5
+
 @component
 export class MWNPMain extends BaseScriptComponent {
   @ui.label('<span style="color: #60A5FA;">FaultLens – rule-based agent driven by netlist.json</span>')
@@ -278,6 +282,7 @@ export class MWNPMain extends BaseScriptComponent {
       return
     }
     const nl = this.nl
+    this.fitCabinet()
     this.cabinet.build(nl)
     this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels(), this.cabinet.getBoardNote())
     this.placeLeftColumn()
@@ -961,6 +966,65 @@ export class MWNPMain extends BaseScriptComponent {
    * corner as seen from the user's eye, on the same plane and tilt as the other cards. The menu is a child of the
    * assistant root (outside the UI root), so the main Hide never fades it.
    */
+  /**
+   * Scales the cabinet down and shifts it to the right edge of the view so the card column (left of it) fits in the frame
+   * too. The scale is the one at which the widest card just fits between the frame's left edge and the cabinet, capped at
+   * CABINET_SCALE_MAX (70%) and floored at CABINET_SCALE_MIN. Card sizes are not changed; the model's labels are raised
+   * to the 1.0 cm minimum by PartTags. Called before the cabinet is built.
+   */
+  private fitCabinet(): void {
+    const camSO = this.findUserCamera()
+    const cam = camSO ? (camSO.getComponent("Component.Camera") as Camera) : null
+    // Horizontal half-angle of the view (the SPECS 27 preview is about 16 degrees: 36.6 degrees tall at aspect 0.875).
+    let tanH = 0.289
+    let tanV = 0.33
+    if (cam && cam.fov > 0.01 && cam.aspect > 0.01) {
+      tanV = Math.tan(cam.fov / 2)
+      tanH = tanV * cam.aspect
+    }
+    this.viewTanV = tanV
+    const half = this.cabinet.getBoardHalfSize()
+    const boardW = half.x * 2
+    const eye = this.authoredEyePos
+    const tt = this.cabinet.sceneObject.getTransform()
+    const tp = tt.getLocalPosition()
+    const cabDist = eye.z - tp.z
+    // The widest card (real cm) and the card plane's distance from the eye.
+    const cards: [SceneObject, number][] = [
+      [this.jobPanel.sceneObject, this.jobPanel.widthCm],
+      [this.stepCard.sceneObject, this.stepCard.widthCm],
+      [this.findingCard.sceneObject, this.findingCard.widthCm],
+      [this.summaryCard.sceneObject, this.summaryCard.widthCm],
+      [this.cameraCard.sceneObject, this.cameraCard.widthCm],
+      [this.optionsCard.sceneObject, this.optionsCard.widthCm],
+      [this.notesCard.sceneObject, this.notesCard.widthCm],
+      [this.photoViewer.sceneObject, this.photoViewer.widthCm],
+      [this.schematicPanel.sceneObject, this.schematicPanel.widthCm],
+    ]
+    let widest = 0
+    let cardDist = 74
+    for (const [so, w] of cards) {
+      const t = so.getTransform()
+      widest = Math.max(widest, w * t.getLocalScale().x)
+      cardDist = eye.z - t.getLocalPosition().z
+    }
+    const edgeMargin = 1.0 // real cm kept free at the frame's edges
+    const xRight = tanH * cabDist - edgeMargin // the cabinet's right edge, at the cabinet's plane
+    // Column: right edge at (cabinet left edge x cardDist/cabDist) - gap; left edge must stay inside the frame.
+    const xLeftMin = ((widest - tanH * cardDist + edgeMargin + this.columnGapCm) * cabDist) / cardDist
+    let s = (xRight - xLeftMin) / boardW
+    s = Math.max(CABINET_SCALE_MIN, Math.min(CABINET_SCALE_MAX, s))
+    this.cabinetScale = s
+    tt.setLocalScale(new vec3(s, s, s))
+    // Vertically the cabinet sits just below the middle of the view.
+    tt.setLocalPosition(new vec3(xRight - (boardW * s) / 2, eye.y - 3, tp.z))
+    print("[MWNP] cabinet scale " + s.toFixed(3) + ", widest card " + widest.toFixed(1) + " cm, view half-angle tan " + tanH.toFixed(3))
+  }
+
+  /** Cabinet scale chosen by fitCabinet (test aid). */
+  cabinetScale = 1
+  private viewTanV = 0.33
+
   private placeLeftColumn(): void {
     const half = this.cabinet.getBoardHalfSize()
     const rootInv = this.sceneObject.getTransform().getInvertedWorldTransform()
@@ -990,7 +1054,8 @@ export class MWNPMain extends BaseScriptComponent {
       const s = t.getLocalScale().x
       const k = (eye.z - lp.z) / cabDist // the cabinet's edge, seen from the eye, at this card's distance
       const edgeX = eye.x + (corner.x - eye.x) * k - this.columnGapCm
-      const topY = eye.y + (corner.y - eye.y) * k
+      // The column starts at the top of the view (the cards are tall), not at the cabinet's top.
+      const topY = eye.y + this.viewTanV * (eye.z - lp.z) - 1.0
       // The Library menu (or its chip) is the top row; the open card sits right below it.
       const y = keepY ? lp.y : isLibrary ? topY : topY - chipRowLocal * s
       t.setLocalPosition(new vec3(edgeX - (widthLocal * s) / 2, y, lp.z))

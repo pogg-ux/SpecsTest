@@ -19,7 +19,7 @@
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
-import {COLOR, colorForWord, LabelPlate, makeLabelPlate, makeObj, PLATE_EDGE_IDLE, sizeForEmCm, styleLabelText, textWidthCm} from "./MWNPSharedUI"
+import {COLOR, colorForWord, LabelPlate, makeLabelPlate, makeObj, MIN_TEXT_EM_CM, PLATE_EDGE_IDLE, sizeForEmCm, styleLabelText, textWidthCm} from "./MWNPSharedUI"
 
 export interface TagAnchor {
   id: string
@@ -129,6 +129,15 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
   }
 
   build(anchors: TagAnchor[], wireLabels: WireLabel[], note: {text: string; pos: vec3} | null = null): void {
+    // The cabinet may be scaled down to fit the frame: raise each label size (in cabinet cm) so that, after that scale,
+    // every label is still at least MIN_TEXT_EM_CM (1.0 cm) tall in the real world.
+    const floorEm = MIN_TEXT_EM_CM / Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
+    this.tagEmCm = Math.max(this.tagEmCm, floorEm)
+    this.overlayEmCm = Math.max(this.overlayEmCm, floorEm)
+    this.wireEmCm = Math.max(this.wireEmCm, floorEm)
+    this.noteEmCm = Math.max(this.noteEmCm, floorEm)
+    // Bubbles keep their real width (so their text wraps at words, not mid-word) when the cabinet is scaled down.
+    this.overlayMaxWidthCm = this.overlayMaxWidthCm / Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
     for (const wl of wireLabels) {
       const so = makeObj(this.sceneObject, wl.name, wl.pos)
       const t = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), wl.text, this.wireEmCm, 4)
