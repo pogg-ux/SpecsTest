@@ -86,9 +86,15 @@ export class MWNPRetestControlsScenario extends Scenario {
       return
     }
     const switchButtons = stopAfter === "target2" ? [] : ["Btn_S1_UP", "Btn_S1_DOWN"]
-    for (const n of [...switchButtons, "S1_Toggle", "Key_0", "Key_1", "Key_2", "Key_3", "Key_4", "Key_5", "Key_6", "Key_7", "Key_8", "Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_Schematic"]) {
+    for (const n of [...switchButtons, "S1_Toggle", "Btn_LogReading", "Btn_Schematic"]) {
       await check(n)
     }
+    // The keys live on the Log reading card: open it (as a user does), check them, then Cancel back to the step card.
+    await ui.tap("Btn_LogReading")
+    for (const n of ["Key_0", "Key_1", "Key_2", "Key_3", "Key_4", "Key_5", "Key_6", "Key_7", "Key_8", "Key_9", "Key_Dot", "Key_Back", "Key_Enter", "Btn_KeypadCancel"]) {
+      await check(n)
+    }
+    await ui.tap("Btn_KeypadCancel")
     expect(failures.length === 0, "not reachable by a mouse ray: " + failures.join("; ")).toBe(true)
     if (stopAfter === "target2") return
 

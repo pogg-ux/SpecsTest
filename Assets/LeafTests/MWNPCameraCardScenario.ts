@@ -152,7 +152,7 @@ export class MWNPCameraCardScenario extends Scenario {
     expect(textOf("SummaryTitle"), "report title").toBe("Job report")
     expect(s.reportCaptureIds.length, "report lists every capture").toBe(3)
     expect(s.reportTab, "the report opens on the Summary tab").toBe("summary")
-    expect(isEnabled("Btn_SaveJobLog") && isEnabled("ReadingRow_0"), "Summary page: readings and Save").toBe(true)
+    expect((isEnabled("Btn_SaveJobLog") || isEnabled("Btn_ReportNextPage")) && isEnabled("ReadingRow_0"), "Summary page: readings, and Save (or the next page that holds it)").toBe(true)
     expect(isEnabled("ReportCapture_" + s.captures[0].id), "pictures are not on the Summary page").toBe(false)
     await ui.tap("Btn_TabNotes")
     s = await waitFor((x) => x.reportTab === "notes", 3000, "Notes & pictures tab")

@@ -13,7 +13,7 @@ import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection, FlexAlign} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addButton, addCardHeader, addFitText, addFlex, cardEm, deferDestroy, makeCardBody, makeObj, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, addFlex, buttonGapLocal, cardEm, deferDestroy, makeCardBody, makeObj, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -160,8 +160,9 @@ export class MWNPPhotoViewerUI extends BaseScriptComponent {
     addFitText(c, "PhotoViewerTime", "Time: " + info.time, inner, em, {color: TEXT_BODY})
     if (info.editable) {
       addFitText(c, "PhotoViewerCount", info.position, inner, em, {color: TEXT_SOFT})
-      const half = (inner - 1.0) / 2
-      const row = addFlex(c, "PhotoNavRow", FlexDirection.Row, inner, 3.6, 1.0, {align: FlexAlign.Center})
+      const gap = buttonGapLocal(this.sceneObject)
+      const half = (inner - gap) / 2
+      const row = addFlex(c, "PhotoNavRow", FlexDirection.Row, inner, 3.6, gap, {align: FlexAlign.Center})
       addButton(row, "Btn_PhotoPrev", "Previous", half, 3.6, () => this._onPrev.invoke(), {emCm: em})
       addButton(row, "Btn_PhotoNext", "Next", half, 3.6, () => this._onNext.invoke(), {emCm: em})
       addButton(c, "Btn_PhotoDelete", "Delete", inner - 4, 3.6, () => this._onDelete.invoke(), {emCm: em})

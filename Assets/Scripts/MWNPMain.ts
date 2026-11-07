@@ -281,6 +281,19 @@ export class MWNPMain extends BaseScriptComponent {
     this.stepCard.onKey.add((k) => this.onKey(k))
     this.stepCard.onEnter.add(() => this.onEnter())
     this.stepCard.onMore.add((open) => this.partTags.setBoardNoteVisible(open))
+    // Log reading opens the keypad as its own card; Cancel goes back; the chip (after an action) reopens the step card.
+    this.stepCard.onLogReading.add(() => {
+      this.click()
+      this.stepCard.openKeypad()
+    })
+    this.stepCard.onKeypadCancel.add(() => {
+      this.click()
+      this.stepCard.closeKeypad()
+    })
+    this.stepCard.onChip.add(() => {
+      this.click()
+      this.stepCard.expand()
+    })
     this.stepCard.onSchematic.add(() => this.onSchematic())
     this.stepCard.onCamera.add(() => this.openCamera())
     this.libraryCard.onPick.add((k) => this.onLibraryPick(k))
@@ -401,6 +414,7 @@ export class MWNPMain extends BaseScriptComponent {
       this.lastResultColor = ""
       this.lastMessage = "Flip " + (ctl ? ctl.component + " " + ctl.position : "the switch") + " first (pinch it on the model or use the button), then press Enter."
       this.stepCard.setResult(this.lastMessage, "")
+      this.stepCard.closeKeypad() // back to the step card, where the message and the switch buttons are
       this.log("enter-blocked")
       return
     }
@@ -409,7 +423,11 @@ export class MWNPMain extends BaseScriptComponent {
     if (!res.accepted || !res.cls) {
       this.click()
       // Enter with nothing typed: say what to do instead of doing nothing.
-      if (agent.phase === "steps" || agent.phase === "retest") this.stepCard.setResult("Type the meter reading with the number pad, then press Enter.", "amber")
+      if (agent.phase === "steps" || agent.phase === "retest") {
+        const hint = "Type the meter reading with the number pad, then press Enter."
+        this.stepCard.setResult(hint, "amber")
+        this.stepCard.setKeypadHint("Type the reading, then Enter.")
+      }
       return
     }
     const v = nl.fmtReading(res.value)
@@ -450,6 +468,8 @@ export class MWNPMain extends BaseScriptComponent {
     } else {
       this.stepCard.setResult(this.lastMessage, this.lastResultColor === "green" ? "green" : this.lastResultColor)
       this.refreshStep()
+      // The keypad card closes after Enter and the step card shrinks to its chip ("Step X of N"); pinch it to reopen.
+      this.stepCard.collapse()
     }
     this.log("enter " + res.pointId + " " + v + " " + res.cls)
   }
@@ -457,6 +477,9 @@ export class MWNPMain extends BaseScriptComponent {
   private onSchematic(): void {
     this.click()
     this.schematicPanel.toggle(this.currentWireId())
+    // One card at a time: the schematic opens while the step card shrinks to its chip, and it returns when the schematic closes.
+    if (this.schematicPanel.isOpen) this.stepCard.collapse()
+    else this.stepCard.expand()
     this.log("schematic " + (this.schematicPanel.isOpen ? "open" : "closed"))
   }
 

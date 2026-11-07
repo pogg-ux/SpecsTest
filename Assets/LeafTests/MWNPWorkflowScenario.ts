@@ -82,7 +82,9 @@ export class MWNPWorkflowScenario extends Scenario {
       check(isEnabled("Btn_DisplayToggle") && isEnabled("Btn_LibraryToggle"), "both Hide/Show buttons stay")
       await ui.tap("Btn_DisplayToggle")
       await waitFor((x) => !x.display.hidden && !x.display.fading && x.display.alpha === 1, 3000, "shown")
-      check(isEnabled(cardName) && mwnpState().visibleCard === before, cardName + " back after Show")
+      // The step card may be showing as its chip (it shrinks after a reading); that is its state to come back to.
+      const stepAsChip = cardName === "StepCardCard" && isEnabled("Btn_StepChip")
+      check((isEnabled(cardName) || stepAsChip) && mwnpState().visibleCard === before, cardName + " back after Show")
       await ui.tap("Btn_LibraryToggle")
       await waitFor((x) => x.libraryHidden && !x.libraryFading && x.libraryAlpha === 0, 3000, "library hidden")
       check(isEnabled(cardName), cardName + " unaffected by the Library's Hide")

@@ -97,7 +97,8 @@ export class MWNPDisplayToggleScenario extends Scenario {
     const m = card.getTransform().getWorldTransform()
     let top = 9
     for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) top = Math.min(top, cam.worldSpaceToScreenSpace(m.multiplyPoint(new vec3((dx * csz.x) / 2, (dy * csz.y) / 2, 0))).y)
-    expect(b.y < top, "button sits above the card, not on it (button y " + b.y.toFixed(3) + ", card top " + top.toFixed(3) + ")").toBe(true)
+    // The Hide button is attached inside the top-right corner of the card's header (near its top edge, not floating above it).
+    expect(b.y >= top - 0.002 && b.y < top + 0.08, "button sits in the card's header (button y " + b.y.toFixed(3) + ", card top " + top.toFixed(3) + ")").toBe(true)
 
     // Colors the display must give back after the fade.
     const titleColor = textOf("FindingTitle").textFill.color

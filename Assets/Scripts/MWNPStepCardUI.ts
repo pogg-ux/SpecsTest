@@ -19,7 +19,35 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection, FlexJustify, FlexAlign} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
-import {addButton, addCardHeader, addFlex, addText, ButtonHandle, COLOR, colorForWord, deferDestroy, fitText, getHostEmFactor, hostBaseScale, LINE_H, makeCardBody, minEmCm, TEXT_BODY, TEXT_SOFT} from "./MWNPSharedUI"
+import {
+  addButton,
+  addCardHeader,
+  addFitText,
+  addFlex,
+  addText,
+  BEST_TARGET_CM,
+  ButtonHandle,
+  buttonGapLocal,
+  COLOR,
+  colorForWord,
+  deferDestroy,
+  fitText,
+  getHostEmFactor,
+  hostBaseScale,
+  LINE_H,
+  makeCardBody,
+  minEmCm,
+  MIN_TARGET_CM,
+  realToLocal,
+  TEXT_BODY,
+  TEXT_SOFT,
+} from "./MWNPSharedUI"
+
+/** Keypad keys on the Log reading card (real cm): large, between the guideline's "best" (3.9) and minimum (2.6). */
+const KEYPAD_KEY_CM = 3.5
+/** The collapsed chip: width (real cm) and where it sits relative to the step card's host (card units): upper right, above the cabinet. */
+const CHIP_WIDTH_CM = 9.5
+const CHIP_OFFSET = new vec3(4.0, 11.5, 0.6)
 
 export interface SwitchPick {
   component: string
@@ -76,10 +104,6 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   /** Switch row: shown during the retest step. */
   switchRowVisible: boolean = false
   switchCurrent: string = ""
-  get isVisible(): boolean {
-    return !!this.body && this.body.enabled
-  }
-
   private body: SceneObject | null = null
   private content: SceneObject | null = null
   private inner = 0
@@ -105,6 +129,33 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   }
   get isMoreOpen(): boolean {
     return this.moreOpen
+  }
+
+  // Modes: "card" = the full step card; "keypad" = the number pad as its own card ("Log reading"); "chip" = a small
+  // "Step X of N" button at the edge of the view, shown after an action so the card is out of the way.
+  // Only one of the three is visible at a time.
+  private mode: "card" | "keypad" | "chip" = "card"
+  private keypadBody: SceneObject | null = null
+  private tKeypadStep: Text | null = null
+  private tKeypadHint: Text | null = null
+  private chip: ButtonHandle | null = null
+  private _onLogReading = new Event<void>()
+  private _onKeypadCancel = new Event<void>()
+  private _onChip = new Event<void>()
+  get onLogReading(): PublicApi<void> {
+    return this._onLogReading.publicApi()
+  }
+  get onKeypadCancel(): PublicApi<void> {
+    return this._onKeypadCancel.publicApi()
+  }
+  get onChip(): PublicApi<void> {
+    return this._onChip.publicApi()
+  }
+  get isCollapsed(): boolean {
+    return this.mode === "chip" && this.isVisible
+  }
+  get isKeypadOpen(): boolean {
+    return this.mode === "keypad" && this.isVisible
   }
   // Last values given to the setters, so rebuild() (Text size option) can put them back.
   private sReasoning = ""
@@ -138,13 +189,75 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
   }
 
+  /** Shows the full step card (whatever mode it was in). */
   show(): void {
     if (!this.body) this.build()
-    ;(this.body as SceneObject).enabled = true
+    this.mode = "card"
+    this.applyMode()
   }
 
   hide(): void {
     if (this.body) this.body.enabled = false
+    if (this.keypadBody) this.keypadBody.enabled = false
+    if (this.chip) this.chip.so.enabled = false
+    this.mode = "card"
+  }
+
+  /** Step card, keypad card or chip is showing. */
+  get isVisible(): boolean {
+    return (!!this.body && this.body.enabled) || (!!this.keypadBody && this.keypadBody.enabled) || (!!this.chip && this.chip.so.enabled)
+  }
+
+  /** Shrinks the card to the "Step X of N" chip (no-op while the step card is not showing). */
+  collapse(): void {
+    if (!this.isVisible) return
+    this.mode = "chip"
+    this.applyMode()
+  }
+
+  /** Chip -> full step card. */
+  expand(): void {
+    if (!this.isVisible) return
+    this.mode = "card"
+    this.applyMode()
+  }
+
+  /** "Log reading": the number pad opens as its own card in the step card's place. */
+  openKeypad(): void {
+    if (!this.isVisible) return
+    this.mode = "keypad"
+    this.setKeypadHint("")
+    this.applyMode()
+  }
+
+  /** Keypad card -> step card. */
+  closeKeypad(): void {
+    if (this.mode !== "keypad") return
+    this.mode = "card"
+    this.applyMode()
+  }
+
+  setKeypadHint(text: string): void {
+    if (this.tKeypadHint) fitText(this.tKeypadHint, text, this.inner, this.textEmLocal, 0)
+  }
+
+  private chipLabel(): string {
+    const t = this.sStep[0]
+    const m = /^Step \d+ of \d+/.exec(t)
+    if (m) return m[0]
+    const head = t.split(":")[0]
+    return head.length > 0 ? head : "Step"
+  }
+
+  private applyMode(): void {
+    if (this.mode === "keypad" && !this.keypadBody) this.buildKeypad()
+    if (this.mode === "chip" && !this.chip) this.buildChip()
+    if (this.body) this.body.enabled = this.mode === "card"
+    if (this.keypadBody) this.keypadBody.enabled = this.mode === "keypad"
+    if (this.chip) {
+      this.chip.so.enabled = this.mode === "chip"
+      this.chip.label.text = this.chipLabel()
+    }
   }
 
   get built(): boolean {
@@ -154,9 +267,17 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   /** Rebuilds the card at the current Text size factor, keeping everything it shows and whether it is visible. */
   rebuild(): void {
     if (!this.body) return
-    const vis = this.body.enabled
+    const vis = this.isVisible
+    const mode = this.mode
     deferDestroy(this, this.body)
+    if (this.keypadBody) deferDestroy(this, this.keypadBody)
+    if (this.chip) deferDestroy(this, this.chip.so)
     this.body = null
+    this.keypadBody = null
+    this.tKeypadStep = null
+    this.tKeypadHint = null
+    this.tReadout = null
+    this.chip = null
     this.content = null
     this.switchRow = null
     this.switchKey = ""
@@ -169,7 +290,10 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     this.setResult(this.resultText, this.resultColorWord)
     this.setReadout(this.sReadout || "— V")
     if (this.sSwitch[1].length > 0) this.setSwitchControls(...this.sSwitch)
-    ;(this.body as SceneObject).enabled = vis
+    if (vis) {
+      this.mode = mode
+      this.applyMode()
+    } else this.hide()
   }
 
   setReasoning(text: string): void {
@@ -198,6 +322,8 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     if (this.tQuestion) fitText(this.tQuestion, question, this.inner, em)
     if (this.tCite) fitText(this.tCite, citation, this.inner, em)
     if (this.tExpected) fitText(this.tExpected, expected, this.inner, em)
+    if (this.tKeypadStep) fitText(this.tKeypadStep, title, this.inner, em)
+    if (this.chip) this.chip.label.text = this.chipLabel()
   }
 
   setResult(text: string, colorWord: string): void {
@@ -214,8 +340,7 @@ export class MWNPStepCardUI extends BaseScriptComponent {
   setReadout(text: string): void {
     this.readoutText = this.readoutPrefix + " " + text
     this.sReadout = text
-    // Two short lines ("Reading:" / "12.1 V") so the value stays big inside the narrow side column.
-    if (this.tReadout) this.tReadout.text = this.readoutPrefix + "\n" + text
+    if (this.tReadout) this.tReadout.text = this.readoutPrefix + " " + text
   }
 
   /**
@@ -249,10 +374,13 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const c = this.content as SceneObject
     const em = this.btnEmLocal
     const labelW = 5.5
-    const gap = 0.8
+    const gap = buttonGapLocal(this.sceneObject)
     const bw = (this.inner - labelW - gap * positions.length) / positions.length
-    const row = addFlex(c, "SwitchRow", FlexDirection.Row, this.inner, 3.8, gap, {align: FlexAlign.Center})
-    ;(row.getComponent(FlexItem.getTypeName()) as FlexItem).order = 1
+    const rowH = Math.max(3.8, realToLocal(this.sceneObject, MIN_TARGET_CM))
+    const row = addFlex(c, "SwitchRow", FlexDirection.Row, this.inner, rowH, gap, {align: FlexAlign.Center})
+    const rowItem = row.getComponent(FlexItem.getTypeName()) as FlexItem
+    rowItem.order = 1
+    rowItem.marginTop = rowItem.marginBottom = Math.max(0, (gap - 0.5) / 2)
     addText(row, "SwitchLabel", component, labelW, 3.8, {emCm: em, color: TEXT_SOFT, align: "center"})
     this.switchButtons = {}
     for (const pos of positions) {
@@ -293,16 +421,47 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     }
     ;(this.tTitle as Text & {weight?: number}).weight = 700
 
-    // Bottom row: number pad (left) + readout / Enter / Schematic (right).
-    const kw = this.keyWidthRealCm / scale
-    const kh = this.keyHeightRealCm / scale
+    // Actions: one large "Log reading" button (opens the keypad as its own card), then Schematic | Camera, then More.
+    const host = this.sceneObject
+    const gap = buttonGapLocal(host)
+    const margin = Math.max(0, (gap - 0.5) / 2)
+    const logBtn = addButton(c, "Btn_LogReading", "Log reading", inner - 4, realToLocal(host, BEST_TARGET_CM), () => this._onLogReading.invoke(), {emCm: btnEm * 1.2, bold: true, primary: true})
+    ;(logBtn.so.getComponent(FlexItem.getTypeName()) as FlexItem).order = 2
+    const rowH = realToLocal(host, MIN_TARGET_CM)
+    const half = (inner - gap) / 2
+    const actions = addFlex(c, "ActionRow", FlexDirection.Row, inner, rowH, gap, {align: FlexAlign.Center})
+    const actionsItem = actions.getComponent(FlexItem.getTypeName()) as FlexItem
+    actionsItem.order = 3
+    actionsItem.marginTop = actionsItem.marginBottom = margin
+    addButton(actions, "Btn_Schematic", this.schematicLabel, half, rowH, () => this._onSchematic.invoke(), {emCm: btnEm})
+    addButton(actions, "Btn_Camera", this.cameraLabel, half, rowH, () => this._onCamera.invoke(), {emCm: btnEm})
+
+    // "More" toggle: full-width, large, last on the card.
+    this.moreBtn = addButton(c, "Btn_More", this.moreOpen ? "Less" : "More", inner - 4, 4.4, () => this.setMore(!this.moreOpen), {emCm: btnEm * 1.2, bold: true})
+    ;(this.moreBtn.so.getComponent(FlexItem.getTypeName()) as FlexItem).order = 4
+  }
+
+  /** The number pad as its own card: large keys (KEYPAD_KEY_CM), at least MIN_GAP_CM between them, Cancel + Enter below. */
+  private buildKeypad(): void {
+    const host = this.sceneObject
+    const scale = hostBaseScale(host)
+    const em = this.textEmLocal
+    const btnEm = this.btnEmLocal
+    const gap = buttonGapLocal(host)
+    const key = realToLocal(host, KEYPAD_KEY_CM)
+    const padW = key * 3 + gap * 2
+    const w = padW + 2.8
+    const inner = padW
+    const card = makeCardBody(host, "KeypadCardCard", w, 1.4, 0.5, "top")
+    this.keypadBody = card.body
+    const c = card.content
+    addCardHeader(c, "KeypadHeader", "Log reading", inner, host)
+    this.tKeypadStep = addFitText(c, "KeypadStep", this.sStep[0], inner, em, {color: TEXT_SOFT})
+    const rem = minEmCm(this.readoutEmCm) / scale
+    this.tReadout = addText(c, "Readout", this.readoutPrefix + " " + (this.sReadout || "— V"), inner, rem * LINE_H, {emCm: rem, align: "center"})
+    this.tKeypadHint = addFitText(c, "KeypadHint", "", inner, em, {color: COLOR.amber, minLines: 0})
     const digitEm = minEmCm(this.digitEmCm) / scale
-    const kg = 0.35
-    const padW = kw * 3 + kg * 2
-    const padH = kh * 4 + kg * 3
-    const row = addFlex(c, "PadRow", FlexDirection.Row, inner, padH, 1.0, {align: FlexAlign.Center})
-    ;(row.getComponent(FlexItem.getTypeName()) as FlexItem).order = 2
-    const pad = addFlex(row, "NumPad", FlexDirection.Column, padW, padH, kg)
+    const pad = addFlex(c, "NumPad", FlexDirection.Column, padW, key * 4 + gap * 3, gap)
     const keys = [
       ["7", "8", "9"],
       ["4", "5", "6"],
@@ -310,23 +469,26 @@ export class MWNPStepCardUI extends BaseScriptComponent {
       [".", "0", "back"],
     ]
     keys.forEach((rowKeys, r) => {
-      const kr = addFlex(pad, "KeyRow" + r, FlexDirection.Row, padW, kh, kg)
+      const kr = addFlex(pad, "KeyRow" + r, FlexDirection.Row, padW, key, gap)
       for (const k of rowKeys) {
         const name = k === "." ? "Key_Dot" : k === "back" ? "Key_Back" : "Key_" + k
         const label = k === "back" ? "Del" : k
-        addButton(kr, name, label, kw, kh, () => this._onKey.invoke(k), {emCm: digitEm, bold: true})
+        addButton(kr, name, label, key, key, () => this._onKey.invoke(k), {emCm: digitEm, bold: true})
       }
     })
-    const sideW = inner - padW - 1.0
-    const side = addFlex(row, "PadSide", FlexDirection.Column, sideW, padH, 0.8, {justify: FlexJustify.Center})
-    const rem = minEmCm(this.readoutEmCm) / scale
-    this.tReadout = addText(side, "Readout", this.readoutPrefix + "\n— V", sideW, rem * LINE_H * 2, {emCm: rem, align: "center", wrap: true, valign: "top"})
-    addButton(side, "Key_Enter", "Enter", sideW - 1, 3.0, () => this._onEnter.invoke(), {emCm: btnEm, bold: true, primary: true})
-    addButton(side, "Btn_Schematic", this.schematicLabel, sideW - 1, 3.0, () => this._onSchematic.invoke(), {emCm: btnEm})
-    addButton(side, "Btn_Camera", this.cameraLabel, sideW - 1, 3.0, () => this._onCamera.invoke(), {emCm: btnEm})
+    const act = addFlex(c, "KeypadActions", FlexDirection.Row, padW, key, gap)
+    const actItem = act.getComponent(FlexItem.getTypeName()) as FlexItem
+    actItem.marginTop = Math.max(0, (gap - 0.5) / 2)
+    addButton(act, "Btn_KeypadCancel", "Cancel", key, key, () => this._onKeypadCancel.invoke(), {emCm: btnEm})
+    addButton(act, "Key_Enter", "Enter", padW - key - gap, key, () => this._onEnter.invoke(), {emCm: btnEm * 1.2, bold: true, primary: true})
+  }
 
-    // "More" toggle: full-width, large, last on the card (after the pad row).
-    this.moreBtn = addButton(c, "Btn_More", this.moreOpen ? "Less" : "More", inner - 4, 4.4, () => this.setMore(!this.moreOpen), {emCm: btnEm * 1.2, bold: true})
-    ;(this.moreBtn.so.getComponent(FlexItem.getTypeName()) as FlexItem).order = 3
+  /** The chip: a small "Step X of N" button at the top-right edge of the view, above the cabinet, never over it. */
+  private buildChip(): void {
+    const host = this.sceneObject
+    const h = Math.max(this.btnEmLocal * LINE_H + 1.6, realToLocal(host, MIN_TARGET_CM))
+    const w = Math.max(16, realToLocal(host, CHIP_WIDTH_CM))
+    this.chip = addButton(host, "Btn_StepChip", this.chipLabel(), w, h, () => this._onChip.invoke(), {emCm: this.btnEmLocal, bold: true, primary: true, inFlex: false})
+    this.chip.so.getTransform().setLocalPosition(CHIP_OFFSET)
   }
 }

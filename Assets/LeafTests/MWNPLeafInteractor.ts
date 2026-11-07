@@ -36,8 +36,38 @@ export class MWNPLeafInteractor extends DefaultLeafInteractor {
     super("MWNPLeafInteractor")
   }
 
+  /**
+   * The step card collapses to a chip after an action and the number pad lives on its own "Log reading" card.
+   * Before pinching a step-card button or a key, reopen the step card (chip) and the keypad (Log reading) as a user would.
+   */
+  private async ensureStepUi(name: string): Promise<void> {
+    // The Job report's Save / Export buttons are on its last page now that buttons are larger and further apart.
+    if ((name === "Btn_SaveJobLog" || name === "Btn_ExportReport") && !findInteractablesByName(name, undefined, true)[0]) {
+      const next = findInteractablesByName("Btn_ReportNextPage", undefined, true)[0]
+      if (next) {
+        await this.trigger(next)
+        await sleep(250)
+      }
+    }
+    const isKey = name.indexOf("Key_") === 0
+    if (!isKey && !/^(Btn_LogReading|Btn_Schematic|Btn_Camera|Btn_More|Btn_S1_)/.test(name)) return
+    const chip = findInteractablesByName("Btn_StepChip", undefined, true)[0]
+    if (chip) {
+      await this.trigger(chip)
+      await sleep(250)
+    }
+    if (isKey && !findInteractablesByName(name, undefined, true)[0]) {
+      const log = findInteractablesByName("Btn_LogReading", undefined, true)[0]
+      if (log) {
+        await this.trigger(log)
+        await sleep(250)
+      }
+    }
+  }
+
   /** Pinch an enabled Interactable by SceneObject name (waits up to 3 s for it to appear). */
   async tap(name: string): Promise<void> {
+    await this.ensureStepUi(name)
     const t0 = getTime()
     let target = findInteractablesByName(name, undefined, true)[0]
     while (!target && (getTime() - t0) < 3) {

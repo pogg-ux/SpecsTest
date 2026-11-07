@@ -21,6 +21,10 @@ import {
   addCardHeader,
   addFitMixed,
   addFitText,
+  buttonGapLocal,
+  realToLocal,
+  MIN_GAP_CM,
+  MIN_TARGET_CM,
   addFlex,
   addText,
   ButtonHandle,
@@ -197,8 +201,11 @@ export class MWNPSummaryUI extends BaseScriptComponent {
   }
 
   private buttonH(label: string, w: number, em: number): number {
+    // Buttons are at least MIN_TARGET_CM tall and carry margins so neighbours are at least MIN_GAP_CM apart (see addButton).
+    const minT = realToLocal(this.sceneObject, MIN_TARGET_CM)
     const lines = estimateLines(label, w - 1.5, em)
-    return (lines > 1 ? Math.max(3.6, lines * em * LINE_H + 1.6) : 3.6) + 0.15
+    const base = lines > 1 ? Math.max(minT, lines * em * LINE_H + 1.6) : Math.max(3.6, minT)
+    return base + 0.15 + Math.max(0, realToLocal(this.sceneObject, MIN_GAP_CM) - 0.15)
   }
 
   private captureH(cap: ReportCapture, inner: number, em: number): number {
@@ -265,7 +272,7 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     })
     const readOnly = !!d.backToCurrent
     out.push({
-      h: (readOnly ? 0 : 3.75) + this.buttonH("Export report — coming in v2", inner, em) + this.textH(EXPORT_NOTE, inner, em),
+      h: (readOnly ? 0 : this.buttonH(d.saveLabel, inner - 6, em)) + this.buttonH("Export report — coming in v2", inner, em) + this.textH(EXPORT_NOTE, inner, em),
       build: (c) => {
         if (!readOnly) {
           this.saveBtn = addButton(c, "Btn_SaveJobLog", d.saveLabel, inner - 6, 3.6, () => this._onSave.invoke(), {emCm: em, primary: true})
@@ -325,10 +332,11 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     addCardHeader(c, "SummaryTitle", d.title, inner, this.sceneObject)
 
     // Tabs: the one showing is amber (the active one).
-    const half = (inner - 1.0) / 2
+    const gap = buttonGapLocal(this.sceneObject)
+    const half = (inner - gap) / 2
     const tabLines = Math.max(estimateLines("Summary", half - 1.5, em, true), estimateLines("Notes & pictures", half - 1.5, em, true))
-    const tabH = tabLines > 1 ? Math.max(3.6, tabLines * em * LINE_H + 1.6) : 3.6
-    const tabs = addFlex(c, "ReportTabs", FlexDirection.Row, inner, tabH, 1.0, {align: FlexAlign.Center})
+    const tabH = Math.max(realToLocal(this.sceneObject, MIN_TARGET_CM), tabLines > 1 ? Math.max(3.6, tabLines * em * LINE_H + 1.6) : 3.6)
+    const tabs = addFlex(c, "ReportTabs", FlexDirection.Row, inner, tabH, gap, {align: FlexAlign.Center})
     const t1 = addButton(tabs, "Btn_TabSummary", "Summary", half, tabH, () => this.setTab("summary"), {emCm: em, bold: true})
     const t2 = addButton(tabs, "Btn_TabNotes", "Notes & pictures", half, tabH, () => this.setTab("notes"), {emCm: em, bold: true})
     ;(this.tab === "summary" ? t1 : t2).label.textFill.color = COLOR.amber
@@ -352,13 +360,13 @@ export class MWNPSummaryUI extends BaseScriptComponent {
       return pages
     }
     let pages = pack(base)
-    if (pages.length > 1) pages = pack(base - 6.6) // room for the page indicator and buttons
+    if (pages.length > 1) pages = pack(base - (em * LINE_H + this.buttonH("Previous page", inner / 2, em))) // room for the page indicator and the pager buttons
     this.pageCount = pages.length
     this.page = Math.min(this.page, pages.length - 1)
     for (const i of pages[this.page]) all[i].build(c)
     if (pages.length > 1) {
       addText(c, "ReportPageInfo", "Page " + (this.page + 1) + " of " + pages.length, inner, em * LINE_H, {emCm: em, color: TEXT_SOFT, align: "center"})
-      const nav = addFlex(c, "ReportPager", FlexDirection.Row, inner, 3.6, 1.0, {align: FlexAlign.Center})
+      const nav = addFlex(c, "ReportPager", FlexDirection.Row, inner, 3.6, gap, {align: FlexAlign.Center})
       addButton(nav, "Btn_ReportPrevPage", "Previous page", half, 3.6, () => this.turnPage(-1), {emCm: em})
       addButton(nav, "Btn_ReportNextPage", "Next page", half, 3.6, () => this.turnPage(1), {emCm: em})
     }

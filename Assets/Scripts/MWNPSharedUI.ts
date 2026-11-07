@@ -48,6 +48,24 @@ export function applyTextRole(t: Text, role: TextRole, distanceCm: number): void
   ;(t as Text & {weight?: number}).weight = TYPE_SCALE[role].weight
 }
 
+// ── Hand-gesture targets ──
+// Snap OS design guideline (Positioning & Sizing Content > Button Sizing & Spacing): targetable elements are at least
+// 2 degrees wide and at least 1 degree apart ("best" is about 3 degrees). The cards float about 74 cm from the eye, so
+// 2 degrees = 2.6 cm, 1 degree = 1.3 cm, 3 degrees = 3.9 cm. Sizes here are REAL cm; realToLocal() converts them to
+// card units for a card hosted under a scaled host.
+export const CARD_DISTANCE_CM = 74
+export const MIN_TARGET_CM = 2.6
+export const MIN_GAP_CM = 1.3
+export const BEST_TARGET_CM = 3.9
+export function realToLocal(host: SceneObject, cm: number): number {
+  const s = host.getTransform().getWorldScale().y
+  return s > 0.001 ? cm / s : cm
+}
+/** Gap between buttons in a row, in card units (MIN_GAP_CM real). */
+export function buttonGapLocal(host: SceneObject): number {
+  return realToLocal(host, MIN_GAP_CM)
+}
+
 // ── Palette (additive display: nothing near-black) ──
 export const COLOR = {
   white: new vec4(1, 1, 1, 1),
@@ -142,6 +160,10 @@ export function addButton(
   onClick: () => void,
   opts?: {role?: TextRole; distanceCm?: number; inFlex?: boolean; emCm?: number; wrap?: boolean; bold?: boolean; icon?: Texture; primary?: boolean}
 ): ButtonHandle {
+  // Every button is at least MIN_TARGET_CM (real cm) in both directions, whatever the caller asked for.
+  const minT = realToLocal(parent, MIN_TARGET_CM)
+  w = Math.max(w, minT)
+  h = Math.max(h, minT)
   // A label too long for its button wraps and the button grows (large Text size option).
   if (opts?.emCm && !opts.wrap) {
     const lines = estimateLines(label, w - 1.5, opts.emCm, !!opts.bold)
@@ -188,6 +210,14 @@ export function addButton(
     item.overrideWidth = w
     item.overrideHeight = h
     item.flexShrink = 0
+    // At least MIN_GAP_CM between neighbours in a column: margins make up what the layout's own row gap lacks.
+    // (Row layouts set their gap at the call site with buttonGapLocal(), since their widths depend on it.)
+    const layout = parent.getComponent(FlexLayout.getTypeName()) as FlexLayout | null
+    if (layout && layout.direction === FlexDirection.Column) {
+      const extra = Math.max(0, (realToLocal(parent, MIN_GAP_CM) - layout.rowGap) / 2)
+      item.marginTop = extra
+      item.marginBottom = extra
+    }
     register(parent, item)
   }
   return {so, button: btn, label: t, iconMat}

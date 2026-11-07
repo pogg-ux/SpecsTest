@@ -9,7 +9,7 @@ import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {FlexDirection} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {addButton, addCardHeader, addFitText, addFlex, addText, cardEm, COLOR, estimateLines, LINE_H, makeCardBody, makeObj, TEXT_SOFT, textWidthCm} from "./MWNPSharedUI"
+import {addButton, addCardHeader, addFitText, addFlex, addText, buttonGapLocal, cardEm, COLOR, estimateLines, LINE_H, makeCardBody, makeObj, TEXT_SOFT, textWidthCm} from "./MWNPSharedUI"
 
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
@@ -72,7 +72,7 @@ export class MWNPSafetyNoticeUI extends BaseScriptComponent {
     addCardHeader(card.content, "SafetyHeader", "Safety", inner, this.sceneObject)
     addFitText(card.content, "SafetyAppName", "FaultLens", inner, em, {color: TEXT_SOFT})
 
-    const gap = 0.8
+    const gap = buttonGapLocal(this.sceneObject)
     const iconW = Math.max(2.4, em * 1.3)
     const btnW = textWidthCm(this.dismissLabel, em) + 3
     const btnH = em * LINE_H + 1.6
