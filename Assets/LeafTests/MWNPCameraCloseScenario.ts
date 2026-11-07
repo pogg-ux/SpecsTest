@@ -163,7 +163,7 @@ export class MWNPCameraCloseScenario extends Scenario {
     checkLibraryButton("after pressing Show")
 
     // Main Hide / Show after every card swap.
-    for (const lib of ["Btn_Lib_Report", "Btn_Lib_Notes", "Btn_Lib_Options", "Btn_Lib_Camera", "Btn_Lib_Job"]) {
+    for (const lib of ["Btn_Lib_Report", "Btn_Lib_Options", "Btn_Lib_Camera", "Btn_Lib_Job"]) {
       await ui.tap(lib)
       await sleep(600)
       checkMainButton("after " + lib)

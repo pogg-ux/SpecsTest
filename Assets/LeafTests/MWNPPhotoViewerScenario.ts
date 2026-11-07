@@ -5,7 +5,7 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {MWNPLeafInteractor, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, cardIs, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
 import {checkCard, findCamera, screenRect} from "./MWNPLayoutCardsScenario"
 
 function isEnabled(name: string): boolean {
@@ -71,7 +71,7 @@ export class MWNPPhotoViewerScenario extends Scenario {
     const vw = findSceneObjectByName("PhotoViewerCardCard")
     const vsz = (vw.getComponent("Component.ScriptComponent") as any).size
     const vr = screenRect(cam, vw, vsz.x, vsz.y)
-    expect(!(lib.x0 < vr.x1 && vr.x0 < lib.x1 && lib.y0 < vr.y1 && vr.y0 < lib.y1), "viewer clear of the Library menu").toBe(true)
+    expect(!findSceneObjectByName("LibraryCardCard").isEnabledInHierarchy || !(lib.x0 < vr.x1 && vr.x0 < lib.x1 && lib.y0 < vr.y1 && vr.y0 < lib.y1), "viewer clear of the Library menu (which collapses to its chip while a card is open)").toBe(true)
     await reach("Btn_PhotoPrev", "Btn_PhotoNext", "Btn_PhotoDelete", "Btn_PhotoClose")
 
     // ── Previous / Next ──
@@ -142,7 +142,7 @@ export class MWNPPhotoViewerScenario extends Scenario {
 
     // ── Previous jobs' pictures are view-only ──
     await ui.tap("Btn_Lib_Control")
-    await waitFor((x) => x.visibleCard === "jobcontrol", 3000, "Job control")
+    await waitFor((x) => cardIs(x.visibleCard, "jobcontrol"), 3000, "Job control")
     await sleep(300)
     await ui.tap("Btn_EndJob")
     await waitFor((x) => x.visibleCard === "confirm", 3000, "confirm")

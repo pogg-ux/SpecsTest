@@ -34,7 +34,7 @@ import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {Capture, PHOTO_PLACEHOLDER, SnapshotCamera, takePhoto} from "./MWNPCapture"
 import {MWNPSchematicPanelUI} from "./MWNPSchematicPanelUI"
 import {DisplayFader} from "./MWNPDisplayFader"
-import {addButton, ButtonHandle, cardEm, makeObj, setCardOpaque, setHostEmFactor, setHostFactor} from "./MWNPSharedUI"
+import {addButton, ButtonHandle, cardEm, makeObj, MIN_GAP_CM, realToLocal, setCardOpaque, setHostEmFactor, setHostFactor} from "./MWNPSharedUI"
 
 const CHECK = "✓"
 const CROSS = "×" // U+00D7: the Lens font has no U+2717 ✗ glyph
@@ -154,6 +154,11 @@ export class MWNPMain extends BaseScriptComponent {
   set visibleCard(v: string) {
     this._visible = v
     if (v === "job" || v === "symptoms" || v === "step" || v === "finding" || v === "summary") this.flowCard = v
+    // One card at a time, the Library included: it shows as its menu only while no card is open, else as a chip.
+    if (this.libraryCard && this.libraryCard.built) {
+      if (v === "home") this.libraryCard.expand()
+      else if (v !== "safety") this.libraryCard.collapse()
+    }
     this.updateDisplayButtonPos()
   }
   private cameraReturn = "home"
@@ -176,7 +181,8 @@ export class MWNPMain extends BaseScriptComponent {
   private viewerPrevJob = -1
   private viewerConfirm = false
   /** Screen offset (fraction of the view) of the menu's top-left from the cabinet's top-left corner. */
-  libraryDock = new vec2(-0.03, -0.15)
+  /** Real cm between the left column of cards and the cabinet's left edge (seen from the eye). */
+  private columnGapCm = 1.5
   private schematicWasOpen = false
   private textFactor = 1
   private schemFactor = 1
@@ -274,6 +280,7 @@ export class MWNPMain extends BaseScriptComponent {
     const nl = this.nl
     this.cabinet.build(nl)
     this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels(), this.cabinet.getBoardNote())
+    this.placeLeftColumn()
 
     this.safetyNotice.onDismiss.add(() => this.onDismissNotice())
     this.jobPanel.onReportSymptom.add(() => this.onReportSymptom())
@@ -301,6 +308,9 @@ export class MWNPMain extends BaseScriptComponent {
     this.jobPanel.onNewRequest.add(() => this.onJobRequest("new"))
     this.jobPanel.onConfirm.add((c) => this.onJobConfirm(c.kind, c.yes))
     this.jobPanel.onStartJob.add(() => this.onStartJob())
+    this.jobPanel.onResume.add(() => this.onResumeFlow())
+    this.libraryCard.onChip.add(() => this.onLibraryChip())
+    this.summaryCard.onAddNote.add(() => this.onReportAddNote())
     this.notesCard.onNote.add((n) => this.onNote(n.text, n.placeholder))
     this.notesCard.onEdit.add((e) => this.onNoteEdit(e.id, e.text))
     this.summaryCard.onPrevious.add((i) => this.onPreviousPick(i))
@@ -344,11 +354,10 @@ export class MWNPMain extends BaseScriptComponent {
     this.safetyNotice.hide()
     ;(this.agent as MWNPAgent).dismissNotice()
     // The Job card is built now but stays hidden: the Library is home, its Job button opens this card.
-    this.jobPanel.showJob("Job: " + nl.data.machine + " " + nl.machineKind(), this.filesLoadedText)
+    this.jobPanel.showJob("Job: " + nl.data.machine + " " + nl.machineKind(), this.filesLoadedText, true, this.controlStatus())
     this.jobPanel.setVisible(false)
     this.flowCard = "job"
-    // The Library menu is docked (expanded) in the upper left; no other card is open until the user picks one.
-    this.dockLibrary()
+    // The Library menu is docked (expanded) in the column left of the cabinet; no other card is open until the user picks one.
     this.buildLibraryControls()
     this.libraryCard.show()
     this.visibleCard = "home"
@@ -534,7 +543,8 @@ export class MWNPMain extends BaseScriptComponent {
     else if (v === "options") this.optionsCard.hide()
     else if (v === "notes") this.notesCard.hide()
     else if (v === "viewer") this.photoViewer.hide()
-    else if (v === "jobcontrol" || v === "confirm") this.jobPanel.hideAux()
+    else if (v === "jobhome") this.jobPanel.hide()
+    else if (v === "confirm") this.jobPanel.hideAux()
     this.visibleCard = "home"
   }
 
@@ -548,8 +558,8 @@ export class MWNPMain extends BaseScriptComponent {
     } else if (v === "notes") {
       this.notesCard.show(this.notes)
       this.visibleCard = "notes"
-    } else if (v === "jobcontrol") {
-      this.openJobControl()
+    } else if (v === "jobhome") {
+      this.openJobHome()
     } else if (v === "home" || v === "confirm") {
       this.visibleCard = "home"
     } else {
@@ -583,14 +593,18 @@ export class MWNPMain extends BaseScriptComponent {
     const v = this.visibleCard
     this.click()
     if (key === "job") {
-      // The flow card is already showing: the press just pulses it.
-      if (v === this.flowCard) return this.pulseCard(this.flowHost())
-      this.hideOpenCard()
-      this.resumeFlow()
-    } else if (key === "control") {
-      if (v === "jobcontrol") return this.pulseCard(this.jobPanel.sceneObject)
-      this.hideOpenCard()
-      this.openJobControl()
+      if (v === "jobhome") return this.pulseCard(this.jobPanel.sceneObject)
+      const beyondJobCard = this.flowCard === "step" || this.flowCard === "finding" || this.flowCard === "summary"
+      if (!beyondJobCard) {
+        // Before a symptom is reported the Job card is the flow card; if it is already showing, the press just pulses it.
+        if (v === this.flowCard) return this.pulseCard(this.flowHost())
+        this.hideOpenCard()
+        this.resumeFlow()
+      } else {
+        // Mid-job the Job button opens the Job card with its actions (Back to the step, End job, New job).
+        this.hideOpenCard()
+        this.openJobHome()
+      }
     } else if (key === "report") {
       if (v === "report" || v === "summary") return this.pulseCard(this.summaryCard.sceneObject)
       this.hideOpenCard()
@@ -600,11 +614,6 @@ export class MWNPMain extends BaseScriptComponent {
       if (v === "camera") return this.pulseCard(this.cameraCard.sceneObject)
       this.hideOpenCard()
       this.openCameraCard(v)
-    } else if (key === "notes") {
-      if (v === "notes") return this.pulseCard(this.notesCard.sceneObject)
-      this.hideOpenCard()
-      this.notesCard.show(this.notes)
-      this.visibleCard = "notes"
     } else if (key === "options") {
       if (v === "options") return this.pulseCard(this.optionsCard.sceneObject)
       this.hideOpenCard()
@@ -632,18 +641,45 @@ export class MWNPMain extends BaseScriptComponent {
     return !this.jobActive ? "Status: No job" : (this.agent as MWNPAgent).repaired ? "Status: Repaired · not yet ended" : "Status: In progress"
   }
 
-  /** Library > Job control: the job's status with End job / New job. */
-  private openJobControl(): void {
+  /** Library > Job once the job is under way: the Job card with Back to the step / finding / summary, End job and New job. */
+  private openJobHome(): void {
     const nl = this.nl as Netlist
-    this.hideOpenCard()
-    this.jobPanel.showControl("Job: " + nl.data.machine + " " + nl.machineKind(), this.controlStatus(), this.jobActive)
-    this.visibleCard = "jobcontrol"
+    const label = this.flowCard === "finding" ? "Back to the finding" : this.flowCard === "summary" ? "Back to the summary" : "Back to the step"
+    this.jobPanel.showJob("Job: " + nl.data.machine + " " + nl.machineKind(), this.filesLoadedText, this.jobActive, this.controlStatus(), this.jobActive ? label : "")
+    this.visibleCard = "jobhome"
   }
 
-  // ── End job / New job / Notes ─────────────────────────────────────────────
+  private onResumeFlow(): void {
+    this.click()
+    this.hideOpenCard()
+    this.resumeFlow()
+    this.log("job-resume")
+  }
+
+  /** Library chip: bring the Library back, closing whatever card is open (its state is kept). */
+  private onLibraryChip(): void {
+    this.click()
+    this.hideOpenCard() // visibleCard becomes "home", which expands the Library
+    this.log("library-chip")
+  }
+
+  /** "Add note" on the Job report's Notes & pictures tab opens the Notes card. */
+  private onReportAddNote(): void {
+    this.click()
+    this.hideOpenCard()
+    this.notesCard.show(this.notes)
+    this.visibleCard = "notes"
+    this.log("report-add-note")
+  }
+
+  // ── End job / New job ─────────────────────────────────────────────────────
+
+  /** Which Job card End job / New job was pressed on, so No can return to it. */
+  private confirmReturn = "job"
 
   private onJobRequest(kind: string): void {
-    if (this.visibleCard !== "jobcontrol") return
+    if (this.visibleCard !== "job" && this.visibleCard !== "jobhome") return
+    this.confirmReturn = this.visibleCard
     this.click()
     this.hideOpenCard()
     this.jobPanel.showConfirm(
@@ -663,7 +699,11 @@ export class MWNPMain extends BaseScriptComponent {
     this.click()
     this.jobPanel.hideAux()
     if (!yes) {
-      this.openJobControl()
+      if (this.confirmReturn === "jobhome") this.openJobHome()
+      else {
+        this.jobPanel.setVisible(true)
+        this.visibleCard = "job"
+      }
       this.log("confirm-no")
       return
     }
@@ -744,7 +784,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.clearBoard()
     this.jobActive = false
     const nl = this.nl as Netlist
-    this.jobPanel.showJob("Job: " + nl.data.machine + " " + nl.machineKind(), this.filesLoadedText, false)
+    this.jobPanel.showJob("Job: " + nl.data.machine + " " + nl.machineKind(), this.filesLoadedText, false, this.controlStatus())
     this.jobPanel.setVisible(false)
     this.flowCard = "job"
     this.visibleCard = "home"
@@ -921,22 +961,40 @@ export class MWNPMain extends BaseScriptComponent {
    * corner as seen from the user's eye, on the same plane and tilt as the other cards. The menu is a child of the
    * assistant root (outside the UI root), so the main Hide never fades it.
    */
-  private dockLibrary(): void {
-    const camSO = this.findUserCamera()
-    const trainer = this.cabinet.sceneObject
-    if (!camSO) return
-    const cam = camSO.getComponent("Component.Camera") as Camera
+  private placeLeftColumn(): void {
     const half = this.cabinet.getBoardHalfSize()
-    const corner = cam.worldSpaceToScreenSpace(trainer.getTransform().getWorldTransform().multiplyPoint(new vec3(-half.x, half.y, 0)))
-    const ct = camSO.getTransform()
+    const rootInv = this.sceneObject.getTransform().getInvertedWorldTransform()
+    const corner = rootInv.multiplyPoint(this.cabinet.sceneObject.getTransform().getWorldTransform().multiplyPoint(new vec3(-half.x, half.y, 0)))
+    const eye = this.authoredEyePos
+    const cabDist = eye.z - corner.z
     const stepT = this.stepCard.sceneObject.getTransform()
-    const depth = Math.max(10, stepT.getWorldPosition().distance(ct.getWorldPosition()))
-    const tl = cam.screenSpaceToWorldSpace(new vec2(corner.x + this.libraryDock.x, corner.y + this.libraryDock.y), depth)
-    const hostT = this.libraryCard.sceneObject.getTransform()
-    hostT.setWorldRotation(stepT.getWorldRotation())
-    const right = stepT.right
-    const wScale = hostT.getWorldScale().x
-    hostT.setWorldPosition(tl.add(right.uniformScale((this.libraryCard.menuWidth * wScale) / 2)))
+    const libT = this.libraryCard.sceneObject.getTransform()
+    libT.setWorldRotation(stepT.getWorldRotation())
+    const chipRowLocal = this.libraryCard.chipHeight + realToLocal(this.libraryCard.sceneObject, MIN_GAP_CM)
+    // [host, widthCm, isLibrary, keepY]
+    const hosts: [SceneObject, number, boolean, boolean][] = [
+      [this.libraryCard.sceneObject, this.libraryCard.menuWidth, true, false],
+      [this.jobPanel.sceneObject, this.jobPanel.widthCm, false, false],
+      [this.stepCard.sceneObject, this.stepCard.widthCm, false, false],
+      [this.findingCard.sceneObject, this.findingCard.widthCm, false, false],
+      [this.summaryCard.sceneObject, this.summaryCard.widthCm, false, false],
+      [this.cameraCard.sceneObject, this.cameraCard.widthCm, false, false],
+      [this.optionsCard.sceneObject, this.optionsCard.widthCm, false, false],
+      [this.notesCard.sceneObject, this.notesCard.widthCm, false, false],
+      [this.photoViewer.sceneObject, this.photoViewer.widthCm, false, false],
+      [this.schematicPanel.sceneObject, this.schematicPanel.widthCm, false, true],
+    ]
+    for (const [host, widthLocal, isLibrary, keepY] of hosts) {
+      const t = host.getTransform()
+      const lp = t.getLocalPosition()
+      const s = t.getLocalScale().x
+      const k = (eye.z - lp.z) / cabDist // the cabinet's edge, seen from the eye, at this card's distance
+      const edgeX = eye.x + (corner.x - eye.x) * k - this.columnGapCm
+      const topY = eye.y + (corner.y - eye.y) * k
+      // The Library menu (or its chip) is the top row; the open card sits right below it.
+      const y = keepY ? lp.y : isLibrary ? topY : topY - chipRowLocal * s
+      t.setLocalPosition(new vec3(edgeX - (widthLocal * s) / 2, y, lp.z))
+    }
   }
 
   /**
@@ -1458,6 +1516,8 @@ export class MWNPMain extends BaseScriptComponent {
   private updateLibraryButtonPos(): void {
     if (!this.libBtn) return
     const cb = this.cardBodyOf(this.libraryCard.sceneObject)
+    // The Library's Hide button belongs to its menu: it goes away while the menu is collapsed to its chip.
+    this.libBtn.so.enabled = !!cb && this.libraryCard.isMenuVisible
     if (!cb || !cb.plate.size || cb.plate.size.x < 1) return
     this.libBtn.so.getTransform().setLocalPosition(this.headerCornerLocal(cb, 8.0, 3.6))
   }

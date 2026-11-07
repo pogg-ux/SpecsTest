@@ -8,7 +8,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
-import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, cardIs, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 const CARDS = ["LibraryCardCard", "JobCard", "SymptomCard", "JobControlCard", "JobConfirmCard", "StepCardCard", "FindingCardCard", "SummaryCardCard", "CameraCardCard", "OptionsCardCard", "NotesCardCard", "PhotoViewerCardCard"]
 /** Titles and body text that must be pure white (everything else only has to be opaque: amber primary labels, status colors). */
@@ -76,7 +76,7 @@ export class MWNPCardTextScenario extends Scenario {
     }
     const pick = async (button: string, card: string) => {
       await ui.tap(button)
-      await waitFor((s) => s.visibleCard === card, 3000, card)
+      await waitFor((s) => cardIs(s.visibleCard, card), 3000, card)
     }
 
     await ui.startExtendDiagnosis()
@@ -84,7 +84,7 @@ export class MWNPCardTextScenario extends Scenario {
 
     // ── Library -> each card in turn, twice round ──
     for (let round = 0; round < 2; round++) {
-      for (const [b, c] of [["Btn_Lib_Job", "step"], ["Btn_Lib_Control", "jobcontrol"], ["Btn_Lib_Report", "report"], ["Btn_Lib_Camera", "camera"], ["Btn_Lib_Notes", "notes"], ["Btn_Lib_Options", "options"], ["Btn_Lib_Job", "step"]]) {
+      for (const [b, c] of [["Btn_Lib_Job", "step"], ["Btn_Lib_Report", "report"], ["Btn_Lib_Camera", "camera"], ["Btn_Lib_Notes", "notes"], ["Btn_Lib_Options", "options"], ["Btn_Lib_Job", "step"]]) {
         await pick(b, c)
         await audit("Library " + b + " (round " + round + ")", 800)
       }
@@ -119,7 +119,7 @@ export class MWNPCardTextScenario extends Scenario {
     await waitFor((s) => s.visibleCard === "confirm", 3000, "end confirm")
     await audit("End job confirm", 700)
     await ui.tap("Btn_ConfirmNo")
-    await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "No")
+    await waitFor((s) => cardIs(s.visibleCard, "jobcontrol"), 3000, "No")
     await audit("Job control after No", 700)
     await ui.tap("Btn_EndJob")
     await waitFor((s) => s.visibleCard === "confirm", 3000, "end confirm again")
@@ -137,10 +137,8 @@ export class MWNPCardTextScenario extends Scenario {
     // ── New job -> Yes ──
     await pick("Btn_Lib_Control", "jobcontrol")
     await audit("Job control (no job)", 700)
-    await ui.tap("Btn_NewJob")
-    await waitFor((s) => s.visibleCard === "confirm", 3000, "new confirm")
-    await sleep(200)
-    await ui.tap("Btn_ConfirmYes")
+    // No job is in progress, so the Job card offers "Start new job" (nothing to lose: no confirmation).
+    await ui.tap("Btn_StartJob")
     await waitFor((s) => s.visibleCard === "symptoms" && s.jobActive === true, 3000, "symptom list")
     await audit("symptom list after New job")
 
@@ -156,10 +154,7 @@ export class MWNPCardTextScenario extends Scenario {
     await waitFor((s) => s.jobActive === false, 3000, "ended 2")
     await sleep(300)
     await pick("Btn_Lib_Control", "jobcontrol")
-    await ui.tap("Btn_NewJob")
-    await waitFor((s) => s.visibleCard === "confirm", 3000, "new confirm 2")
-    await sleep(200)
-    await ui.tap("Btn_ConfirmYes")
+    await ui.tap("Btn_StartJob") // no job in progress: "Start new job", no confirmation
     await waitFor((s) => s.visibleCard === "symptoms" && s.jobActive === true, 3000, "symptom list 2")
     await audit("symptom list after End -> New")
     await pick("Btn_Lib_Camera", "camera")
@@ -172,6 +167,8 @@ export class MWNPCardTextScenario extends Scenario {
     await audit("Camera again")
     await ui.tap("Btn_CameraClose")
     await sleep(300)
+    // Opening the Library closed the symptom list, so the camera returned home: bring the Job card back.
+    await pick("Btn_Lib_Job", "symptoms")
     await ui.tap("Btn_Symptom_EXTEND")
     await waitFor((s) => s.visibleCard === "step", 3000, "step again")
     await audit("step card of the new job")

@@ -5,7 +5,7 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {ScenarioConfig} from "Leaf.lspkg/Scenarios/scenario/ScenarioConfig"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, cardIs, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 @component
 export class MWNPGalleryScenario extends Scenario {
@@ -47,7 +47,7 @@ export class MWNPGalleryScenario extends Scenario {
       await ui.enterReading("12.1")
       for (const kind of ["EndJob", "NewJob"]) {
         await ui.tap("Btn_Lib_Control")
-        await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "job control")
+        await waitFor((s) => cardIs(s.visibleCard, "jobcontrol"), 3000, "job control")
         await sleep(300)
         await ui.tap("Btn_" + kind)
         await waitFor((s) => s.visibleCard === "confirm", 3000, "confirm")
@@ -145,12 +145,12 @@ export class MWNPGalleryScenario extends Scenario {
     await sleep(1400)
     if (shot === "job-control") {
       await ui.tap("Btn_Lib_Control")
-      await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "job control")
+      await waitFor((s) => cardIs(s.visibleCard, "jobcontrol"), 3000, "job control")
       await sleep(1400)
     }
     if (shot === "complete" || shot === "complete-filed" || shot === "complete-notes") {
       await ui.tap("Btn_Lib_Control")
-      await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "job control")
+      await waitFor((s) => cardIs(s.visibleCard, "jobcontrol"), 3000, "job control")
       await ui.tap("Btn_EndJob")
       await waitFor((s) => s.visibleCard === "confirm", 3000, "confirm")
       await sleep(300)

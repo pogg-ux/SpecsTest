@@ -104,7 +104,7 @@ export class MWNPLayoutScenario extends Scenario {
     await sleep(600) // let the start-pose anchoring (re-run at 0.25 s) settle
     const cam0 = findCamera()
 
-    // Safety notice: fully in view and roughly centered horizontally.
+    // Safety notice: fully in view, in the upper right (the approved position), above the cabinet and clear of it.
     {
       const so = findSceneObjectByName("SafetyNoticeCard")
       expect(!!so && so.isEnabledInHierarchy, "safety notice visible").toBe(true)
@@ -112,7 +112,11 @@ export class MWNPLayoutScenario extends Scenario {
       const r = screenRect(cam0, so, size.x, size.y)
       ev("layout notice", {size: [size.x, size.y], rect: fmt(r)})
       expect(r.x0 >= 0.02 && r.x1 <= 0.98 && r.y0 >= 0.02 && r.y1 <= 0.98, "safety notice inside view " + fmt(r)).toBe(true)
-      expect(Math.abs((r.x0 + r.x1) / 2 - 0.5) < 0.05, "safety notice centered " + fmt(r)).toBe(true)
+      expect((r.x0 + r.x1) / 2 > 0.5, "safety notice is on the right side of the view " + fmt(r)).toBe(true)
+      const trainer0 = findSceneObjectByName("MWNPTrainer")
+      const half0 = (trainer0.getComponent("Component.ScriptComponent") as any).getBoardHalfSize() as vec2
+      const topRight = cam0.worldSpaceToScreenSpace(trainer0.getTransform().getWorldTransform().multiplyPoint(new vec3(half0.x, half0.y, 0)))
+      expect(r.y1 <= topRight.y + 0.005, "safety notice sits above the cabinet's top edge (notice bottom " + r.y1.toFixed(3) + ", cabinet top " + topRight.y.toFixed(3) + ")").toBe(true)
     }
 
     // Start state: every label is idle, so every label is full-brightness pure white (never dimmed), bold, on a plate.

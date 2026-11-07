@@ -9,7 +9,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
-import {MWNPLeafInteractor, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, cardIs, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
 import {checkCard, findCamera, screenRect} from "./MWNPLayoutCardsScenario"
 
 function isEnabled(name: string): boolean {
@@ -51,7 +51,7 @@ export class MWNPWorkflowScenario extends Scenario {
     /** Library destination: tap, wait for the card. */
     const go = async (button: string, card: string) => {
       await ui.tap(button)
-      await waitFor((s) => s.visibleCard === card, 3000, card)
+      await waitFor((s) => cardIs(s.visibleCard, card), 3000, card)
       await sleep(450)
     }
     /** Every control on the card is the first thing a mouse ray reaches (so a click lands on it). */
@@ -69,6 +69,8 @@ export class MWNPWorkflowScenario extends Scenario {
         const sz = (so.getComponent("Component.ScriptComponent") as any).size
         return screenRect(cam, so, sz.x, sz.y)
       }
+      // The Library menu collapses to its chip while a card is open (one card at a time): nothing to overlap then.
+      if (!findSceneObjectByName("LibraryCardCard").isEnabledInHierarchy) return false
       const a = rect("LibraryCardCard")
       const b = rect(cardName)
       return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1
@@ -79,17 +81,21 @@ export class MWNPWorkflowScenario extends Scenario {
       await ui.tap("Btn_DisplayToggle")
       await waitFor((x) => x.display.hidden && !x.display.fading && x.display.alpha === 0, 3000, "hidden")
       check(!isEnabled(cardName), cardName + " hidden by Hide")
-      check(isEnabled("Btn_DisplayToggle") && isEnabled("Btn_LibraryToggle"), "both Hide/Show buttons stay")
+      // The Library's own Hide button belongs to its menu, which is collapsed to a chip while a card is open.
+      check(isEnabled("Btn_DisplayToggle") && (isEnabled("Btn_LibraryToggle") || isEnabled("Btn_LibraryChip")), "the main Hide/Show button and the Library (menu or chip) stay")
       await ui.tap("Btn_DisplayToggle")
       await waitFor((x) => !x.display.hidden && !x.display.fading && x.display.alpha === 1, 3000, "shown")
-      // The step card may be showing as its chip (it shrinks after a reading); that is its state to come back to.
-      const stepAsChip = cardName === "StepCardCard" && isEnabled("Btn_StepChip")
+      // The step card may be showing as its chip (after a reading) or as the Log reading keypad; that is its state to come back to.
+      const stepAsChip = cardName === "StepCardCard" && (isEnabled("Btn_StepChip") || isEnabled("KeypadCardCard"))
       check((isEnabled(cardName) || stepAsChip) && mwnpState().visibleCard === before, cardName + " back after Show")
-      await ui.tap("Btn_LibraryToggle")
-      await waitFor((x) => x.libraryHidden && !x.libraryFading && x.libraryAlpha === 0, 3000, "library hidden")
-      check(isEnabled(cardName), cardName + " unaffected by the Library's Hide")
-      await ui.tap("Btn_LibraryToggle")
-      await waitFor((x) => !x.libraryHidden && !x.libraryFading && x.libraryAlpha === 1, 3000, "library shown")
+      // The Library's own Hide button exists only while its menu is showing (it is a chip while a card is open).
+      if (isEnabled("Btn_LibraryToggle")) {
+        await ui.tap("Btn_LibraryToggle")
+        await waitFor((x) => x.libraryHidden && !x.libraryFading && x.libraryAlpha === 0, 3000, "library hidden")
+        check(isEnabled(cardName), cardName + " unaffected by the Library's Hide")
+        await ui.tap("Btn_LibraryToggle")
+        await waitFor((x) => !x.libraryHidden && !x.libraryFading && x.libraryAlpha === 1, 3000, "library shown")
+      }
     }
     /** Text size Large / Extra large (and Normal again): layout rules hold for this card. */
     const sizes = async (cardName: string) => {
@@ -174,23 +180,23 @@ export class MWNPWorkflowScenario extends Scenario {
     await ui.tap("Btn_PhotoClose")
     await waitFor((s) => s.visibleCard === "camera", 3000, "viewer closes to the camera card")
     await ui.tap("Btn_CameraClose")
-    await waitFor((s) => s.visibleCard === "options", 3000, "camera closes to the card it was opened over (Options)")
+    await waitFor((s) => s.visibleCard === "home", 3000, "camera closes to home (opening the Library closed Options first: one card at a time)")
     await go("Btn_Lib_Job", "step")
     await go("Btn_Lib_Control", "jobcontrol")
-    await audit("JobControlCard")
+    await audit("JobCard")
     await ui.tap("Btn_EndJob")
     await waitFor((s) => s.visibleCard === "confirm", 3000, "end confirm")
     await sleep(450)
     check(isEnabled("Btn_ConfirmYes") && isEnabled("Btn_ConfirmNo"), "the End job confirm has Yes and No")
     await audit("JobConfirmCard")
     await ui.tap("Btn_ConfirmNo")
-    await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "No returns")
+    await waitFor((s) => cardIs(s.visibleCard, "jobcontrol"), 3000, "No returns")
     await ui.tap("Btn_NewJob")
     await waitFor((s) => s.visibleCard === "confirm", 3000, "new confirm")
     await sleep(450)
     check(isEnabled("Btn_ConfirmYes") && isEnabled("Btn_ConfirmNo"), "the New job confirm has Yes and No")
     await ui.tap("Btn_ConfirmNo")
-    await waitFor((s) => s.visibleCard === "jobcontrol", 3000, "No returns again")
+    await waitFor((s) => cardIs(s.visibleCard, "jobcontrol"), 3000, "No returns again")
     check(mwnpState().jobActive && mwnpState().previousJobs.length === 0, "No on both confirms keeps the job and files nothing")
     await go("Btn_Lib_Job", "step")
     check(mwnpState().activePoint === "F1:IN", "the job resumes at F1 IN")
@@ -279,10 +285,8 @@ export class MWNPWorkflowScenario extends Scenario {
 
     // ═══ Job B: New job -> RETRACT ═══
     await go("Btn_Lib_Control", "jobcontrol")
-    await ui.tap("Btn_NewJob")
-    await waitFor((x) => x.visibleCard === "confirm", 3000, "new confirm")
-    await sleep(350)
-    await ui.tap("Btn_ConfirmYes")
+    // No job is in progress, so the Job card offers "Start new job" (nothing to lose: no confirmation).
+    await ui.tap("Btn_StartJob")
     s = await waitFor((x) => x.visibleCard === "symptoms" && x.previousJobs.length === 2, 3000, "symptom list of job B")
     await sleep(500)
     check(s.readings.length === 0 && s.jobActive, "job B starts empty and in progress, at the symptom list")
@@ -318,10 +322,7 @@ export class MWNPWorkflowScenario extends Scenario {
 
     // ═══ Job C: New job -> "Neither works" ═══
     await go("Btn_Lib_Control", "jobcontrol")
-    await ui.tap("Btn_NewJob")
-    await waitFor((x) => x.visibleCard === "confirm", 3000, "new confirm C")
-    await sleep(350)
-    await ui.tap("Btn_ConfirmYes")
+    await ui.tap("Btn_StartJob") // no job in progress: "Start new job", no confirmation
     s = await waitFor((x) => x.visibleCard === "symptoms" && x.previousJobs.length === 3, 3000, "symptom list of job C")
     await ui.tap("Btn_Symptom_Neither")
     await waitFor((x) => x.visibleCard === "step", 3000, "Neither: first step")

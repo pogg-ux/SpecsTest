@@ -31,6 +31,15 @@ export async function waitFor(pred: (s: any) => boolean, timeoutMs: number, what
 
 const KEY_NAMES: {[c: string]: string} = {".": "Key_Dot"}
 
+/**
+ * Whether the visible card is the expected one. "jobcontrol" (the old Job control card, now part of the Job card) matches
+ * the Job card in both of its forms: "job" (before a symptom is reported) and "jobhome" (mid-job).
+ */
+export function cardIs(visible: string, expected: string): boolean {
+  if (expected === "jobcontrol") return visible === "job" || visible === "jobhome"
+  return visible === expected
+}
+
 export class MWNPLeafInteractor extends DefaultLeafInteractor {
   constructor() {
     super("MWNPLeafInteractor")
@@ -65,8 +74,60 @@ export class MWNPLeafInteractor extends DefaultLeafInteractor {
     }
   }
 
+  /**
+   * Library buttons: the menu collapses to its chip while a card is open (one card at a time), so pinch the chip first.
+   * The retired entries map to their new homes: Job control = the Job card (End job / New job are on it), and
+   * Notes = Report > Notes & pictures > Add note.
+   */
+  private async libraryTap(name: string): Promise<boolean> {
+    if (name.indexOf("Btn_Lib_") !== 0) return false
+    const reopen = async () => {
+      const chip = findInteractablesByName("Btn_LibraryChip", undefined, true)[0]
+      if (chip) {
+        await this.trigger(chip)
+        await sleep(300)
+      }
+    }
+    if (name === "Btn_Lib_Notes") {
+      await reopen()
+      await this.tap("Btn_Lib_Report")
+      await sleep(400)
+      await this.tap("Btn_TabNotes")
+      await sleep(300)
+      await this.tap("Btn_ReportAddNote")
+      return true
+    }
+    if (!findInteractablesByName(name, undefined, true)[0]) await reopen()
+    if (name === "Btn_Lib_Control") {
+      // Job control is the Job card now: open it and stay on it (End job / New job are there).
+      const job = findInteractablesByName("Btn_Lib_Job", undefined, true)[0]
+      if (!job) throw new Error('Interactable "Btn_Lib_Job" not found or not enabled')
+      await this.trigger(job)
+      await sleep(350)
+      return true
+    }
+    if (name === "Btn_Lib_Job") {
+      // Mid-job the Job button opens the Job card with "Back to the step / finding / summary": older scenarios mean
+      // "return to the flow card" by it, so press that too.
+      const job = findInteractablesByName("Btn_Lib_Job", undefined, true)[0]
+      if (!job) throw new Error('Interactable "Btn_Lib_Job" not found or not enabled')
+      await this.trigger(job)
+      await sleep(350)
+      const back = findInteractablesByName("Btn_ResumeJob", undefined, true)[0]
+      if (back) {
+        await this.trigger(back)
+        await sleep(250)
+      }
+      return true
+    }
+    return false
+  }
+
   /** Pinch an enabled Interactable by SceneObject name (waits up to 3 s for it to appear). */
   async tap(name: string): Promise<void> {
+    if (await this.libraryTap(name)) return
+    // With no job in progress the Job card offers "Start new job" (no confirmation) where Job control had "New job".
+    if (name === "Btn_NewJob" && !findInteractablesByName(name, undefined, true)[0] && findInteractablesByName("Btn_StartJob", undefined, true)[0]) name = "Btn_StartJob"
     await this.ensureStepUi(name)
     const t0 = getTime()
     let target = findInteractablesByName(name, undefined, true)[0]

@@ -5,7 +5,7 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {MWNPLeafInteractor, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, cardIs, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
 import {checkCard, findCamera} from "./MWNPLayoutCardsScenario"
 
 function isEnabled(name: string): boolean {
@@ -117,7 +117,7 @@ export class MWNPReportPagesScenario extends Scenario {
 
     // ── End job files the whole report (all notes, the picture); it pages the same way, read-only ──
     await ui.tap("Btn_Lib_Control")
-    await waitFor((x) => x.visibleCard === "jobcontrol", 3000, "Job control")
+    await waitFor((x) => cardIs(x.visibleCard, "jobcontrol"), 3000, "Job control")
     await sleep(300)
     await ui.tap("Btn_EndJob")
     await waitFor((x) => x.visibleCard === "confirm", 3000, "end confirm")

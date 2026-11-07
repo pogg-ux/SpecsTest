@@ -64,6 +64,12 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   get onStartJob(): PublicApi<void> {
     return this._onStartJob.publicApi()
   }
+  private jobStatus = ""
+  private jobResume = ""
+  private _onResume = new Event<void>()
+  get onResume(): PublicApi<void> {
+    return this._onResume.publicApi()
+  }
   private _onReportSymptom = new Event<void>()
   private _onSymptomPicked = new Event<number>()
   get onReportSymptom(): PublicApi<void> {
@@ -77,9 +83,16 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
   }
 
-  showJob(jobLine: string, filesLine: string, hasJob: boolean = true): void {
+  /**
+   * The Job card: job line, files, status, and the job's actions — Report symptom (or, once the job is under way,
+   * `resumeLabel` = "Back to the step" etc.), End job and New job (the former Job control), or Start new job when no job
+   * is in progress.
+   */
+  showJob(jobLine: string, filesLine: string, hasJob: boolean = true, status: string = "", resumeLabel: string = ""): void {
     this.clear()
     this.jobArgs = [jobLine, filesLine]
+    this.jobStatus = status
+    this.jobResume = resumeLabel
     this.hasJob = hasJob
     const w = this.widthCm
     const inner = w - 2.8
@@ -89,8 +102,13 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
     addCardHeader(card.content, "JobHeader", "Job", inner, this.sceneObject)
     addFitText(card.content, "JobTitle", jobLine, inner, em, {bold: true})
     addFitText(card.content, "FilesLoaded", filesLine, inner, em, {color: TEXT_SOFT})
-    if (hasJob) addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em, primary: true})
-    else {
+    if (status) addFitText(card.content, "JobStatus", status, inner, em, {color: hasJob ? COLOR.amber : TEXT_BODY, bold: true})
+    if (hasJob) {
+      if (resumeLabel) addButton(card.content, "Btn_ResumeJob", resumeLabel, inner - 4, 3.6, () => this._onResume.invoke(), {emCm: em, primary: true})
+      else addButton(card.content, "Btn_ReportSymptom", this.reportLabel, inner - 4, 3.6, () => this._onReportSymptom.invoke(), {emCm: em, primary: true})
+      addButton(card.content, "Btn_EndJob", "End job", inner - 4, 3.6, () => this._onEndRequest.invoke(), {emCm: em})
+      addButton(card.content, "Btn_NewJob", "New job", inner - 4, 3.6, () => this._onNewRequest.invoke(), {emCm: em})
+    } else {
       addFitText(card.content, "NoJobText", "No job in progress.", inner, em, {bold: true})
       addButton(card.content, "Btn_StartJob", "Start new job", inner - 4, 3.6, () => this._onStartJob.invoke(), {emCm: em, primary: true})
     }
@@ -173,7 +191,7 @@ export class MWNPJobPanelUI extends BaseScriptComponent {
   rebuild(): void {
     if (!this.body) return
     const vis = this.body.enabled
-    if (this.currentView === "job") this.showJob(this.jobArgs[0], this.jobArgs[1], this.hasJob)
+    if (this.currentView === "job") this.showJob(this.jobArgs[0], this.jobArgs[1], this.hasJob, this.jobStatus, this.jobResume)
     else if (this.currentView === "symptoms") this.showSymptoms(this.symptomItems)
     if (this.body) (this.body as SceneObject).enabled = vis
   }

@@ -45,9 +45,9 @@ import {
 
 /** Keypad keys on the Log reading card (real cm): large, between the guideline's "best" (3.9) and minimum (2.6). */
 const KEYPAD_KEY_CM = 3.5
-/** The collapsed chip: width (real cm) and where it sits relative to the step card's host (card units): upper right, above the cabinet. */
+/** The collapsed chip: width (real cm) and where it sits relative to the step card host (card units): the card's own top row in the left column. */
 const CHIP_WIDTH_CM = 9.5
-const CHIP_OFFSET = new vec3(4.0, 11.5, 0.6)
+const CHIP_OFFSET = new vec3(0, -2.4, 0.6)
 
 export interface SwitchPick {
   component: string
@@ -489,6 +489,6 @@ export class MWNPStepCardUI extends BaseScriptComponent {
     const h = Math.max(this.btnEmLocal * LINE_H + 1.6, realToLocal(host, MIN_TARGET_CM))
     const w = Math.max(16, realToLocal(host, CHIP_WIDTH_CM))
     this.chip = addButton(host, "Btn_StepChip", this.chipLabel(), w, h, () => this._onChip.invoke(), {emCm: this.btnEmLocal, bold: true, primary: true, inFlex: false})
-    this.chip.so.getTransform().setLocalPosition(CHIP_OFFSET)
+    this.chip.so.getTransform().setLocalPosition(new vec3(CHIP_OFFSET.x, -h / 2, CHIP_OFFSET.z))
   }
 }

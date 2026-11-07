@@ -142,6 +142,10 @@ export class MWNPSummaryUI extends BaseScriptComponent {
   private exportInner = 0
   exportNoteText = ""
   private whiteTex: Texture | null = null
+  private _onAddNote = new Event<void>()
+  get onAddNote(): PublicApi<void> {
+    return this._onAddNote.publicApi()
+  }
   private _onSave = new Event<void>()
   private _onPrevious = new Event<number>()
   private _onBack = new Event<void>()
@@ -221,6 +225,10 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     const lh = em * LINE_H
     if (this.tab === "notes") {
       const notes = d.notes || []
+      // Notes live here: "Add note" opens the Notes card (not offered while viewing a previous job's read-only report).
+      if (!d.backToCurrent) {
+        out.push({h: this.buttonH("Add note", inner - 4, em), build: (c) => addButton(c, "Btn_ReportAddNote", "Add note", inner - 4, 3.6, () => this._onAddNote.invoke(), {emCm: em, primary: true})})
+      }
       out.push({h: this.textH("Notes (" + notes.length + ")", inner, em, true), keepNext: true, build: (c) => addFitText(c, "NotesHeading", "Notes (" + notes.length + ")", inner, em, {bold: true})})
       if (notes.length === 0) out.push({h: this.textH("No notes yet.", inner, em), build: (c) => addFitText(c, "NoteEmpty", "No notes yet.", inner, em, {color: TEXT_SOFT})})
       notes.forEach((n, i) => {

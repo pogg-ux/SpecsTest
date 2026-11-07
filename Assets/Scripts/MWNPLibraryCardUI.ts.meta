@@ -45,7 +45,7 @@
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Library – docked menu: Job, Job report, Camera, Options</span>"}'
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MWNP Library – docked menu: Job, Report, Camera, Options</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float widthCm = 17 {"hint":"Menu width in card units (cm before scaling)", "widget":"slider", "min":10, "max":24, "step":0.5}'

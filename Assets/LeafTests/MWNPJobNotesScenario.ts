@@ -7,7 +7,7 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {MWNPLeafInteractor, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, cardIs, ev, mwnpState, rayReaches, waitFor} from "./MWNPLeafInteractor"
 import {checkCard, findCamera} from "./MWNPLayoutCardsScenario"
 
 function isEnabled(name: string): boolean {
@@ -40,7 +40,7 @@ export class MWNPJobNotesScenario extends Scenario {
     }
     const pick = async (button: string, card: string) => {
       await ui.tap(button)
-      await waitFor((s) => s.visibleCard === card, 3000, card)
+      await waitFor((s) => cardIs(s.visibleCard, card), 3000, card)
       await sleep(400)
     }
 
@@ -49,7 +49,7 @@ export class MWNPJobNotesScenario extends Scenario {
     await ui.tap("Btn_DismissSafety")
     await waitFor((s) => s.visibleCard === "home", 3000, "library menu")
     await sleep(500)
-    await reach("Btn_Lib_Job", "Btn_Lib_Control", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Notes", "Btn_Lib_Options")
+    await reach("Btn_Lib_Job", "Btn_Lib_Report", "Btn_Lib_Camera", "Btn_Lib_Options")
     checkCard(cam, "LibraryCardCard")
 
     // ── The Job card no longer carries End job / New job (they live on Job control) ──
@@ -123,7 +123,7 @@ export class MWNPJobNotesScenario extends Scenario {
     checkCard(cam, "JobConfirmCard")
     await reach("Btn_ConfirmYes", "Btn_ConfirmNo")
     await ui.tap("Btn_ConfirmNo")
-    s = await waitFor((x) => x.visibleCard === "jobcontrol", 3000, "No returns to Job control")
+    s = await waitFor((x) => cardIs(x.visibleCard, "jobcontrol"), 3000, "No returns to Job control")
     expect(s.jobActive, "No does not end the job").toBe(true)
     expect(s.previousJobs.length, "nothing filed").toBe(0)
     const readingsBefore = s.readings.length
@@ -206,7 +206,7 @@ export class MWNPJobNotesScenario extends Scenario {
     await waitFor((x) => x.visibleCard === "confirm", 3000, "new job confirm (in progress)")
     await sleep(300)
     await ui.tap("Btn_ConfirmNo")
-    s = await waitFor((x) => x.visibleCard === "jobcontrol", 3000, "No returns")
+    s = await waitFor((x) => cardIs(x.visibleCard, "jobcontrol"), 3000, "No returns")
     expect(s.previousJobs.length === 1 && s.readings.length === 1, "No keeps the job").toBe(true)
     await ui.tap("Btn_NewJob")
     await waitFor((x) => x.visibleCard === "confirm", 3000, "new job confirm again")
