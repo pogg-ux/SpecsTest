@@ -14,6 +14,8 @@ const micIcon = requireAsset("../Icons/mic.png") as Texture
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
 
 const DEDUP_SEC = 2.0
+/** Seconds without a change before new words count as a new utterance (the old one never got a final). */
+const NEW_UTTERANCE_SEC = 3.0
 const SETTLE_SEC = 1.0 // a command with an argument acts when its text has not changed for this long (or on the final)
 const HEARD_SEC = 2.0
 const MESSAGE_SEC = 4.0
@@ -205,6 +207,13 @@ export class SparkyVoice extends BaseScriptComponent {
   private onTranscript(text: string, isFinal: boolean): void {
     if (this.asrPaused) return // a clip is playing: Sparky must not hear itself
     const now = getTime()
+    // A new utterance that follows one with no final (ASR restarted, a session replaced) must not inherit its "already handled" count,
+    // or its first command is skipped ("Sparky, retest" worked, then "Sparky, show card" was swallowed).
+    if (this.lastText !== "" && now - this.lastChangeT > NEW_UTTERANCE_SEC) {
+      this.handled = 0
+      this.lastText = ""
+      this.lastSegs = []
+    }
     const segs = wakeSegments(text)
     if (segs.length > 0) this.log((isFinal ? "final: " : "partial: ") + '"' + text + '"')
     else if (isFinal && text.trim().length > 0) {
@@ -213,6 +222,15 @@ export class SparkyVoice extends BaseScriptComponent {
       const shown = text.trim().length > 34 ? text.trim().substring(0, 34) + "..." : text.trim()
       this.heardText = 'Heard: "' + shown + '" (start with Sparky)'
       this.heardUntil = now + HEARD_SEC
+    }
+    // Words already acted on were replaced by different words (not just extended or re-spelled): a new utterance, so start counting again.
+    for (let i = 0; i < this.handled && i < this.lastSegs.length; i++) {
+      const was = this.lastSegs[i]
+      const now2 = segs[i] === undefined ? "" : segs[i]
+      if (!(now2.indexOf(was) === 0 || was.indexOf(now2) === 0)) {
+        this.handled = 0
+        break
+      }
     }
     if (text !== this.lastText) {
       this.lastText = text
@@ -294,6 +312,7 @@ export class SparkyVoice extends BaseScriptComponent {
   }
 
   private pauseAsr(): void {
+    this.log("ASR paused for clips (session " + this.sessionId + " stopped)")
     this.asrPaused = true
     this.sessionId++ // whatever the stopping session still says is stale
     this.listening = false
@@ -312,6 +331,7 @@ export class SparkyVoice extends BaseScriptComponent {
 
   private resumeAsr(): void {
     this.asrPaused = false
+    this.log("ASR resuming after clips")
     this.startAsr()
   }
 

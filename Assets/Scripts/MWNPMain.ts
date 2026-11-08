@@ -646,6 +646,12 @@ export class MWNPMain extends BaseScriptComponent {
       this.voiceClips.push("dismiss_safety")
       return "Dismiss the safety notice first"
     }
+    // Hidden display: the commands that act on a card show the display first, so the tech never gets stuck. "show" / "hide" /
+    // "close" / "dismiss" deal with it themselves.
+    if (this.displayHidden && ["hide_display", "show_display", "close", "dismiss"].indexOf(name) < 0) {
+      this.setDisplayHidden(false)
+      this.log("voice auto-show for " + name)
+    }
     const steps = this.jobActive && agent.phase === "steps"
     switch (name) {
       case "next":
@@ -770,6 +776,14 @@ export class MWNPMain extends BaseScriptComponent {
         }
         if (this.visibleCard === "notes" && this.notesCard.cancel()) return "Cancelled"
         return "Nothing to cancel"
+      case "s1_up":
+      case "s1_down": {
+        const pos = name === "s1_up" ? "UP" : "DOWN"
+        const s1c = nl.component("S1")
+        if (!s1c || !s1c.terminals || s1c.terminals.indexOf(pos) < 0) return "No S1 switch"
+        this.onSwitchPicked("S1", pos)
+        return "S1 " + pos
+      }
       case "hide_display":
         this.setDisplayHidden(true)
         return "Cards hidden"

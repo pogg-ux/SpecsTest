@@ -5,7 +5,7 @@
 // Must not: act on anything (SparkyVoice dispatches, Main performs).
 
 export interface VoiceCommand {
-  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" | "dismiss" | "symptom" | "retest" | "new_job" | "yes" | "no" | "not_yet" | "more" | "less" | "cancel" | "hide_display" | "show_display" | "open_job" | "open_options" | "fixed" | "not_fixed" | "end_job" */
+  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" | "dismiss" | "symptom" | "retest" | "new_job" | "yes" | "no" | "not_yet" | "more" | "less" | "cancel" | "s1_up" | "s1_down" | "hide_display" | "show_display" | "open_job" | "open_options" | "fixed" | "not_fixed" | "end_job" */
   name: string
   /** "log": the number as typed on the pad ("12.0"); "highlight": the spoken wire id words ("three b"). */
   arg: string
@@ -100,13 +100,15 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^undo( that| last)?$/.test(t)) return done("undo")
   if (/^close( it| this)?$/.test(t)) return done("close")
   if (/^(show|open) (the )?schematic$/.test(t)) return done("show_schematic")
-  if (/^open (the )?library$/.test(t)) return done("open_library")
-  if (/^open (the )?report$/.test(t)) return done("open_report")
-  if (/^open (the )?camera$/.test(t)) return done("open_camera")
+  if (/^((show|open) (the )?)?library$/.test(t)) return done("open_library")
+  if (/^((show|open) (the )?)?report$/.test(t)) return done("open_report")
+  if (/^((show|open) (the )?)?camera$/.test(t)) return done("open_camera")
   if (/^hide( card| cards| display)?$/.test(t)) return done("hide_display")
   if (/^show( card| cards| display)?$/.test(t)) return done("show_display")
-  if (/^open (the )?job$/.test(t)) return done("open_job")
-  if (/^open (the )?options$/.test(t)) return done("open_options")
+  if (/^((show|open) (the )?)?job$/.test(t)) return done("open_job")
+  if (/^((show|open) (the )?)?options$/.test(t)) return done("open_options")
+  const s1 = /^(?:s ?1|s one|as one|is one|ess one|switch|the switch) (up|down)$/.exec(t)
+  if (s1) return done("s1_" + s1[1])
   if (/^(fixed|it is fixed|yes fixed|problem solved)$/.test(t)) return done("fixed")
   if (/^(not fixed|still faulty|no not fixed)$/.test(t)) return done("not_fixed")
   if (/^end job$/.test(t)) return done("end_job")
