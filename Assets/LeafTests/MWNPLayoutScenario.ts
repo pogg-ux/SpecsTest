@@ -298,7 +298,10 @@ export class MWNPLayoutScenario extends Scenario {
         if (w.name.indexOf("Wire_2b_") === 0 && w.getChildrenCount() > 0) wireSeg = w.getChild(0).getComponent("Component.RenderMeshVisual") as RenderMeshVisual
       }
       const wc = (wireSeg as RenderMeshVisual).mainMaterial.mainPass.baseColor
-      expect(wc.x >= 0.25 && wc.x <= 0.35 && wc.y <= 0.08, "supply wires are red at 30% (dimmed, not the current step's wire): " + colorStr(wc)).toBe(true)
+      // Dimmed body opacity: 30% (the original rule), or the cabinet's wireBodyAlpha with the realistic look (round wires, default 70%).
+      const cabScript = trainer0.getComponent("Component.ScriptComponent") as any
+      const bodyAlpha = cabScript && cabScript.realisticLook && cabScript.vertexMaterial ? cabScript.wireBodyAlpha : 0.3
+      expect(Math.abs(wc.x - bodyAlpha) < 0.04 && Math.abs(wc.y - 0.16 * bodyAlpha) < 0.03, "supply wires are red at " + Math.round(bodyAlpha * 100) + "% (dimmed, not the current step's wire): " + colorStr(wc)).toBe(true)
       const plate = findSceneObjectByName("StepCardCard").getComponent("Component.ScriptComponent") as any
       const fillA = plate && plate.roundedRectangle ? plate.roundedRectangle.backgroundColor.w : 0
       ev("layout colors", {traceThicknessCm: tcomp.traceThicknessCm, traceColor: colorStr(tc), wireColor: colorStr(wc), cardFillAlpha: +fillA.toFixed(2)})

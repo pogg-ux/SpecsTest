@@ -20564,6 +20564,7 @@
   Enabled: true
   ScriptAsset: !<reference> f22136c7-fc5f-4dfc-92c6-dfa9f6afd6c3
   ScriptInputsDefault:
+    realisticLook: true
     wireThicknessCm: true
     leverAngleDeg: true
     debugColliders: true
@@ -20574,6 +20575,8 @@
       boxMesh: !<reference.RenderMesh> 2fa981b6-96ff-43ab-a2ce-4e7c41d0f824
       sphereMesh: !<reference.RenderMesh> c2370efe-1049-4e5a-b319-38824da99150
       baseMaterial: !<reference.Material> 8ffb4432-aeba-410e-8289-dfbfbfaddd99
+      vertexMaterial: !<reference.Material> 70d03593-c7b4-410a-ae5c-75cb82ee32dc
+      realisticLook: true
       wireThicknessCm: 0.300000
       traceThicknessCm: 0.750000
       leverAngleDeg: !<float> 35.000000
