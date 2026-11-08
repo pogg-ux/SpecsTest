@@ -1,3 +1,3 @@
-Done: branch sparky-voice created from main b6af914; ASR spike results known (works in Preview; partials ~1 Hz, finals 0.6-2.0 s after the phrase is complete; camera frames keep flowing); read MWNPAgent.
-In progress: designing the command layer (Agent stepForward/stepBack + snapshot/restore for undo, Main.voiceCommand dispatcher).
-Next step: add the Agent methods, then Main.voiceCommand, then Assets/Scripts/SparkyVoice.ts (wake word, partial-first parsing, 2 s dedup, indicator, typed-text hook), then the LEAF scenario, README/Devpost text; clips stretch only after core commands pass.
+Done: command layer (MWNPSpeech.ts parsers/numbers/wire ids; Agent stepForward/stepBack/snapshot/restore; Main.voiceCommand with next/back/repeat/log/undo/show schematic/close/open library|report|camera/highlight wire); mic icon imported; compiles.
+In progress: Assets/Scripts/SparkyVoice.ts (ASR session, wake word, partial-first with 2 s dedup, listening indicator, typed-text inject hook) and attaching it to a SparkyVoice scene object.
+Next step: LEAF scenario mwnp-sparky-voice (inject next/back/repeat/log/undo), run c1-c5 + new scenario, README/Devpost text, merge to main only if core commands pass; then the audio-clip stretch (Assets/Audio/Sparky, list of clip lines for ElevenLabs).

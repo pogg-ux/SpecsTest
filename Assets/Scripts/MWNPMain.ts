@@ -15,7 +15,8 @@
 // (see each UI module header).
 
 import {Netlist} from "./MWNPNetlist"
-import {MWNPAgent} from "./MWNPAgent"
+import {AgentSnapshot, MWNPAgent} from "./MWNPAgent"
+import {resolveWire} from "./MWNPSpeech"
 import {MWNPCabinet} from "./MWNPCabinet"
 import {MWNPPartTagsUI} from "./MWNPPartTagsUI"
 import {MWNPSafetyNoticeUI} from "./MWNPSafetyNoticeUI"
@@ -52,6 +53,18 @@ function clock(): string {
   return two(d.getHours()) + ":" + two(d.getMinutes()) + ":" + two(d.getSeconds())
 }
 
+
+/** What undo needs to put the last reading back: the agent's state plus the visuals and notes that reading changed. */
+interface UndoState {
+  agent: AgentSnapshot
+  outlines: {[id: string]: string}
+  badges: string[]
+  notesLen: number
+  lastMessage: string
+  lastResultColor: string
+  resultText: string
+  resultColor: string
+}
 
 /** Real cm kept between the display area's edge and the card column; chip widths (real cm) for left-aligning the chips with it. */
 const FRAME_MARGIN_CM = 1.0
@@ -392,6 +405,8 @@ export class MWNPMain extends BaseScriptComponent {
     const agent = this.agent as MWNPAgent
     this.click()
     agent.pickSymptom(i)
+    this.highlightIdx = -1
+    this.lastUndo = null
     this.addNote("Agent", "Symptom reported: " + nl.symptomLabel(i) + ".")
     this.jobPanel.hide()
 
@@ -440,7 +455,12 @@ export class MWNPMain extends BaseScriptComponent {
       return
     }
     const pointId = agent.activePoint()
+    const undoSnap = this.captureUndo()
     const res = agent.enter(clock())
+    if (res.accepted) {
+      this.lastUndo = undoSnap // voice "undo" puts this reading back
+      this.highlightIdx = -1
+    }
     if (!res.accepted || !res.cls) {
       this.click()
       // Enter with nothing typed: say what to do instead of doing nothing.
@@ -502,6 +522,179 @@ export class MWNPMain extends BaseScriptComponent {
     if (this.schematicPanel.isOpen) this.stepCard.collapse()
     else this.stepCard.expand()
     this.log("schematic " + (this.schematicPanel.isOpen ? "open" : "closed"))
+  }
+
+  // ── Voice (Sparky) ────────────────────────────────────────────────────────
+
+  /** Where SparkyVoice puts its listening indicator (root-local), set by placeChips: right of the Library chip. */
+  voiceIndicatorPos: vec3 = new vec3(0, 20, -56)
+  private lastUndo: UndoState | null = null
+  /** A wire the tech asked to highlight by voice (netlist index), -1 = follow the current step's wire. */
+  private highlightIdx = -1
+
+  private captureUndo(): UndoState {
+    const agent = this.agent as MWNPAgent
+    const outlines: {[id: string]: string} = {}
+    for (const id of Object.keys(this.cabinet.outlineStates)) outlines[id] = this.cabinet.outlineStates[id]
+    return {
+      agent: agent.snapshot(),
+      outlines,
+      badges: this.partTags.getBadgeIds(),
+      notesLen: this.notes.length,
+      lastMessage: this.lastMessage,
+      lastResultColor: this.lastResultColor,
+      resultText: this.stepCard.resultText,
+      resultColor: this.stepCard.resultColorWord,
+    }
+  }
+
+  /** Brings the current step back on screen and fresh: card mode, schematic closed, texts and cabinet visuals refreshed. */
+  private showStepAgain(): void {
+    if (this.visibleCard !== "step") {
+      this.hideOpenCard()
+      this.resumeFlow()
+    }
+    if (this.schematicPanel.isOpen) this.schematicPanel.close()
+    this.stepCard.show()
+    this.refreshStep()
+    this.applyTrace()
+  }
+
+  private undoLastReading(): string {
+    const agent = this.agent as MWNPAgent
+    const u = this.lastUndo
+    if (!u) return "Nothing to undo"
+    const ph = agent.phase
+    const valid = (ph === "steps" || ph === "finding" || ph === "retest") && agent.readings.length === u.agent.readingsLen + 1
+    this.lastUndo = null
+    if (!valid) return "Can't undo that one"
+    agent.restore(u.agent)
+    this.cabinet.clearOutlines()
+    for (const id of Object.keys(u.outlines)) this.cabinet.setOutline(id, u.outlines[id])
+    for (const id of this.partTags.getBadgeIds()) if (u.badges.indexOf(id) < 0) this.partTags.removeBadge(id)
+    const added = this.notes.length - u.notesLen
+    if (added > 0) this.notes.splice(0, added) // notes are newest first
+    this.notesCard.setNotes(this.notes)
+    this.lastMessage = u.lastMessage
+    this.lastResultColor = u.lastResultColor
+    this.highlightIdx = -1
+    if (this.visibleCard === "finding") {
+      this.findingCard.hide()
+      this.visibleCard = "step"
+    } else if (this.visibleCard !== "step") {
+      this.hideOpenCard()
+    }
+    this.partTags.hideExpected()
+    this.stepCard.show()
+    this.visibleCard = "step"
+    this.stepCard.setResult(u.resultText, u.resultColor)
+    this.stepCard.setReadout("— V")
+    this.applyTrace()
+    this.refreshStep()
+    this.log("undo")
+    return "Undone"
+  }
+
+  /** "Sparky, log <number>": types the number on the pad's behalf and presses Enter, exactly as the buttons do. */
+  private voiceLog(value: string): string {
+    const agent = this.agent as MWNPAgent
+    if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "Nothing to log right now"
+    if (agent.phase === "retest_wait") return "Flip the switch first"
+    if (this.visibleCard !== "step") {
+      this.hideOpenCard()
+      this.resumeFlow()
+    }
+    const before = agent.readings.length
+    agent.entry = ""
+    for (let i = 0; i < value.length; i++) agent.key(value.charAt(i))
+    this.onEnter()
+    if (agent.readings.length === before) return "Couldn't log " + value
+    return "Logged " + value + " V. Say 'undo' to remove."
+  }
+
+  /**
+   * Runs one Sparky command and returns the line to show ("Logged 12.0 V. Say 'undo' to remove."). Every command maps to an
+   * action the buttons already have; nothing here decides anything the agent would not.
+   */
+  voiceCommand(name: string, arg: string = ""): string {
+    const agent = this.agent as MWNPAgent | null
+    const nl = this.nl as Netlist | null
+    if (!agent || !nl || !this.initialized) return "Not ready"
+    if (this.visibleCard === "safety") return "Dismiss the safety notice first"
+    const steps = this.jobActive && agent.phase === "steps"
+    switch (name) {
+      case "next":
+      case "back": {
+        if (!steps) return "No step to move to"
+        if (!(name === "next" ? agent.stepForward() : agent.stepBack())) return name === "next" ? "Already on the last step" : "Already on the first step"
+        this.highlightIdx = -1
+        this.showStepAgain()
+        this.log("voice " + name)
+        return "Step " + (agent.stepIndex + 1) + " of " + agent.steps.length
+      }
+      case "repeat": {
+        if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "Nothing to repeat"
+        this.highlightIdx = -1
+        this.showStepAgain()
+        this.log("voice repeat")
+        return "Repeating the step"
+      }
+      case "log":
+        return this.voiceLog(arg)
+      case "undo":
+        return this.undoLastReading()
+      case "show_schematic": {
+        if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "The schematic is for a step"
+        if (this.schematicPanel.isOpen) return "The schematic is open"
+        if (this.visibleCard !== "step") {
+          this.hideOpenCard()
+          this.resumeFlow()
+        }
+        this.onSchematic()
+        return "Schematic"
+      }
+      case "close": {
+        if (this.schematicPanel.isOpen) {
+          this.onSchematic()
+          return "Closed the schematic"
+        }
+        if (this.stepCard.isKeypadOpen) {
+          this.stepCard.closeKeypad()
+          return "Closed the keypad"
+        }
+        if (this.visibleCard !== "home") {
+          this.hideOpenCard()
+          return "Closed"
+        }
+        return "Nothing to close"
+      }
+      case "open_library":
+        if (this.visibleCard === "home") return "The Library is open"
+        this.onLibraryChip()
+        return "Library"
+      case "open_report":
+        this.onLibraryPick("report")
+        return "Report"
+      case "open_camera":
+        this.onLibraryPick("camera")
+        return "Camera"
+      case "highlight": {
+        const ids: string[] = []
+        nl.data.wires.forEach((w) => {
+          if (ids.indexOf(w.id) < 0) ids.push(w.id)
+        })
+        const r = resolveWire(arg, ids)
+        if (!r.id) return "Which wire?"
+        const idx = nl.wireIndicesById(r.id)[0]
+        if (idx === undefined) return "Which wire?"
+        this.highlightIdx = idx
+        this.applyTrace()
+        if (this.schematicPanel.isOpen) this.schematicPanel.highlight(r.id)
+        this.log("voice highlight " + r.id)
+        return "Highlighting wire " + r.id
+      }
+    }
+    return "Didn't understand"
   }
 
   // ── Camera card ───────────────────────────────────────────────────────────
@@ -769,6 +962,8 @@ export class MWNPMain extends BaseScriptComponent {
     this.agent = new MWNPAgent(nl)
     const agent = this.agent as MWNPAgent
     agent.dismissNotice()
+    this.highlightIdx = -1
+    this.lastUndo = null
     this.cabinet.clearOutlines()
     this.cabinet.setFocusWire(-1)
     this.cabinet.hideTraces()
@@ -1003,6 +1198,7 @@ export class MWNPMain extends BaseScriptComponent {
     const gap = MIN_GAP_CM
     // Left-aligned with the card column, at the top of the display area.
     const leftX = eye.x - this.viewTanH * dist + FRAME_MARGIN_CM
+    this.voiceIndicatorPos = new vec3(leftX + LIBRARY_CHIP_CM + 1.2, yTop - chipH / 2, lp.z + 0.6 * s)
     this.libraryCard.setChipOffset(toHost(libHost, new vec3(leftX + LIBRARY_CHIP_CM / 2, yTop - chipH / 2, lp.z + 0.6 * s)))
     this.stepCard.setChipOffset(toHost(stepHost, new vec3(leftX + STEP_CHIP_CM / 2, yTop - chipH - gap - chipH / 2, lp.z + 0.6 * s)))
   }
@@ -1835,6 +2031,7 @@ export class MWNPMain extends BaseScriptComponent {
 
   /** Netlist index of the wire the current step measures (into the active point, else out of it); -1 if none. */
   private currentWireIndex(): number {
+    if (this.highlightIdx >= 0) return this.highlightIdx // a wire asked for by voice
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
     const p = agent.activePoint() || agent.retestPointId

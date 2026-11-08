@@ -340,6 +340,17 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
   }
   private popEvent: SceneEvent | null = null
 
+  /** Point ids that currently have a badge showing (for undo). */
+  getBadgeIds(): string[] {
+    return Object.keys(this.badges).filter((k) => this.badges[k].so.enabled)
+  }
+
+  /** Removes one point's badge (undo of that reading). */
+  removeBadge(pointId: string): void {
+    if (this.badges[pointId]) this.badges[pointId].so.enabled = false
+    delete this.badgeTexts[pointId]
+  }
+
   clearBadges(): void {
     for (const k of Object.keys(this.badges)) this.badges[k].so.enabled = false
     this.badgeTexts = {}
