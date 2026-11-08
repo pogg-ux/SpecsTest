@@ -1,3 +1,3 @@
-Done: Sparky core commands complete and tested (scenario mwnp-sparky-voice PASSES: wake word, next/back, partial-first + 2 s dedup, repeat, log, undo, show schematic, close, open library/report/camera, highlight wire); c1-c5 + camera-card pass; README/Devpost/design-brief updated.
-In progress: final commit of the core, then merge sparky-voice into main.
-Next step: audio-clip stretch on a follow-up commit: Assets/Audio/Sparky, SparkyClips player (AudioComponent; stop ASR while a clip plays, restart after; missing clip = silent skip), clip list for ElevenLabs.
+Done: Sparky core commands merged to main (d0e104a); mwnp-sparky-voice, c1-c5, camera-card pass.
+In progress: audio-clip stretch on branch sparky-voice (SparkyVoice plays named clips from an AudioTrackAsset list; stops ASR during a clip; missing clip = silent skip).
+Next step: Main.voiceClips per command, clip queue + ASR pause/resume in SparkyVoice, scenario checks, devpost/SPARKY_CLIPS.md (exact filenames + lines for ElevenLabs), then commit.
