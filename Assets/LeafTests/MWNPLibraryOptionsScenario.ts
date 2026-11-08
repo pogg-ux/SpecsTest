@@ -324,7 +324,7 @@ export class MWNPLibraryOptionsScenario extends Scenario {
     expect(labelOf("Opt_Labels"), "labels toggle text").toBe("Labels: Always on")
     expect(mwnpState().options.labels).toBe("Always on")
     await ui.tap("Opt_Labels")
-    expect(labelOf("Opt_Labels")).toBe("Labels: This step only")
+    expect(labelOf("Opt_Labels")).toBe("Labels: On request")
     await ui.tap("Opt_HideButton")
     expect(labelOf("Opt_HideButton"), "hide button toggle text").toBe("Hide button: Everything")
     expect(mwnpState().options.hideButton).toBe("Everything")

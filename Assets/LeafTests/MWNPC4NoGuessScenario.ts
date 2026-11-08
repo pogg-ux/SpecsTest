@@ -53,7 +53,7 @@ export class MWNPC4NoGuessScenario extends Scenario {
     // Re-entry still works at the same point (sanity: no lockup after amber).
     expect(s.entry, "entry cleared after Enter").toBe("")
 
-    // TS-3 spare: no tolerance defined. "Labels: This step only" hides tags that are not part of the step, so show them all first.
+    // TS-3 spare: no tolerance defined. "Labels: On request" hides tags that are not part of the step, so show them all first.
     ;(global as any).mwnpAssistant.optionsCard.set("labels", 1) // "Always on"
     await sleep(400) // the labels refresh each frame
     await ui.tap("Tag_TS-3")

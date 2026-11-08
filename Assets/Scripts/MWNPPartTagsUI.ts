@@ -336,8 +336,8 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
   }
 
   /**
-   * Label focus ("Labels: This step only"): only the tags in `tagIds` and the wire label named `wireName` show; every
-   * other tag and wire label hides. `null` shows them all (start screen, "Always on").
+   * Label focus ("Labels: On request" while shown): only the tags in `tagIds` and the wire label named `wireName` show; every
+   * other tag and wire label hides. `null` shows them all (no step yet, "Always on").
    */
   setLabelFocus(tagIds: string[] | null, wireName: string | null): void {
     for (const id of Object.keys(this.tags)) {
@@ -348,6 +348,18 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     }
     for (const name of Object.keys(this.wireLabelSOs)) this.wireLabelSOs[name].enabled = !tagIds || name === wireName
     for (const name of Object.keys(this.wireEndSOs)) for (const so of this.wireEndSOs[name]) so.enabled = !tagIds || name === wireName
+  }
+
+  /** Every ID tag, tag leader line and wire-number sleeve (not the reading bubbles or badges): what the "On request" labels fade in and out. */
+  labelRoots(): SceneObject[] {
+    const out: SceneObject[] = []
+    for (const id of Object.keys(this.tags)) {
+      out.push(this.tags[id].so)
+      if (this.tags[id].leader) out.push(this.tags[id].leader as SceneObject)
+    }
+    for (const name of Object.keys(this.wireLabelSOs)) out.push(this.wireLabelSOs[name])
+    for (const name of Object.keys(this.wireEndSOs)) for (const so of this.wireEndSOs[name]) out.push(so)
+    return out
   }
 
   /** Back to the idle look for every tag (New job). */

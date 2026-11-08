@@ -37,6 +37,8 @@ import {MWNPSchematicPanelUI} from "./MWNPSchematicPanelUI"
 import {DisplayFader} from "./MWNPDisplayFader"
 import {addButton, ButtonHandle, cardEm, makeObj, MIN_GAP_CM, realToLocal, setCardOpaque, setHostEmFactor, setHostFactor} from "./MWNPSharedUI"
 
+/** "Labels: On request": seconds the component tags and wire badges stay up after a reveal, then they fade out. */
+export const LABEL_FADE_SEC = 10
 const CHECK = "✓"
 const CROSS = "×" // U+00D7: the Lens font has no U+2717 ✗ glyph
 
@@ -241,6 +243,11 @@ export class MWNPMain extends BaseScriptComponent {
   private audio: AudioComponent | null = null
   private fader: DisplayFader | null = null
   private labelsFader: DisplayFader | null = null
+  /** Fades just the ID tags and wire-number badges ("On request" labels); the wire highlights and reading badges are not part of it. */
+  private tagFader: DisplayFader | null = null
+  private tagsOn = true
+  private labelRevealUntil = -1
+  private labelStepKey = "?"
   private displayBtn: ButtonHandle | null = null
   private lastGrabToggle = -10
   private initialized = false
@@ -321,6 +328,7 @@ export class MWNPMain extends BaseScriptComponent {
     setCardOpaque(this.optionsCard.value("cardStyle") === "Opaque")
     this.cabinet.build(nl)
     this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels(), this.cabinet.getBoardNote(), this.cabinet.getWireRoutes(), this.cabinet.getPartRects().concat(this.cabinet.getKeyAreas()))
+    this.tagFader = new DisplayFader(this, this.partTags.labelRoots(), null, 0.35)
     this.placeLeftColumn()
     this.placeChips()
 
@@ -935,10 +943,20 @@ export class MWNPMain extends BaseScriptComponent {
       }
       case "hide_display":
         this.setDisplayHidden(true)
+        this.clearLabels()
         return "Cards hidden"
       case "show_display":
         this.setDisplayHidden(false)
+        this.revealLabels()
         return "Cards shown"
+      case "show_labels":
+        if (this.labelsAlways) return "Labels are always on"
+        this.revealLabels()
+        return "Labels shown for " + LABEL_FADE_SEC + " seconds"
+      case "clear_labels":
+        if (this.labelsAlways) return "Labels are always on. Change Labels in Options"
+        this.clearLabels()
+        return "Labels cleared"
       case "open_job":
         this.onLibraryPick("job")
         return "Job"
@@ -1893,7 +1911,10 @@ export class MWNPMain extends BaseScriptComponent {
 
   private onDisplayToggle(): void {
     this.click()
+    const showing = this.displayHidden
     this.setDisplayHidden(!this.displayHidden)
+    if (showing) this.revealLabels()
+    else this.clearLabels()
   }
 
   /** The always-visible Hide / Show button at the cabinet's top-right edge, and the fader behind it. */
@@ -2342,17 +2363,42 @@ export class MWNPMain extends BaseScriptComponent {
    * the card grows downward; if the grown card would leave the bottom of the view, that card steps down to the next
    * smaller factor. Schematic: the schematic host is scaled, shrinking until it fits the view.
    */
-  /** Labels: "This step only" shows just the current step's tags and wire number once a symptom is picked; otherwise all labels show. */
+  /** Shows the component tags and wire badges for LABEL_FADE_SEC seconds (On request mode); they fade out after that. */
+  revealLabels(): void {
+    this.labelRevealUntil = getTime() + this.labelFadeSec
+  }
+
+  private labelFadeSec = LABEL_FADE_SEC
+
+  /** Test only: overrides how long a reveal lasts (screenshots). LABEL_FADE_SEC itself is not changed. */
+  setLabelFadeSec(sec: number): void {
+    this.labelFadeSec = sec
+  }
+
+  /** Fades the tags and wire badges out right away (On request mode). */
+  clearLabels(): void {
+    this.labelRevealUntil = -1
+  }
+
+  private get labelsAlways(): boolean {
+    return this.optionsCard.value("labels") === "Always on"
+  }
+
+  /**
+   * Labels. "Always on": every tag and wire badge shows all the time. "On request": they show only for the current step's focus
+   * (the active point, the reference, the part and wire in play), a "show me" / "show labels" command or the Show button, and fade
+   * out LABEL_FADE_SEC seconds later or on "clear" / "hide labels". In a step the reveal shows just that step's labels; otherwise all.
+   */
   private labelFocusKey = "?"
   private updateLabelFocus(): void {
-    if (!this.partTags || !this.agent || !this.nl || !this.optionsCard) return
+    if (!this.partTags || !this.tagFader || !this.agent || !this.nl || !this.optionsCard) return
     const agent = this.agent as MWNPAgent
     const nl = this.nl as Netlist
     const ph = agent.phase
     let ids: string[] | null = null
     let wire: string | null = null
     const inStep = ph === "steps" || ph === "retest" || ph === "retest_wait" || ph === "finding"
-    if (this.optionsCard.value("labels") === "This step only" && this.jobActive && inStep) {
+    if (this.jobActive && inStep) {
       ids = []
       const p = ph === "finding" && agent.finding ? agent.finding.pointId : agent.activePoint() || agent.retestPointId
       if (p) ids.push(nl.baseId(p))
@@ -2365,6 +2411,24 @@ export class MWNPMain extends BaseScriptComponent {
       }
       const wi = this.currentWireIndex()
       wire = wi >= 0 ? "WireLabel_" + nl.data.wires[wi].id + "_" + wi : ""
+    }
+    const always = this.labelsAlways
+    // A new step focus is a reveal of its own.
+    const stepKey = JSON.stringify([ids, wire])
+    if (stepKey !== this.labelStepKey) {
+      this.labelStepKey = stepKey
+      if (!always && ids) this.revealLabels()
+    }
+    const want = always || getTime() < this.labelRevealUntil
+    if (want !== this.tagsOn) {
+      this.tagsOn = want
+      if (want && always) this.tagFader.snapShown()
+      else this.tagFader.setHidden(!want)
+      this.labelFocusKey = "?" // the fader re-enables every root: apply the focus again
+    }
+    if (always) {
+      ids = null
+      wire = null
     }
     const key = JSON.stringify([ids, wire])
     if (key === this.labelFocusKey) return
@@ -2617,6 +2681,12 @@ export class MWNPMain extends BaseScriptComponent {
         fading: (!!this.fader && this.fader.isFading) || (!!this.labelsFader && this.labelsFader.isFading),
         labelsHidden: !!this.labelsFader && this.labelsFader.hidden,
         labelsAlpha: this.labelsFader ? this.labelsFader.alpha : 1,
+      },
+      labelTags: {
+        on: this.tagsOn,
+        alpha: this.tagFader ? this.tagFader.alpha : 1,
+        fading: !!this.tagFader && this.tagFader.isFading,
+        secondsLeft: Math.max(0, +(this.labelRevealUntil - getTime()).toFixed(2)),
       },
       options: {
         labels: this.optionsCard.value("labels"),
