@@ -33,6 +33,7 @@
     - !<own> 713050e2-4b4e-4763-b472-1b4b4a997121
     - !<own> d34b2e8a-e335-4be8-bdea-486c0ffe857a
     - !<own> c74833e5-c08f-4ca0-b67f-bd5bc3328469
+    - !<own> ccb45b12-0fcb-4edc-ba8d-0f28d1715cbc
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 17
@@ -2155,6 +2156,22 @@
       doFunctionCallingOnTap: false
       enableLogging: false
       enableLoggingLifecycle: false
+  ScriptTypes:
+    "":
+      {}
+- !<ScriptComponent/0e99966d-0d18-4df9-81c2-9a42a2eb8b82>
+  PrefabRemaps:
+    []
+  Name: SparkyVoice
+  Enabled: true
+  ScriptAsset: !<reference> 21928d45-6785-47c7-832a-cad3bcad734a
+  ScriptInputsDefault:
+    enableAsr: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      enableAsr: true
   ScriptTypes:
     "":
       {}
@@ -19255,6 +19272,21 @@
     []
   Components:
     - !<own> 67fd500e-3bf2-4a24-99b9-e78d656c1b22
+- !<SceneObject/ccb45b12-0fcb-4edc-ba8d-0f28d1715cbc>
+  PrefabRemaps:
+    []
+  Name: SparkyVoice
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 0e99966d-0d18-4df9-81c2-9a42a2eb8b82
 - !<Text/cce8cb7c-3ad1-4843-9924-2be351332e4e>
   PrefabRemaps:
     []

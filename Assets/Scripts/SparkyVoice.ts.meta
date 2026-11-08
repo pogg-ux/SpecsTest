@@ -24,11 +24,11 @@
   VersionPatch: 0
   VersionPrerelease: ""
   UpdateOrder: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: f6011560-3d4a-436a-a039-04e510ace5eb
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    {}
+    enableAsr: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,10 +38,11 @@
   Attachments:
     []
   DefaultScriptInputs:
-    -
-      {}
+    - enableAsr: true
   ScriptTypes:
     -
       {}
   InputLines:
-    []
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SparkyVoice – wake word \"Sparky\", continuous ASR, commands</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input bool enableAsr = true {"hint":"Listen with the microphone. Off = only typed-text injection (tests)."}'
