@@ -2365,7 +2365,14 @@ export class MWNPMain extends BaseScriptComponent {
    */
   /** Shows the component tags and wire badges for LABEL_FADE_SEC seconds (On request mode); they fade out after that. */
   revealLabels(): void {
-    this.labelRevealUntil = getTime() + LABEL_FADE_SEC
+    this.labelRevealUntil = getTime() + this.labelFadeSec
+  }
+
+  private labelFadeSec = LABEL_FADE_SEC
+
+  /** Test only: overrides how long a reveal lasts (screenshots). LABEL_FADE_SEC itself is not changed. */
+  setLabelFadeSec(sec: number): void {
+    this.labelFadeSec = sec
   }
 
   /** Fades the tags and wire badges out right away (On request mode). */

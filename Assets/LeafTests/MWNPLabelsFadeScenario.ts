@@ -36,13 +36,20 @@ export class MWNPLabelsFadeScenario extends Scenario {
     expect(findSceneObjectByName("Tag_F1").isEnabledInHierarchy, "a part outside the step's focus stays hidden").toBe(false)
     ev("labels shown", mwnpState().labelTags)
     if (shot === "on") {
-      // Capture runs only: re-reveal every frame for 40 s so the tool-call latency before the screenshot cannot let them time out.
-      const until = getTime() + 40
-      app.createEvent("UpdateEvent").bind(() => {
-        if (getTime() < until) app.revealLabels()
-      })
+      // Capture run: labels stay up 120 s (test-only override) so the screenshot can follow right away.
+      app.setLabelFadeSec(120)
+      app.revealLabels()
       await sleep(800)
       ev("labels on for capture", mwnpState().labelTags)
+      return
+    }
+    if (shot === "faded") {
+      // Capture run: a 2 s reveal, then wait 4 s so the labels are gone before the screenshot.
+      app.setLabelFadeSec(2)
+      app.revealLabels()
+      await sleep(4000)
+      ev("labels faded for capture", mwnpState().labelTags)
+      expect(mwnpState().labelTags.on, "labels off after the 2 s test timeout").toBe(false)
       return
     }
     await sleep(500)
