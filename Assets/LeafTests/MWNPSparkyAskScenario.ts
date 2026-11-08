@@ -5,7 +5,7 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {MWNPLeafInteractor, ev} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, ev, mwnpState} from "./MWNPLeafInteractor"
 import {parseCommand} from "../Scripts/MWNPSpeech"
 
 const REFUSAL = "I can't confirm that from the job files."
@@ -58,18 +58,27 @@ export class MWNPSparkyAskScenario extends Scenario {
       return sparky.answerText as string
     }
 
-    // No token / no connection: the sentence, on the card, and the rest of Sparky keeps working.
+    // No token / no connection: the sentence, and the rest of Sparky keeps working. The card stays closed by default (the option is Off:
+    // Sparky only speaks); with "Show Sparky's answers as text" On it opens, and "close" hides it.
+    const app = (global as any).mwnpAssistant
+    expect(app.showAnswerText, "the answer text option starts Off").toBe(false)
     const saved = sparky.askTokenOverride
     sparky.askTokenOverride = null
     const off = await askAndWait("ask why that terminal")
     expect(off, "no token -> the connection sentence").toBe(OFFLINE)
     expect(sparky.askState, "failed state").toBe("failed")
-    expect(sparky.answerVisible, "the answer card shows it").toBe(true)
+    expect(sparky.answerVisible, "the answer card stays closed by default").toBe(false)
+    app.optionsCard.set("answerText", 1)
+    await sleep(2200)
+    const offOn = await askAndWait("ask why that terminal")
+    expect(offOn, "no token -> the connection sentence").toBe(OFFLINE)
+    expect(sparky.answerVisible, "with the option On the answer card shows it").toBe(true)
     sparky.askTokenOverride = saved
     await sleep(2200)
     sparky.inject("Sparky, close")
     await sleep(400)
     expect(sparky.answerVisible, "close hides the answer card").toBe(false)
+    app.optionsCard.set("answerText", 0)
 
     if (!sparky.hasAskToken()) {
       ev("SPARKY ASK PASS (no token: live part skipped)", {})
@@ -95,6 +104,36 @@ export class MWNPSparkyAskScenario extends Scenario {
     const t2 = Date.now()
     while (sparky.asrPaused && Date.now() - t2 < 20000) await sleep(200)
     expect(sparky.asrPaused, "ASR resumes after the answer").toBe(false)
+    expect(sparky.answerVisible, "the answer was spoken without opening the card (option Off)").toBe(false)
+
+    // "Sparky, repeat" replays the last Ask answer from the saved audio: it plays again (ASR pauses), and no new chat or speech request is made.
+    await sleep(2200)
+    const asks = sparky.askRequests
+    const speeches = sparky.speechRequests
+    const stepBefore = mwnpState().stepIndex
+    sparky.inject("Sparky, repeat")
+    let again = false
+    const t3 = Date.now()
+    while (Date.now() - t3 < 4000 && !again) {
+      again = sparky.asrPaused
+      await sleep(100)
+    }
+    expect(again, "repeat plays the last answer again (ASR pauses while it plays)").toBe(true)
+    expect(sparky.acted[sparky.acted.length - 1].result, "repeat says it is repeating the answer").toBe("Repeating the answer")
+    expect(sparky.askRequests === asks && sparky.speechRequests === speeches, "repeat makes no new chat or speech request").toBe(true)
+    expect(mwnpState().stepIndex, "repeat leaves the step alone").toBe(stepBefore)
+    const t4 = Date.now()
+    while (sparky.asrPaused && Date.now() - t4 < 20000) await sleep(200)
+    expect(sparky.asrPaused, "ASR resumes after the repeated answer").toBe(false)
+    // After a step clip, "repeat" repeats the step again, not the old answer.
+    sparky.addFakeClip("step_EXTEND_2", 0.4)
+    await sleep(2200)
+    sparky.inject("Sparky, next")
+    await sleep(1500)
+    sparky.inject("Sparky, repeat")
+    expect(sparky.requested[sparky.requested.length - 1].join(","), "repeat after a step clip repeats the step clip").toBe("step_EXTEND_2")
+    expect(sparky.speechRequests, "still no new speech request").toBe(speeches)
+    await sleep(1500)
 
     // The rest without speech (saves requests).
     sparky.askSpeak = false

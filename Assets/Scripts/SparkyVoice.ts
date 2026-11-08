@@ -312,6 +312,15 @@ export class SparkyVoice extends BaseScriptComponent {
     this.heardText = "Heard: " + label
     this.heardUntil = now + HEARD_SEC
     let result = "Not ready"
+    if (cmd.name === "repeat" && this.repeatLastAnswer()) {
+      // The last thing Sparky said was an Ask answer: say it again from the saved audio (the step card is left alone).
+      result = "Repeating the answer"
+      this.acted.push({name: cmd.name, arg: cmd.arg, result})
+      this.requested.push([])
+      this.log("ACT " + key + " -> " + result)
+      this.showMessage(result)
+      return
+    }
     try {
       if (this.main) result = this.main.voiceCommand(cmd.name, cmd.arg)
     } catch (e) {
@@ -345,12 +354,37 @@ export class SparkyVoice extends BaseScriptComponent {
     return (this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)).length > 0
   }
 
+  /** What Sparky said last: a step / reading clip, an Ask answer (its audio is kept), or the offline sentence. "Sparky, repeat" replays it. */
+  lastSpoken: "none" | "clip" | "answer" | "offline" = "none"
+  private lastAnswerTrack: AudioTrackAsset | null = null
+  private lastAnswerText = ""
+  /** Requests made for Ask (a chat call each) and for its speech (a text-to-speech call each): tests check that repeat makes none. */
+  askRequests = 0
+  speechRequests = 0
+
+  /** "Sparky, repeat" after an Ask answer: plays the saved answer audio again (and the card again when it is on). Returns true when it did. */
+  private repeatLastAnswer(): boolean {
+    if (this.lastSpoken === "answer" && this.lastAnswerTrack) {
+      this.showAnswer(this.lastAnswerText, true)
+      this.playTrack(this.lastAnswerTrack)
+      return true
+    }
+    if (this.lastSpoken === "offline") {
+      this.showAnswer(OFFLINE, true)
+      this.playClips(["live_needs_connection"])
+      this.lastSpoken = "offline"
+      return true
+    }
+    return false
+  }
+
   private runAsk(req: {question: string; context: string}): void {
     if (this.askState === "thinking") {
       this.showMessage("Still thinking...")
       return
     }
     this.askState = "thinking"
+    this.askRequests++
     this.showAnswer("Thinking...", false)
     const token = this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)
     const t0 = getTime()
@@ -359,13 +393,17 @@ export class SparkyVoice extends BaseScriptComponent {
       (text: string) => {
         this.log("ASK answer after " + (getTime() - t0).toFixed(2) + " s: " + text)
         this.answerText = text
+        this.lastAnswerText = text
         this.askState = "done"
         this.showAnswer(text, true)
         if (!this.askSpeak) return
         const s0 = getTime()
+        this.speechRequests++
         speak(text, token).then(
           (track: AudioTrackAsset) => {
             this.log("ASK speech ready after " + (getTime() - s0).toFixed(2) + " s")
+            this.lastAnswerTrack = track // "Sparky, repeat" plays this again: no new request
+            this.lastSpoken = "answer"
             this.playTrack(track)
           },
           (e: any) => this.log("ASK speech failed: " + e)
@@ -377,6 +415,7 @@ export class SparkyVoice extends BaseScriptComponent {
         this.askState = "failed"
         this.showAnswer(OFFLINE, true)
         this.playClips(["live_needs_connection"]) // skipped silently when the clip file does not exist
+        if (this.hasClip("live_needs_connection")) this.lastSpoken = "offline"
       }
     )
   }
@@ -459,6 +498,8 @@ export class SparkyVoice extends BaseScriptComponent {
 
   /** The small answer card under the mic indicator (stays visible when the cards are hidden). */
   private showAnswer(text: string, autoHide: boolean): void {
+    // Sparky speaks the answer; the text card only opens when Options > "Show Sparky's answers as text" is On (default Off).
+    if (!this.main || !this.main.showAnswerText) return
     if (!this.ensureAnswerCard() || !this.answerRoot) return
     if (this.answerTextComp) fitText(this.answerTextComp, text, this.answerInner, this.answerEm, 1)
     this.answerRoot.enabled = true
@@ -498,6 +539,7 @@ export class SparkyVoice extends BaseScriptComponent {
   private playClips(names: string[]): void {
     const have = names.filter((n) => this.hasClip(n))
     if (have.length === 0) return
+    this.lastSpoken = "clip"
     this.queue = this.queue.concat(have)
     if (!this.asrPaused) this.pauseAsr()
     if (this.queue.length === have.length) this.playNext()

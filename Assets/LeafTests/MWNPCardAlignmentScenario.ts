@@ -1,9 +1,10 @@
 // Card alignment and placement:
 //  - every card faces the camera square: its top edge is level in screen space, within 0.5 degrees;
 //  - the cabinet fills 55-60% of the frame height and is fully on screen;
-//  - the Library chip (the mic indicator beside it) sits just above the cabinet's top-left corner, the Step card drops from it over the cabinet's
-//    left side; the answer chip sits just above the top-right corner and the answer card drops from it over the right side (overlap with the
-//    cabinet is allowed: "Sparky, hide" clears the cards);
+//  - the Library chip (the mic indicator beside it) sits just above the cabinet's top-left corner; the Step chip sits just above the top-right
+//    corner, right-aligned with the board's edge, and the Step card drops from it over the cabinet's right side; the answer chip (Options >
+//    "Show Sparky's answers as text" On) sits just left of the Step chip and its card drops from it (overlap with the cabinet is allowed:
+//    "Sparky, hide" clears the cards);
 //  - the card is nudged, never the cabinet, so the current step's test point and its highlighted wire stay visible, on all five steps;
 //  - the answer card is the Step card's twin (same plate, width and text size, text at least 1.0 cm).
 
@@ -21,6 +22,7 @@ const BOARD_HALF_CM = 23
 /** How far (screen fraction) a chip may be from its corner and still count as "just above / at" it. */
 const NEAR = 0.025
 const LIBRARY_CHIP_CM = 7.5
+const STEP_CHIP_CM = 9.6
 
 type R = {x0: number; x1: number; y0: number; y1: number}
 
@@ -41,7 +43,7 @@ function fmt(r: R): string {
 @component
 export class MWNPCardAlignmentScenario extends Scenario {
   async run(config?: ScenarioConfig): Promise<void> {
-    // shot = "step1": stop on step 1 with the Step card and the answer card up (for the screenshot).
+    // shot = "step1": stop on step 1 with the Step card and the answer card up; "step1_default": the same with the answer option Off (for screenshots).
     const shot = (config && config.get("shot")) || ""
     const ui = new MWNPLeafInteractor()
     await ui.startExtendDiagnosis()
@@ -51,6 +53,7 @@ export class MWNPCardAlignmentScenario extends Scenario {
     sparky.setAsrEnabled(false)
     sparky.askTokenOverride = null
     app.libraryCard.collapse() // the Library shows as its chip while the Step card is open
+    app.optionsCard.set("answerText", 1) // the answer card is opt-in (Options > "Show Sparky's answers as text")
     sparky.inject("Sparky, ask why that terminal")
     await sleep(900)
     sparky.setAnswerTextForTest("TS-4 is the terminal that feeds the EXTEND branch from the S1 UP contact, so checking 12 V there confirms if S1 UP contact and wire 2a are good.")
@@ -116,20 +119,37 @@ export class MWNPCardAlignmentScenario extends Scenario {
     const mic = screenRect(cam, findSceneObjectByName("SparkyMic"), 1, 1)
     expect(mic.x0 >= chipRect.x1 - 0.005 && Math.abs((mic.y0 + mic.y1) / 2 - (chipRect.y0 + chipRect.y1) / 2) <= 0.02, "the mic indicator is right beside the Library chip: mic " + fmt(mic)).toBe(true)
 
-    // Answer chip: its right edge on the board's right edge, just above the top edge; the answer card drops from it, right edges together.
+    // Answer chip (left of the Step chip, checked below): just above the board's top edge; the answer card drops from it, right edges together.
     const ansChipR = screenRect(cam, ansChip.so, ansChip.w, ansChip.h)
     const ansR = screenRect(cam, ans.so, ans.w, ans.h)
     ev("ALIGN answer", {chip: fmt(ansChipR), card: fmt(ansR)})
-    expect(Math.abs(ansChipR.x1 - tr.x) <= NEAR, "the answer chip's right edge is on the cabinet's right edge: " + ansChipR.x1.toFixed(3) + " vs " + tr.x.toFixed(3)).toBe(true)
     expect(ansChipR.y1 <= tr.y && tr.y - ansChipR.y1 <= NEAR + 0.01, "the answer chip is just above the cabinet's top edge: chip bottom " + ansChipR.y1.toFixed(3) + ", board top " + tr.y.toFixed(3)).toBe(true)
     expect(ansR.y0 >= ansChipR.y1 - 0.003 && ansR.y0 - ansChipR.y1 <= 0.04, "the answer card drops straight from its chip: card top " + ansR.y0.toFixed(3) + ", chip bottom " + ansChipR.y1.toFixed(3)).toBe(true)
     expect(Math.abs(ansR.x1 - ansChipR.x1) <= 0.005, "the answer card and its chip share a right edge").toBe(true)
     expect(ansR.x0 < tr.x && ansR.x1 <= 1 && ansR.y1 <= 1, "the answer card runs over the cabinet's right side, inside the display").toBe(true)
 
-    // The Step card drops from the Library chip over the left side.
+    // The Step chip (shown while the Step card is collapsed): just above the top-right corner, right edge on the board's right edge, on the
+    // Library chip's row. The answer chip sits just left of it.
+    app.stepCard.collapse()
+    await sleep(700)
+    const stepChipSO = findSceneObjectByName("Btn_StepChip")
+    expect(!!stepChipSO && stepChipSO.isEnabledInHierarchy, "the Step chip is showing while the card is collapsed").toBe(true)
+    const sc = cam.worldSpaceToScreenSpace(stepChipSO.getTransform().getWorldPosition())
+    const stepChipR: R = {x0: sc.x - (STEP_CHIP_CM / 2) * perCmX, x1: sc.x + (STEP_CHIP_CM / 2) * perCmX, y0: sc.y - (chipHcm / 2) * perCmY, y1: sc.y + (chipHcm / 2) * perCmY}
+    ev("ALIGN Step chip", {rect: fmt(stepChipR)})
+    expect(Math.abs(stepChipR.x1 - tr.x) <= NEAR, "the Step chip's right edge is on the cabinet's right edge: " + stepChipR.x1.toFixed(3) + " vs " + tr.x.toFixed(3)).toBe(true)
+    expect(stepChipR.y1 <= tr.y + 0.01 && tr.y - stepChipR.y1 <= NEAR + 0.015, "the Step chip is just above the cabinet's top edge: chip bottom " + stepChipR.y1.toFixed(3) + ", board top " + tr.y.toFixed(3)).toBe(true)
+    expect(Math.abs((stepChipR.y0 + stepChipR.y1) / 2 - (chipRect.y0 + chipRect.y1) / 2) <= 0.02, "the Step chip is on the Library chip's row").toBe(true)
+    expect(ansChipR.x1 <= stepChipR.x0 + 0.005 && stepChipR.x0 - ansChipR.x1 <= 0.04, "the answer chip sits just left of the Step chip: answer chip right " + ansChipR.x1.toFixed(3) + ", Step chip left " + stepChipR.x0.toFixed(3)).toBe(true)
+    app.stepCard.expand()
+    await sleep(900)
+
+    // The Step card drops from the Step chip over the right side, right edges together (unless the test point makes it slide).
     const stepR = screenRect(cam, step.so, step.w, step.h)
-    ev("ALIGN step card", {rect: fmt(stepR), nudge: app.cardNudge ? app.cardNudge["StepCard"] : null})
-    expect(stepR.y0 >= chipRect.y1 - 0.003 && stepR.y0 - chipRect.y1 <= 0.05, "the Step card drops from the Library chip: card top " + stepR.y0.toFixed(3) + ", chip bottom " + chipRect.y1.toFixed(3)).toBe(true)
+    const nudge0 = app.cardNudge ? app.cardNudge["StepCard"] : null
+    ev("ALIGN step card", {rect: fmt(stepR), nudge: nudge0})
+    expect(stepR.y0 >= stepChipR.y1 - 0.003 && stepR.y0 - stepChipR.y1 <= 0.05 || (!!nudge0 && nudge0.dy !== 0), "the Step card drops from the Step chip: card top " + stepR.y0.toFixed(3) + ", chip bottom " + stepChipR.y1.toFixed(3)).toBe(true)
+    expect(Math.abs(stepR.x1 - tr.x) <= NEAR || (!!nudge0 && nudge0.dx !== 0), "the Step card's right edge is on the cabinet's right edge unless nudged: " + stepR.x1.toFixed(3) + " vs " + tr.x.toFixed(3)).toBe(true)
     expect(stepR.x0 >= 0 && stepR.x1 <= 1 && stepR.y1 <= 1, "the Step card is inside the display area").toBe(true)
 
     // The current step's test point and highlighted wire stay visible, on every step: the CARD is nudged (left or down), never the cabinet.
@@ -160,7 +180,12 @@ export class MWNPCardAlignmentScenario extends Scenario {
       expect(!!nudge && nudge.point === 0, "step " + (i + 1) + ": a position that clears the test point was found").toBe(true)
       expect(r.x0 >= 0 && r.x1 <= 1 && r.y0 >= 0 && r.y1 <= 1, "step " + (i + 1) + ": the nudged Step card is still inside the display " + fmt(r)).toBe(true)
       expect(cabSO.getTransform().getWorldPosition().distance(cabPos0) < 0.001, "step " + (i + 1) + ": the cabinet did not move").toBe(true)
-      if (i === 0 && shot === "step1") {
+      if (i === 0 && (shot === "step1" || shot === "step1_default")) {
+        // step1_default: the state a person starts in (answer text option Off, no answer card), with the Step card open.
+        if (shot === "step1_default") {
+          app.optionsCard.set("answerText", 0)
+          await sleep(500)
+        }
         ev("CARD ALIGNMENT PASS (stopped at step 1)", {})
         return
       }
