@@ -33,7 +33,10 @@ export function systemRule(): string {
     "Use ONLY the JOB FILES and CURRENT JOB below. Look the answer up in them; you may combine facts that are written there. " +
     "If the answer is not in them, your first sentence is exactly this, ending with its full stop: " +
     REFUSAL +
-    " Then add a second sentence with a short next check (under 30 words in all). The next check may name ONLY parts, test points, switch positions and values that are written in the job files; never mention one that is not there. " +
+    " Then add a second sentence with a short next check (under 30 words in all). " +
+    "When the answer is found and your first sentence fully answers the question, stop there: one sentence, no next check. " +
+    "Add a next check after an answer only if the answer points to a measurement the technician has not taken yet (not in Readings so far). " +
+    "A next check may name ONLY parts, test points, switch positions and values that are written in the job files; never mention one that is not there. " +
     "Never guess. Never use outside knowledge: no typical values, no general electrical advice, no ratings or specifications that are not written in the job files. " +
     "Say part ids the way they are written, for example F1 or TS-2."
   )
