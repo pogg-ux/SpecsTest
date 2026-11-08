@@ -374,6 +374,35 @@ export class MWNPCabinet extends BaseScriptComponent {
     return new vec2(LAYOUT.board.w / 2, LAYOUT.board.h / 2)
   }
 
+  /**
+   * Every position other parts depend on (points, part boxes, tag anchors, expected / badge spots, wire routes and labels, key areas),
+   * rounded to 0.001 cm, as one JSON string. The realistic-look work must not change it: a test compares it with a recorded baseline.
+   */
+  geometrySnapshot(): string {
+    const r = (n: number): number => Math.round(n * 1000) / 1000
+    const v = (p: vec3): number[] => [r(p.x), r(p.y), r(p.z)]
+    const out: any = {points: {}, boxes: {}, anchors: [], expected: {}, badges: {}, routes: ROUTES, wireLabels: [], keyAreas: [], half: []}
+    for (const id of Object.keys(POINTS).sort()) out.points[id] = v(this.getPointPos(id))
+    for (const id of Object.keys(this.partBoxes).sort()) {
+      const b = this.partBoxes[id]
+      out.boxes[id] = [r(b.c[0]), r(b.c[1]), r(b.w), r(b.h), r(b.zFront)]
+    }
+    for (const a of this.getTagAnchors()) out.anchors.push({id: a.id, pos: v(a.pos), rot: a.rotDeg, info: v(a.infoPos), strip: a.strip ? [r(a.strip.top), r(a.strip.bottom), a.strip.index] : null})
+    const ids = Object.keys(this.partBoxes).sort()
+    for (const id of ids) {
+      out.expected[id] = v(this.getExpectedTagPos(id))
+      out.badges[id] = v(this.getBadgePos(id))
+    }
+    for (const w of this.getWireLabels()) out.wireLabels.push({name: w.name, text: w.text, pos: v(w.pos), ret: w.isReturn})
+    for (const k of this.getKeyAreas()) out.keyAreas.push([k.id, r(k.cx), r(k.cy), r(k.w), r(k.h)])
+    const hs = this.getBoardHalfSize()
+    out.half = [r(hs.x), r(hs.y)]
+    const note = this.getBoardNote()
+    out.note = note ? v(note.pos) : null
+    out.wireCount = Object.keys(this.wireBase).length
+    return JSON.stringify(out)
+  }
+
   // ── Visual state driven by Main ───────────────────────────────────────────
 
   /** "none" | "amber" | "active" | "green" | "red" */
