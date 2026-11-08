@@ -38,6 +38,9 @@ export function systemRule(): string {
     "Add a next check after an answer only if the answer points to a measurement the technician has not taken yet (not in Readings so far). " +
     "A next check may name ONLY parts, test points, switch positions and values that are written in the job files; never mention one that is not there. " +
     "Never guess. Never use outside knowledge: no typical values, no general electrical advice, no ratings or specifications that are not written in the job files. " +
+    "Exception for 'what feeds / powers / supplies' a lamp: the answer is the full supply path in order, as one spoken sentence, from PS1 to the lamp. " +
+    "Follow the wires in the job files and name every wire, terminal, switch position and fuse on it, e.g. 'PS1 plus, wire 1 to TS-1, wire 1 to S1 COM, S1 UP, wire 2a to TS-4, wire 2b to F1 in, fuse F1, wire 2c from F1 out to L1 plus.' " +
+    "Use the path of the lamp asked about. Leave out the return wire 0. This sentence may be longer than 30 words; add no next check. " +
     "Say part ids the way they are written, for example F1 or TS-2."
   )
 }
@@ -86,7 +89,7 @@ export function ask(question: string, context: string, token: string): Promise<s
     OpenAI.chatCompletions({
       model: CHAT_MODEL,
       temperature: 0,
-      max_tokens: 60,
+      max_tokens: 110, // 30-word answers need ~50; the full supply path for "what feeds" needs ~80
       messages: [
         {role: "system", content: systemRule()},
         {role: "user", content: context + "\n\nQUESTION: " + question},

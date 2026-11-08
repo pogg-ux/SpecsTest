@@ -103,15 +103,24 @@ export class MWNPSparkyAskScenario extends Scenario {
     expect(a4.indexOf(REFUSAL) === 0, "not in the files -> starts with the refusal: " + a4).toBe(true)
     // The three sample questions, spoken without "ask": EXTEND and RETRACT must both be answerable from the job files.
     const sample = ["what feeds L1", "why is L2 dead", "what should TS-4 read", "what feeds L2"]
+    const inOrder = (text: string, parts: string[]): boolean => {
+      let from = 0
+      for (const part of parts) {
+        const at = text.indexOf(part, from)
+        if (at < 0) return false
+        from = at + part.length
+      }
+      return true
+    }
     const answers: string[] = []
     for (const t of sample) {
       await sleep(2200)
       answers.push(await askAndWait(t))
     }
-    expect(answers[0].indexOf("L1") >= 0 && answers[0].indexOf(REFUSAL) < 0, "what feeds L1 is answered: " + answers[0]).toBe(true)
+    expect(inOrder(answers[0], ["PS1", "TS-1", "COM", "UP", "2a", "TS-4", "2b", "F1", "2c", "L1"]), "what feeds L1 lists the full path in order: " + answers[0]).toBe(true)
     expect(answers[1].indexOf("TS-5") >= 0 && answers[1].indexOf("S1 DOWN") >= 0, "no L2 readings in the job, so a grounded next check from the RETRACT steps: " + answers[1]).toBe(true)
     expect(answers[2].indexOf("12") >= 0 || answers[2].indexOf("10.8") >= 0, "TS-4 expected reading: " + answers[2]).toBe(true)
-    expect(answers[3].indexOf("F2") >= 0 && answers[3].indexOf(REFUSAL) < 0, "what feeds L2 is answered from the RETRACT path: " + answers[3]).toBe(true)
+    expect(inOrder(answers[3], ["PS1", "TS-1", "COM", "DOWN", "3a", "TS-5", "3b", "F2", "3c", "L2"]), "what feeds L2 lists the full path in order: " + answers[3]).toBe(true)
     // Grounding: no answer names a part or test point that is not in the netlist.
     const known = ["PS1", "TS-1", "TS-2", "TS-3", "TS-4", "TS-5", "S1", "F1", "F2", "L1", "L2"]
     for (const a of answers) {
