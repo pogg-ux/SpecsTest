@@ -29,6 +29,17 @@ export interface Finding {
   stepIndex: number
 }
 
+export interface AgentSnapshot {
+  phase: Phase
+  stepIndex: number
+  entry: string
+  readingsLen: number
+  stepColor: string
+  finding: Finding | null
+  repaired: boolean
+  wireStates: {[wireIndex: number]: string}
+}
+
 export interface EnterResult {
   accepted: boolean
   pointId: string
@@ -202,6 +213,60 @@ export class MWNPAgent {
       return true
     }
     return false
+  }
+
+  /** Voice "next": moves to the next measurable step without logging anything. False when not on a step or already on the last one. */
+  stepForward(): boolean {
+    if (this.phase !== "steps") return false
+    const next = this.nextMeasurableStep(this.stepIndex)
+    if (next < 0) return false
+    this.stepIndex = next
+    this.stepColor = ""
+    this.entry = ""
+    return true
+  }
+
+  /** Voice "back": moves to the previous measurable step without logging anything. False when not on a step or already on the first one. */
+  stepBack(): boolean {
+    if (this.phase !== "steps") return false
+    for (let k = this.stepIndex - 1; k >= 0; k--) {
+      const s = this.steps[k]
+      if (s.pointId && !s.isLoadOffCheck) {
+        this.stepIndex = k
+        this.stepColor = ""
+        this.entry = ""
+        return true
+      }
+    }
+    return false
+  }
+
+  /** Everything enter() can change, copied, so the last reading can be undone (voice "undo"). */
+  snapshot(): AgentSnapshot {
+    const ws: {[wireIndex: number]: string} = {}
+    for (const k of Object.keys(this.wireStates)) ws[parseInt(k)] = this.wireStates[parseInt(k)]
+    return {
+      phase: this.phase,
+      stepIndex: this.stepIndex,
+      entry: this.entry,
+      readingsLen: this.readings.length,
+      stepColor: this.stepColor,
+      finding: this.finding ? {...this.finding} : null,
+      repaired: this.repaired,
+      wireStates: ws,
+    }
+  }
+
+  restore(s: AgentSnapshot): void {
+    this.phase = s.phase
+    this.stepIndex = s.stepIndex
+    this.entry = s.entry
+    this.readings.length = s.readingsLen
+    this.stepColor = s.stepColor
+    this.finding = s.finding ? {...s.finding} : null
+    this.repaired = s.repaired
+    this.wireStates = {}
+    for (const k of Object.keys(s.wireStates)) this.wireStates[parseInt(k)] = s.wireStates[parseInt(k)]
   }
 
   /** Index of the step after `from` that names a measurable test point. */

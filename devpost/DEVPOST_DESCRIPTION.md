@@ -22,7 +22,7 @@ I'm a service technician with limited programming background. I planned the Lens
 - Designing for an additive display: black is invisible, so contrast comes from bright text and smoke-gray plates, not dark backgrounds.
 - The field of view is narrow; real-size content and readable cards compete for space.
 - "No-guess" has to be designed in: tolerances live in the data, and the UI needs an explicit "I don't know" state.
-- Preview stand-ins: pinch-to-mark instead of live recognition, a button for every action. Voice is planned: the assistant is "Sparky" ("Sparky, highlight wire 2a"), not in this build.
+- Preview stand-ins: pinch-to-mark instead of live recognition, and a button for every action. Voice works too: "Sparky, next / back / repeat / log twelve point zero / undo / show schematic / open report / highlight wire three b" (preview-tested in a noisy room; the assistant acts only on phrases that start with "Sparky"). Voice needs the microphone and internet; the buttons always work.
 
 ## What's next
 Reports are session-only in v1. Next they'll save on the glasses, send to the tech's phone as a PDF, and upload to a per-machine job history that can feed a maintenance system. Also: live component recognition and label reading → manual lookup (with permission), per-machine job history and printable reports, magnified view and camera filters, voice notes, AI-phrased answers grounded only in the job files, pneumatic and hydraulic schematics. v2 work in progress on the `v2-dev` branch.
