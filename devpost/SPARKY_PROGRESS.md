@@ -1,3 +1,3 @@
-Done: all 16 Sparky mp3 clips wired into SparkyVoice > Clips (zip removed); typed-text scenarios mute real clips via setRealClips(false); voice, clips and verify-fix scenarios pass.
-In progress: user's by-ear test of the clips in the Preview.
-Next step: fix any clip that plays at the wrong moment or is cut off; re-record any line that sounds wrong.
+Done: P1 voice commands (dismiss, symptom by voice, retest, new job, yes/no, not yet, end job asks first, more/less, cancel); mwnp-sparky-voice and mwnp-verify-fix pass.
+In progress: user's live test of the P1 commands.
+Next step: fix any phrase the live ASR mishears; add alternates to the parser.

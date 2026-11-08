@@ -73,7 +73,9 @@ export class MWNPVerifyFixScenario extends Scenario {
     expect(notes().indexOf("Yes, fixed") >= 0 && notes().indexOf("Not yet") >= 0, "decisions logged: " + notes()).toBe(true)
     sparky.inject("Sparky, end job")
     await sleep(300)
-    expect(mwnpState().jobActive, "end job by voice only when asked").toBe(true)
+    expect(mwnpState().jobActive, "end job by voice asks first").toBe(true)
+    sparky.inject("Sparky, no")
+    await sleep(500)
 
     await toVerify2(ui, app, sparky, has)
     ev("VERIFY FIX PASS", {})

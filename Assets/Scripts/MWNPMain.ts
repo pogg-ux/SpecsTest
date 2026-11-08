@@ -638,6 +638,10 @@ export class MWNPMain extends BaseScriptComponent {
     const nl = this.nl as Netlist | null
     this.voiceClips = []
     if (!agent || !nl || !this.initialized) return "Not ready"
+    if (this.visibleCard === "safety" && name === "dismiss") {
+      this.onDismissNotice()
+      return "Safety notice dismissed"
+    }
     if (this.visibleCard === "safety") {
       this.voiceClips.push("dismiss_safety")
       return "Dismiss the safety notice first"
@@ -707,6 +711,65 @@ export class MWNPMain extends BaseScriptComponent {
       case "open_camera":
         this.onLibraryPick("camera")
         return "Camera"
+      case "dismiss":
+        return "Nothing to dismiss"
+      case "symptom": {
+        if (!this.jobActive || (agent.phase !== "job" && agent.phase !== "symptoms")) return "Not asking for a symptom now"
+        let idx = -1
+        for (let i = 0; i < nl.faultCount(); i++) if (nl.symptomKey(i).toLowerCase() === arg.toLowerCase()) idx = i
+        if (idx < 0) return "Unknown symptom"
+        if (this.visibleCard !== "symptoms") {
+          this.hideOpenCard()
+          this.onReportSymptom()
+        }
+        this.onSymptomPicked(idx)
+        return "Symptom: " + nl.symptomLabel(idx)
+      }
+      case "retest":
+        if (this.visibleCard !== "finding" || agent.phase !== "finding" || this.verifyState !== "") return "No retest to start"
+        this.onRetest()
+        return "Retest"
+      case "new_job":
+        if (!this.jobActive) {
+          this.onStartJob()
+          return "New job"
+        }
+        this.askConfirm("new")
+        return "Start a new job? Say yes or no"
+      case "yes":
+      case "no": {
+        const yes = name === "yes"
+        if (this.visibleCard === "confirm") {
+          this.onJobConfirm(this.confirmKind, yes)
+          return yes ? "Yes" : "No"
+        }
+        if (this.visibleCard === "viewer" && this.photoViewer.view === "confirm") {
+          this.onDeleteConfirm(yes)
+          return yes ? "Deleted" : "Kept"
+        }
+        if (this.verifyState === "end_q") {
+          this.onEndAsk(yes)
+          return yes ? "Job ended" : "Job stays open"
+        }
+        return "Nothing to confirm"
+      }
+      case "not_yet":
+        if (this.verifyState !== "end_q") return "Nothing to answer"
+        this.onEndAsk(false)
+        return "Job stays open"
+      case "more":
+      case "less":
+        if (!this.stepCard.isVisible || this.stepCard.isCollapsed || this.stepCard.isKeypadOpen || this.visibleCard !== "step") return "No More button showing"
+        this.stepCard.setMore(name === "more")
+        return name === "more" ? "More" : "Less"
+      case "cancel":
+        if (this.stepCard.isKeypadOpen) {
+          this.click()
+          this.stepCard.closeKeypad()
+          return "Cancelled"
+        }
+        if (this.visibleCard === "notes" && this.notesCard.cancel()) return "Cancelled"
+        return "Nothing to cancel"
       case "hide_display":
         this.setDisplayHidden(true)
         return "Cards hidden"
@@ -725,9 +788,13 @@ export class MWNPMain extends BaseScriptComponent {
         this.onFixed(name === "fixed")
         return name === "fixed" ? "Fixed" : "Not fixed"
       case "end_job":
-        if (this.verifyState !== "end_q") return "Say end job when asked"
-        this.onEndAsk(true)
-        return "Job ended"
+        if (this.verifyState === "end_q") {
+          this.onEndAsk(true)
+          return "Job ended"
+        }
+        if (!this.jobActive) return "No job to end"
+        this.askConfirm("end")
+        return "End job? Say yes or no"
       case "highlight": {
         const ids: string[] = []
         nl.data.wires.forEach((w) => {
@@ -934,9 +1001,21 @@ export class MWNPMain extends BaseScriptComponent {
   /** Which Job card End job / New job was pressed on, so No can return to it. */
   private confirmReturn = "job"
 
-  private onJobRequest(kind: string): void {
-    if (this.visibleCard !== "job" && this.visibleCard !== "jobhome") return
-    this.confirmReturn = this.visibleCard
+  private confirmKind = "end"
+  /** The card that was open when a voice command asked the confirm, so No puts it back. */
+  private confirmPrev = ""
+
+  /** Asks the End job / New job confirm from any card (voice); the buttons only offer it on the Job card. */
+  private askConfirm(kind: string): void {
+    if (this.visibleCard === "confirm") return
+    this.confirmPrev = this.visibleCard === "job" || this.visibleCard === "jobhome" ? "" : this.visibleCard
+    this.onJobRequest(kind, true)
+  }
+
+  private onJobRequest(kind: string, anywhere: boolean = false): void {
+    if (!anywhere && this.visibleCard !== "job" && this.visibleCard !== "jobhome") return
+    this.confirmReturn = this.visibleCard === "jobhome" ? "jobhome" : "job"
+    this.confirmKind = kind
     this.click()
     this.hideOpenCard()
     this.jobPanel.showConfirm(
@@ -956,6 +1035,13 @@ export class MWNPMain extends BaseScriptComponent {
     this.click()
     this.jobPanel.hideAux()
     if (!yes) {
+      if (this.confirmPrev) {
+        const p = this.confirmPrev
+        this.confirmPrev = ""
+        this.showView(p)
+        this.log("confirm-no")
+        return
+      }
       if (this.confirmReturn === "jobhome") this.openJobHome()
       else {
         this.jobPanel.setVisible(true)
@@ -964,6 +1050,7 @@ export class MWNPMain extends BaseScriptComponent {
       this.log("confirm-no")
       return
     }
+    this.confirmPrev = ""
     if (kind === "end") this.endJob()
     else this.newJob()
   }

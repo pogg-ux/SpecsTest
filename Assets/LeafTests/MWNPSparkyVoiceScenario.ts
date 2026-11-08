@@ -160,6 +160,98 @@ export class MWNPSparkyVoiceScenario extends Scenario {
     sparky.inject("Sparky, fixed")
     await sleep(300)
     expect(mwnpState().visibleCard !== "summary", "fixed does nothing when not asked").toBe(true)
+
+    // ── P1 commands ──
+    const say = async (t: string, ms: number = 500): Promise<void> => {
+      sparky.inject("Sparky, " + t)
+      await sleep(ms)
+    }
+    const parsed = (t: string): string => {
+      const c = parseCommand(t)
+      return c ? c.name + (c.arg ? ":" + c.arg : "") : "null"
+    }
+    expect(parsed("understood"), "understood").toBe("dismiss")
+    expect(parsed("OK"), "ok").toBe("dismiss")
+    expect(parsed("extend doesn't work"), "extend doesn't work").toBe("symptom:extend")
+    expect(parsed("retract doesn't work"), "retract doesn't work").toBe("symptom:retract")
+    expect(parsed("neither works"), "neither works").toBe("symptom:neither")
+    expect(parsed("symptom retract"), "symptom retract").toBe("symptom:retract")
+    expect(parsed("fuse replaced"), "fuse replaced").toBe("retest")
+    expect(parsed("start job"), "start job").toBe("new_job")
+    expect(parsed("not yet"), "not yet").toBe("not_yet")
+    expect(app.voiceCommand("dismiss"), "dismiss with no safety notice").toBe("Nothing to dismiss")
+
+    // more / less on the step card; cancel on the keypad.
+    await say("repeat")
+    expect(mwnpState().visibleCard, "step card showing").toBe("step")
+    await say("more")
+    expect(app.stepCard.isMoreOpen, "more opens More").toBe(true)
+    await say("less")
+    expect(app.stepCard.isMoreOpen, "less closes it").toBe(false)
+    app.stepCard.openKeypad()
+    await sleep(400)
+    expect(app.stepCard.isKeypadOpen, "keypad open").toBe(true)
+    await say("cancel")
+    expect(app.stepCard.isKeypadOpen, "cancel closes the keypad").toBe(false)
+    // cancel on the note card
+    app.onLibraryPick("report")
+    await sleep(300)
+    await ui.tap("Btn_Lib_Notes")
+    await sleep(300)
+    if (app.notesCard.view === "list") await ui.tap("Btn_AddNote")
+    expect(app.notesCard.view, "note picker open").toBe("pick")
+    await say("cancel")
+    expect(app.notesCard.view, "cancel leaves the note picker").toBe("list")
+    await say("close")
+
+    // new job asks first; no keeps the job.
+    await say("new job")
+    expect(mwnpState().visibleCard, "new job asks to confirm").toBe("confirm")
+    await say("no")
+    expect(mwnpState().jobActive, "no keeps the job").toBe(true)
+    expect(mwnpState().visibleCard !== "confirm", "confirm closed").toBe(true)
+    // end job asks first; yes closes it.
+    await say("end job")
+    expect(mwnpState().visibleCard, "end job asks first").toBe("confirm")
+    expect(mwnpState().jobActive, "still open until yes").toBe(true)
+    await say("yes", 800)
+    expect(mwnpState().jobActive, "yes ends the job").toBe(false)
+
+    // no job: new job starts one (nothing to lose); the symptom by voice.
+    await sleep(1800)
+    await say("new job", 700)
+    expect(mwnpState().visibleCard, "new job opens the symptom list").toBe("symptoms")
+    await say("extend doesn't work", 900)
+    expect(mwnpState().visibleCard, "symptom by voice opens the step card").toBe("step")
+
+    // retest by voice, then the verify question.
+    await ui.logInSpecUpToF1Out()
+    await ui.enterReading("0.0")
+    await waitFor((x) => x.visibleCard === "finding", 3000, "finding card")
+    await say("retest", 700)
+    expect(mwnpState().phase, "retest started by voice").toBe("retest_wait")
+    let g = 0
+    while (mwnpState().s1 !== "UP" && g < 2) {
+      await ui.tap("S1_Toggle")
+      g++
+    }
+    await waitFor((x) => x.phase === "retest", 3000, "retest active")
+    await ui.enterReading("12.0")
+    await waitFor((x) => x.phase === "done", 3000, "retest passed")
+    await sleep(2500)
+    await say("fixed", 900)
+    await waitFor((x) => x.visibleCard === "summary", 3000, "summary")
+    await say("not yet", 600)
+    expect(mwnpState().jobActive, "not yet keeps the job open").toBe(true)
+    await sleep(1500)
+    await say("end job")
+    expect(mwnpState().visibleCard, "end job asks, even after the summary").toBe("confirm")
+    await say("no", 600)
+    expect(mwnpState().jobActive, "no keeps it").toBe(true)
+    await sleep(1500)
+    await say("end job")
+    await say("yes", 800)
+    expect(mwnpState().jobActive, "end job + yes closes it").toBe(false)
     ev("SPARKY PASS", {acted: sparky.acted.length})
   }
 }

@@ -182,6 +182,14 @@ export class MWNPNotesCardUI extends BaseScriptComponent {
     if (this.onDevice()) this.openKeyboard()
   }
 
+  /** Voice "cancel": leaves the pick / other view without adding anything. Returns false when there is nothing to cancel. */
+  cancel(): boolean {
+    if (this.view === "other") this.cancelOther()
+    else if (this.view === "pick") this.setView("list")
+    else return false
+    return true
+  }
+
   private cancelOther(): void {
     this.view = "list"
     this.rebuild()

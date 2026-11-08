@@ -5,7 +5,7 @@
 // Must not: act on anything (SparkyVoice dispatches, Main performs).
 
 export interface VoiceCommand {
-  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" */
+  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" | "dismiss" | "symptom" | "retest" | "new_job" | "yes" | "no" | "not_yet" | "more" | "less" | "cancel" | "hide_display" | "show_display" | "open_job" | "open_options" | "fixed" | "not_fixed" | "end_job" */
   name: string
   /** "log": the number as typed on the pad ("12.0"); "highlight": the spoken wire id words ("three b"). */
   arg: string
@@ -110,6 +110,17 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^(fixed|it is fixed|yes fixed|problem solved)$/.test(t)) return done("fixed")
   if (/^(not fixed|still faulty|no not fixed)$/.test(t)) return done("not_fixed")
   if (/^end job$/.test(t)) return done("end_job")
+  if (/^(dismiss|ok|okay|understood)$/.test(t)) return done("dismiss")
+  const sym = /^(?:(extend|retract) (?:doesn t|doesnt|does not) work|symptom (extend|retract|neither)|(neither) (?:works|work|of them work))$/.exec(t)
+  if (sym) return {name: "symptom", arg: sym[1] || sym[2] || sym[3], complete: true, needsSettle: false}
+  if (/^(retest|fuse replaced)$/.test(t)) return done("retest")
+  if (/^(new job|start job|start new job)$/.test(t)) return done("new_job")
+  if (/^yes$/.test(t)) return done("yes")
+  if (/^no$/.test(t)) return done("no")
+  if (/^not yet$/.test(t)) return done("not_yet")
+  if (/^more$/.test(t)) return done("more")
+  if (/^less$/.test(t)) return done("less")
+  if (/^cancel$/.test(t)) return done("cancel")
   const log = /^log (.+)$/.exec(t)
   if (log) {
     const n = parseNumber(log[1].replace(/ volts?$/, ""))
