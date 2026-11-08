@@ -2167,14 +2167,28 @@
   ScriptAsset: !<reference> 21928d45-6785-47c7-832a-cad3bcad734a
   ScriptInputsDefault:
     enableAsr: true
-    clips: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       enableAsr: true
       clips: !<reference.AudioTrackAsset[]>
-        []
+        - !<reference> b54480bb-4aad-493d-9032-cad014abddc3
+        - !<reference> 5ec8e602-ee07-4b3e-96da-b7ae7c181529
+        - !<reference> b8fd76ef-03a0-4a3e-94fa-14a686f8ccdf
+        - !<reference> 320134bf-9af1-46d1-8778-91ccbef8d425
+        - !<reference> f40a679e-e9ac-4cb2-be54-94092149aebc
+        - !<reference> 2a22cc16-9a53-44d5-a85c-81392e4a991d
+        - !<reference> 82d63309-d5ec-48e7-afee-a55034b9e3b0
+        - !<reference> 52ef971a-ccdd-4967-9a23-dd9592e53361
+        - !<reference> 0f9d9269-ad77-4e69-b066-2d8c65ce14c0
+        - !<reference> 2b0a1e8b-11cb-4f57-a90d-48b5e9527f6a
+        - !<reference> e1e66c44-e0a6-4bc4-9ef3-728160278618
+        - !<reference> 97702d86-f8e5-4bae-abd4-a2484f2b7c13
+        - !<reference> f4f2ea38-0eb7-4a4a-9937-4e0a4236c98f
+        - !<reference> 07d2877c-d7b6-4c22-a54a-b26f83cb369c
+        - !<reference> 50fb2144-c517-4f27-983e-c5c5e08c18c1
+        - !<reference> f7c856af-e4d3-4916-a875-308369835f63
   ScriptTypes:
     "":
       {}

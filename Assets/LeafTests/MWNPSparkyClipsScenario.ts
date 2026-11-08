@@ -14,6 +14,7 @@ export class MWNPSparkyClipsScenario extends Scenario {
     await ui.startExtendDiagnosis()
     const sparky = (global as any).mwnpSparky
     expect(!!sparky, "SparkyVoice is running").toBe(true)
+    sparky.setRealClips(false)
     sparky.setAsrEnabled(false)
     await sleep(300)
     const lastReq = (): string => sparky.requested[sparky.requested.length - 1].join(",")

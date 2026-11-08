@@ -1,3 +1,3 @@
-Done: verify-before-close flow (retest in spec -> "Problem solved?" Yes, fixed / No, still faulty -> summary asks "End job?"; job never auto-closes; every decision is a job note) and voice hide/show/open job/open options/fixed/not fixed/end job; mwnp-verify-fix and mwnp-sparky-voice pass.
-In progress: user's live test of the new flow and of hide/show by voice.
-Next step: fix anything the live test shows; then wire the mp3 clips (Assets/Audio/Sparky) when they exist.
+Done: all 16 Sparky mp3 clips wired into SparkyVoice > Clips (zip removed); typed-text scenarios mute real clips via setRealClips(false); voice, clips and verify-fix scenarios pass.
+In progress: user's by-ear test of the clips in the Preview.
+Next step: fix any clip that plays at the wrong moment or is cut off; re-record any line that sounds wrong.

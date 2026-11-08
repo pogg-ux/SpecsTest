@@ -273,9 +273,15 @@ export class SparkyVoice extends BaseScriptComponent {
 
   // ── Pre-recorded clips ────────────────────────────────────────────────────
 
+  /** Test hook: false = ignore the real mp3 clips (stand-ins from addFakeClip still play), so typed-text tests do not wait on audio. */
+  private realClips = true
+  setRealClips(on: boolean): void {
+    this.realClips = on
+  }
+
   private hasClip(name: string): boolean {
     const n = name.toLowerCase()
-    return this.fakeClips[n] !== undefined || this.clipNames().indexOf(n) >= 0
+    return this.fakeClips[n] !== undefined || (this.realClips && this.clipNames().indexOf(n) >= 0)
   }
 
   /** Plays the clips that exist, in order; ASR is stopped while they play and restarted after. A missing clip is skipped silently. */

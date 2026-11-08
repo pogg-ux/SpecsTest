@@ -14,6 +14,7 @@ export class MWNPVerifyFixScenario extends Scenario {
     const app = (global as any).mwnpAssistant
     await ui.startExtendDiagnosis()
     const sparky = (global as any).mwnpSparky
+    sparky.setRealClips(false)
     sparky.setAsrEnabled(false)
     await sleep(300)
     const has = (n: string): boolean => !!findInteractablesByName(n, undefined, true)[0]

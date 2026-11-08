@@ -38,6 +38,7 @@ export class MWNPSparkyVoiceScenario extends Scenario {
     const sparky = (global as any).mwnpSparky
     const app = (global as any).mwnpAssistant
     expect(!!sparky && !!app, "SparkyVoice and Main are running").toBe(true)
+    sparky.setRealClips(false)
     sparky.setAsrEnabled(false) // typed text only: the microphone must not add noise to the test
     await sleep(300)
     const acted = (): number => sparky.acted.length
