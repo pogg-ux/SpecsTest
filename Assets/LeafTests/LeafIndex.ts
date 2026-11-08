@@ -32,6 +32,7 @@ import {MWNPCabinetLockScenario} from "./MWNPCabinetLockScenario"
 import {MWNPCabinetShotScenario} from "./MWNPCabinetShotScenario"
 import {MWNPCabinetShotOnScenario} from "./MWNPCabinetShotOnScenario"
 import {MWNPCabinetShotFullScenario} from "./MWNPCabinetShotFullScenario"
+import {MWNPCabinetShotLabelsScenario} from "./MWNPCabinetShotLabelsScenario"
 
 /** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
 const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
@@ -70,6 +71,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-cabinet-shot", typename: MWNPCabinetShotScenario.getTypeName()},
     {id: "mwnp-cabinet-shot-on", typename: MWNPCabinetShotOnScenario.getTypeName()},
     {id: "mwnp-cabinet-shot-full", typename: MWNPCabinetShotFullScenario.getTypeName()},
+    {id: "mwnp-cabinet-shot-labels", typename: MWNPCabinetShotLabelsScenario.getTypeName()},
     {id: "mwnp-gallery", typename: MWNPGalleryScenario.getTypeName(), parameters: {shot: "start"}},
   ]
 

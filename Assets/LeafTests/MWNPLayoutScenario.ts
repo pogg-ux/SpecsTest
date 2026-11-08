@@ -73,7 +73,7 @@ function childNamed(so: SceneObject, name: string): SceneObject | null {
   return null
 }
 
-/** Checks one label's style: bold text on a 90% smoke-gray plate with a thin bright edge. Returns its text color. */
+/** Checks one label's style: bold text on a 90% smoke-gray plate with a thin bright edge (wire number labels are cream wire sleeves with dark text). Returns its text color. */
 function checkLabelStyle(so: SceneObject): vec4 {
   const lbl = childNamed(so, "Label")
   const plate = childNamed(so, "LabelPlate")
@@ -84,10 +84,12 @@ function checkLabelStyle(so: SceneObject): vec4 {
   expect(t.outlineSettings.enabled, so.name + " has no blurring outline").toBe(false)
   const rr = (plate as SceneObject).getComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
   const fill = rr.backgroundColor
-  expect(fill.w >= 0.85 && fill.x <= 0.2, so.name + " plate is dark smoke-gray at 90%: " + colorStr(fill)).toBe(true)
+  const sleeve = so.name.indexOf("WireLabel_") === 0
+  if (sleeve) expect(fill.w >= 0.99 && fill.x >= 0.9 && fill.y >= 0.85 && fill.z >= 0.6 && fill.z <= 0.9, so.name + " plate is a cream sleeve: " + colorStr(fill)).toBe(true)
+  else expect(fill.w >= 0.85 && fill.x <= 0.2, so.name + " plate is dark smoke-gray at 90%: " + colorStr(fill)).toBe(true)
   expect(rr.border, so.name + " plate has an edge").toBe(true)
   const e = rr.borderColor
-  expect(Math.max(e.x, e.y, e.z) >= 0.85 && e.w >= 0.99, so.name + " plate edge is bright: " + colorStr(e)).toBe(true)
+  if (!sleeve) expect(Math.max(e.x, e.y, e.z) >= 0.85 && e.w >= 0.99, so.name + " plate edge is bright: " + colorStr(e)).toBe(true)
   expect(rr.opacity, so.name + " plate fully opaque (not faded)").toBe(1)
   return t.textFill.color
 }
@@ -125,7 +127,8 @@ export class MWNPLayoutScenario extends Scenario {
       expect(labels.length >= 20, "found the model's labels: " + labels.length).toBe(true)
       for (const so of labels) {
         const c = checkLabelStyle(so)
-        expect(c.x === 1 && c.y === 1 && c.z === 1 && c.w === 1, so.name + " is pure white at full brightness: " + colorStr(c)).toBe(true)
+        if (so.name.indexOf("WireLabel_") === 0) expect(Math.max(c.x, c.y, c.z) <= 0.2 && c.w === 1, so.name + " sleeve text is dark: " + colorStr(c)).toBe(true)
+        else expect(c.x === 1 && c.y === 1 && c.z === 1 && c.w === 1, so.name + " is pure white at full brightness: " + colorStr(c)).toBe(true)
       }
       // Terminal labels are printed on TS-1..TS-5: white bold text on a dark plate, one per terminal.
       for (const id of ["TS-1", "TS-2", "TS-3", "TS-4", "TS-5"]) {

@@ -74,7 +74,7 @@ export class CabinetKit {
   }
 
   /** Axis-aligned box: center, size. `faces` overrides the color of single faces (px, nx, py, ny, pz). The back face (-z) is skipped. */
-  box(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, color: C4, faces?: {[face: string]: C4}): void {
+  box(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, color: C4, faces?: {[face: string]: C4}, skip?: string[]): void {
     const x0 = cx - sx / 2
     const x1 = cx + sx / 2
     const y0 = cy - sy / 2
@@ -82,11 +82,32 @@ export class CabinetKit {
     const z0 = cz - sz / 2
     const z1 = cz + sz / 2
     const col = (f: string): C4 => (faces && faces[f] ? (faces[f] as C4) : color)
-    this.quad([x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1], [1, 0, 0], col("px"))
-    this.quad([x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [x0, y0, z0], [-1, 0, 0], col("nx"))
-    this.quad([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [0, 1, 0], col("py"))
-    this.quad([x0, y0, z1], [x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [0, -1, 0], col("ny"))
-    this.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], col("pz"))
+    const has = (f: string): boolean => !skip || skip.indexOf(f) < 0
+    if (has("px")) this.quad([x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1], [1, 0, 0], col("px"))
+    if (has("nx")) this.quad([x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [x0, y0, z0], [-1, 0, 0], col("nx"))
+    if (has("py")) this.quad([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [0, 1, 0], col("py"))
+    if (has("ny")) this.quad([x0, y0, z1], [x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [0, -1, 0], col("ny"))
+    if (has("pz")) this.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], col("pz"))
+  }
+
+  /** A +Z facing rectangle of cols x rows cells whose brightness varies by +-amp (galvanized spangle). Deterministic from seed. */
+  speckle(x0: number, y0: number, x1: number, y1: number, z: number, cols: number, rows: number, color: C4, amp: number, seed: number): void {
+    let st = seed >>> 0 || 1
+    const rnd = (): number => {
+      st = (Math.imul(st, 1664525) + 1013904223) >>> 0
+      return st / 4294967296
+    }
+    const dx = (x1 - x0) / cols
+    const dy = (y1 - y0) / rows
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const f = 1 + (rnd() * 2 - 1) * amp
+        const cc: C4 = [Math.min(1, color[0] * f), Math.min(1, color[1] * f), Math.min(1, color[2] * f), color[3]]
+        const xa = x0 + c * dx
+        const ya = y0 + r * dy
+        this.quad([xa, ya, z], [xa + dx, ya, z], [xa + dx, ya + dy, z], [xa, ya + dy, z], [0, 0, 1], cc)
+      }
+    }
   }
 
   /** Basis perpendicular to axis a: (u, v) with u x v = a. */

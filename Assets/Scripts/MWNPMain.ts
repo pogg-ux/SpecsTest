@@ -303,7 +303,7 @@ export class MWNPMain extends BaseScriptComponent {
     // Cards are opaque by default (they sit in front of the cabinet); the Options card style can switch back to translucent.
     setCardOpaque(this.optionsCard.value("cardStyle") === "Opaque")
     this.cabinet.build(nl)
-    this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels(), this.cabinet.getBoardNote())
+    this.partTags.build(this.cabinet.getTagAnchors(), this.cabinet.getWireLabels(), this.cabinet.getBoardNote(), this.cabinet.getWireSleeveEnds())
     this.placeLeftColumn()
     this.placeChips()
 

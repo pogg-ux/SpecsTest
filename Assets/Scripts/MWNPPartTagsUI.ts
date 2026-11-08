@@ -30,6 +30,18 @@ export interface TagAnchor {
   strip?: {top: number; bottom: number; index: number}
 }
 
+/** A cream wire-sleeve marker on a wire near one end (decorative twin of the wire's number label; shows and hides with it). */
+export interface WireSleeve {
+  wireName: string
+  text: string
+  pos: vec3
+}
+
+/** Cream sleeve marker look: cream fill, thin tan edge, dark text. */
+const SLEEVE_FILL = new vec4(0.98, 0.92, 0.76, 1)
+const SLEEVE_EDGE = new vec4(0.72, 0.6, 0.38, 1)
+const SLEEVE_TEXT = new vec4(0.16, 0.13, 0.08, 1)
+
 export interface WireLabel {
   name: string
   text: string
@@ -99,6 +111,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
 
   private tags: {[id: string]: {so: SceneObject; label: Text; plate: LabelPlate; hovered: boolean; leader: SceneObject | null}} = {}
   private wireLabelSOs: {[name: string]: SceneObject} = {}
+  private wireEndSOs: {[wireName: string]: SceneObject[]} = {}
   private anchors: {[id: string]: TagAnchor} = {}
   private boxes: LabelBox[] = []
   private expectedSO: SceneObject | null = null
@@ -133,7 +146,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     return this.boxes
   }
 
-  build(anchors: TagAnchor[], wireLabels: WireLabel[], note: {text: string; pos: vec3} | null = null): void {
+  build(anchors: TagAnchor[], wireLabels: WireLabel[], note: {text: string; pos: vec3} | null = null, sleeves: WireSleeve[] = []): void {
     // The cabinet may be scaled down to fit the frame: raise each label size (in cabinet cm) so that, after that scale,
     // every label is still at least MIN_TEXT_EM_CM (1.0 cm) tall in the real world.
     const floorEm = MIN_TEXT_EM_CM / Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
@@ -147,11 +160,24 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       const so = makeObj(this.sceneObject, wl.name, wl.pos)
       this.wireLabelSOs[wl.name] = so
       const t = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), wl.text, this.wireEmCm, 4)
-      styleLabelText(t)
+      styleLabelText(t, SLEEVE_TEXT)
       const w = textWidthCm(wl.text, this.wireEmCm, true) + PAD_X
       const h = this.wireEmCm * PLATE_H
-      makeLabelPlate(so, w, h, wl.isReturn ? this.returnWireColor : this.supplyWireColor)
+      makeLabelPlate(so, w, h, SLEEVE_EDGE, -0.06, SLEEVE_FILL)
       this.boxes.push({name: wl.name, cx: wl.pos.x, cy: wl.pos.y, w, h})
+    }
+    // The twin sleeve near the wire's other end.
+    for (const sl of sleeves) {
+      const name = "WireEnd_" + sl.wireName
+      const so = makeObj(this.sceneObject, name, sl.pos)
+      const t = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), sl.text, this.wireEmCm, 4)
+      styleLabelText(t, SLEEVE_TEXT)
+      const w = textWidthCm(sl.text, this.wireEmCm, true) + PAD_X
+      const h = this.wireEmCm * PLATE_H
+      makeLabelPlate(so, w, h, SLEEVE_EDGE, -0.06, SLEEVE_FILL)
+      if (!this.wireEndSOs[sl.wireName]) this.wireEndSOs[sl.wireName] = []
+      this.wireEndSOs[sl.wireName].push(so)
+      this.boxes.push({name, cx: sl.pos.x, cy: sl.pos.y, w, h})
     }
     if (note) {
       // Footnote: hidden in the default view, shown only through setBoardNoteVisible (the "More" view).
@@ -251,6 +277,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       if (l) l.enabled = on
     }
     for (const name of Object.keys(this.wireLabelSOs)) this.wireLabelSOs[name].enabled = !tagIds || name === wireName
+    for (const name of Object.keys(this.wireEndSOs)) for (const so of this.wireEndSOs[name]) so.enabled = !tagIds || name === wireName
   }
 
   /** Back to the idle look for every tag (New job). */
