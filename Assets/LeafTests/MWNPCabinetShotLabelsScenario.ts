@@ -8,7 +8,7 @@ import {prepareShot} from "./MWNPShotKit"
 export class MWNPCabinetShotLabelsScenario extends Scenario {
   async run(): Promise<void> {
     const app = await prepareShot(false)
-    app.optionsCard.set("labels", 1)
+    app.optionsCard.set("labels", 1) // "Always on", set explicitly: the default is "On request"
     app.voiceCommand("close")
     // "close" re-opens the Library menu: collapse it again so only its chip is left.
     app.libraryCard.collapse()

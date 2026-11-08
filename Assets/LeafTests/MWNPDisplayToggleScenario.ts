@@ -62,8 +62,9 @@ export class MWNPDisplayToggleScenario extends Scenario {
     const ui = new MWNPLeafInteractor()
     const app = (global as any).mwnpAssistant
     await ui.startExtendDiagnosis()
-    // This scenario checks the fade of everything; the Options default (Cards only + labels Always on) is tested in mwnp-library-options.
+    // This scenario checks the fade of everything; the Options default (Cards only + labels On request) is tested in mwnp-library-options.
     app.optionsCard.set("hideButton", 1)
+    app.optionsCard.set("labels", 1) // "Always on": this scenario checks the fade of every label, so none may time out
     await ui.logInSpecUpToF1Out()
     await ui.enterReading("0.0")
     await waitFor((s) => s.visibleCard === "finding", 3000, "finding card")

@@ -5,7 +5,7 @@
 // Must not: act on anything (SparkyVoice dispatches, Main performs).
 
 export interface VoiceCommand {
-  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" | "dismiss" | "symptom" | "retest" | "new_job" | "yes" | "no" | "not_yet" | "more" | "less" | "cancel" | "s1_up" | "s1_down" | "report_symptom" | "open_notes" | "save_note" | "note" | "ask" | "hide_display" | "show_display" | "open_job" | "open_options" | "fixed" | "not_fixed" | "end_job" */
+  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" | "dismiss" | "symptom" | "retest" | "new_job" | "yes" | "no" | "not_yet" | "more" | "less" | "cancel" | "s1_up" | "s1_down" | "report_symptom" | "open_notes" | "save_note" | "note" | "ask" | "hide_display" | "show_display" | "open_job" | "open_options" | "fixed" | "not_fixed" | "end_job" | "show_labels" | "clear_labels" */
   name: string
   /** "log": the number as typed on the pad ("12.0"); "highlight": the spoken wire id words ("three b"). */
   arg: string
@@ -105,6 +105,8 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^((show|open) (the )?)?library$/.test(t)) return done("open_library")
   if (/^((show|open) (the )?)?report$/.test(t)) return done("open_report")
   if (/^((show|open) (the )?)?camera$/.test(t)) return done("open_camera")
+  if (/^(show me|show (the )?labels)$/.test(t)) return done("show_labels")
+  if (/^(clear|clear (the )?labels|hide (the )?labels)$/.test(t)) return done("clear_labels")
   if (/^hide( card| cards| display)?$/.test(t)) return done("hide_display")
   if (/^show( card| cards| display)?$/.test(t)) return done("show_display")
   if (/^(((show|open) (the )?)|in )?job$/.test(t)) return done("open_job")

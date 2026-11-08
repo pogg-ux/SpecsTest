@@ -3,7 +3,7 @@
 // Owns: the card and one button per option; each button says its current value ("Text size: Large") and
 // cycles to the next value when pressed. Holds the values for the session; Main applies them.
 // API: show(), hide(), values (readable), set(key, index), events onChange({key, index, value}).
-// Options (first value is the default): labels [This step only, Always on], hideButton [Cards only, Everything],
+// Options (first value is the default): labels [On request, Always on], hideButton [Cards only, Everything],
 //   cardStyle [Translucent, Opaque] (starts on Opaque), textSize [Normal, Large, Extra large], schematic [Normal, Enlarged],
 //   answerText [Off, On] ("Show Sparky's answers as text": Off = Sparky only speaks an Ask answer, On = the answer card opens too).
 // Test handles: "Opt_Labels", "Opt_HideButton", "Opt_CardStyle", "Opt_TextSize", "Opt_Schematic", "Opt_AnswerText", card "OptionsCardCard".
@@ -18,7 +18,7 @@ export interface OptionDef {
 }
 
 export const OPTION_DEFS: OptionDef[] = [
-  {key: "labels", title: "Labels", values: ["This step only", "Always on"]},
+  {key: "labels", title: "Labels", values: ["On request", "Always on"]},
   {key: "hideButton", title: "Hide button", values: ["Cards only", "Everything"]},
   {key: "cardStyle", title: "Card style", values: ["Translucent", "Opaque"]},
   {key: "textSize", title: "Text size", values: ["Normal", "Large", "Extra large"]},

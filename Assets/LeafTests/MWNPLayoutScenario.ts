@@ -105,6 +105,7 @@ export class MWNPLayoutScenario extends Scenario {
     await waitFor((s) => s.initialized === true && s.visibleCard === "safety", 10000, "safety card")
     await sleep(600) // let the start-pose anchoring (re-run at 0.25 s) settle
     const cam0 = findCamera()
+    ;(global as any).mwnpAssistant.optionsCard.set("labels", 1) // "Always on": this scenario checks every label's style and position, so none may fade
 
     // Safety notice: fully in view, in the upper right (the approved position), above the cabinet and clear of it.
     {
