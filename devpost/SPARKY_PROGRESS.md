@@ -1,3 +1,3 @@
-Done: command layer (MWNPSpeech.ts parsers/numbers/wire ids; Agent stepForward/stepBack/snapshot/restore; Main.voiceCommand with next/back/repeat/log/undo/show schematic/close/open library|report|camera/highlight wire); mic icon imported; compiles.
-In progress: Assets/Scripts/SparkyVoice.ts (ASR session, wake word, partial-first with 2 s dedup, listening indicator, typed-text inject hook) and attaching it to a SparkyVoice scene object.
-Next step: LEAF scenario mwnp-sparky-voice (inject next/back/repeat/log/undo), run c1-c5 + new scenario, README/Devpost text, merge to main only if core commands pass; then the audio-clip stretch (Assets/Audio/Sparky, list of clip lines for ElevenLabs).
+Done: command layer + Assets/Scripts/SparkyVoice.ts (ASR session, wake word, partial-first, 2 s dedup, mic indicator, inject hook) attached as scene object SparkyVoice; scenario mwnp-sparky-voice PASSES (next/back/partial+dedup/repeat/log/undo/highlight).
+In progress: adding show schematic / close / open library|report|camera to the scenario, then regression (c1-c5, layout-cards) and an on-screen look at the indicator.
+Next step: README + Devpost text (Sparky works, preview-tested noisy room, buttons remain), merge to main if core commands pass; then the audio-clip stretch (Assets/Audio/Sparky, AudioComponent player, stop ASR while a clip plays, clip list for ElevenLabs).
