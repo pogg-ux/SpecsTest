@@ -15,7 +15,7 @@ export interface VoiceCommand {
   needsSettle: boolean
 }
 
-const WAKE = "(?:sparky|sparkie|sparkey|sparki|spark key)"
+const WAKE = "(?:sparky|sparkie|sparkey|sparki|spargy|spark key)"
 const WAKE_START = new RegExp("^" + WAKE + "(?: |$)")
 const WAKE_ANY = new RegExp("(?:^| )" + WAKE + "(?= |$)", "g")
 
@@ -105,7 +105,7 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^((show|open) (the )?)?camera$/.test(t)) return done("open_camera")
   if (/^hide( card| cards| display)?$/.test(t)) return done("hide_display")
   if (/^show( card| cards| display)?$/.test(t)) return done("show_display")
-  if (/^((show|open) (the )?)?job$/.test(t)) return done("open_job")
+  if (/^(((show|open) (the )?)|in )?job$/.test(t)) return done("open_job")
   if (/^((show|open) (the )?)?options$/.test(t)) return done("open_options")
   const s1 = /^(?:s ?1|s one|as one|is one|ess one|switch|the switch) (up|down)$/.exec(t)
   if (s1) return done("s1_" + s1[1])
@@ -115,7 +115,7 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^(dismiss|ok|okay|understood)$/.test(t)) return done("dismiss")
   const sym = /^(?:(extend|retract) (?:doesn t|doesnt|does not) work|symptom (extend|retract|neither)|(neither) (?:works|work|of them work))$/.exec(t)
   if (sym) return {name: "symptom", arg: sym[1] || sym[2] || sym[3], complete: true, needsSettle: false}
-  if (/^(retest|fuse replaced)$/.test(t)) return done("retest")
+  if (/^(retest|fuse replaced|repaired|repaired retest|fuse replaced retest|replaced)$/.test(t)) return done("retest")
   if (/^(new job|start job|start new job)$/.test(t)) return done("new_job")
   if (/^yes$/.test(t)) return done("yes")
   if (/^no$/.test(t)) return done("no")

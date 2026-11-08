@@ -1819,7 +1819,22 @@ export class MWNPMain extends BaseScriptComponent {
     this.addNote("Tech", "Problem solved? No, still faulty. Finding: " + f + ". Retest: " + rt + " in spec. Back to the step list; job stays open.")
     this.verifyState = ""
     agent.reopenAfterNotFixed()
+    // Back to the state the first pass started in: no stale badges, undo, highlight or S1 flip from the failed retest.
+    this.highlightIdx = -1
+    this.lastUndo = null
+    this.partTags.clearBadges()
+    this.partTags.resetTags()
+    this.stepCard.setReadout("— V")
+    {
+      const fnKey = agent.functionKey
+      const ctl = fnKey ? nl.controlOf(fnKey) : null
+      if (ctl) this.cabinet.setS1(ctl.position)
+    }
     this.cabinet.clearOutlines()
+    for (const id of nl.activePathComponents(agent.faultIndex)) {
+      this.cabinet.setOutline(id, "amber")
+      this.partTags.setTagState(id, "relevant")
+    }
     this.cabinet.hideTraces()
     this.updateLamps()
     this.stepCard.show()
