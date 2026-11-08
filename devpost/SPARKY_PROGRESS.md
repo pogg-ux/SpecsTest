@@ -1,3 +1,3 @@
-Done: command layer + Assets/Scripts/SparkyVoice.ts (ASR session, wake word, partial-first, 2 s dedup, mic indicator, inject hook) attached as scene object SparkyVoice; scenario mwnp-sparky-voice PASSES (next/back/partial+dedup/repeat/log/undo/highlight).
-In progress: adding show schematic / close / open library|report|camera to the scenario, then regression (c1-c5, layout-cards) and an on-screen look at the indicator.
-Next step: README + Devpost text (Sparky works, preview-tested noisy room, buttons remain), merge to main if core commands pass; then the audio-clip stretch (Assets/Audio/Sparky, AudioComponent player, stop ASR while a clip plays, clip list for ElevenLabs).
+Done: Sparky core commands complete and tested (scenario mwnp-sparky-voice PASSES: wake word, next/back, partial-first + 2 s dedup, repeat, log, undo, show schematic, close, open library/report/camera, highlight wire); c1-c5 + camera-card pass; README/Devpost/design-brief updated.
+In progress: final commit of the core, then merge sparky-voice into main.
+Next step: audio-clip stretch on a follow-up commit: Assets/Audio/Sparky, SparkyClips player (AudioComponent; stop ASR while a clip plays, restart after; missing clip = silent skip), clip list for ElevenLabs.

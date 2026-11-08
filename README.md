@@ -43,7 +43,8 @@ No SPECS glasses needed — everything runs in the Lens Studio preview.
 
 ## Preview stand-ins
 - The 3D trainer stands in for a real cabinet; the tech marks parts by pinching (no live recognition in preview).
-- Grab gesture and camera photos are device-only. Voice is planned, not in this build: the assistant is called **Sparky** and is addressed as "Sparky, <command>" (for example "Sparky, highlight wire 2a"). Every action already has a button.
+- Grab gesture and camera photos are device-only.
+- **Sparky (voice) works in this build.** Say "Sparky, next", "back", "repeat", "log twelve point zero", "undo", "show schematic", "close", "open library", "open report", "open camera", or "highlight wire three b". It acts only on phrases that start with "Sparky" (TV and side talk are ignored), acts on a command as soon as it is complete, and shows what it heard next to the chips. It needs the microphone and an internet connection (speech recognition). Preview-tested with a headset in a noisy room. Every action still has a button; voice is on top, not instead. On the glasses, speech plus camera needs Extended or Transparent Permission (not tested on a device yet).
 - The agent is rule-based by design — no live AI decides anything, so it can't invent an answer.
 
 ## Where the data goes

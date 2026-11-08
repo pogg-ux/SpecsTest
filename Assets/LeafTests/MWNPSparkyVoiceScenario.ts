@@ -120,6 +120,30 @@ export class MWNPSparkyVoiceScenario extends Scenario {
     sparky.inject("Sparky, highlight wire 3d")
     await sleep(300)
     expect(last().result, "3d is not guessed").toBe("Which wire?")
+    // show schematic / close
+    sparky.inject("Sparky, show schematic")
+    await sleep(500)
+    expect(app.schematicPanel.isOpen, "show schematic opens it").toBe(true)
+    expect(app.stepCard.isCollapsed, "one card at a time: the step card is its chip").toBe(true)
+    sparky.inject("Sparky, close")
+    await sleep(500)
+    expect(!app.schematicPanel.isOpen, "close closes the schematic").toBe(true)
+    expect(!app.stepCard.isCollapsed && app.stepCard.isVisible, "and the step card is back").toBe(true)
+
+    // open library / report / camera
+    sparky.inject("Sparky, open library")
+    await sleep(500)
+    expect(mwnpState().visibleCard, "open library -> no card open, the menu shows").toBe("home")
+    expect(app.libraryCard.isMenuVisible, "the Library menu is expanded").toBe(true)
+    sparky.inject("Sparky, open report")
+    await sleep(600)
+    expect(mwnpState().visibleCard === "report" || mwnpState().visibleCard === "summary", "open report: " + mwnpState().visibleCard).toBe(true)
+    sparky.inject("Sparky, open camera")
+    await sleep(600)
+    expect(mwnpState().visibleCard, "open camera").toBe("camera")
+    sparky.inject("Sparky, close")
+    await sleep(500)
+    expect(mwnpState().visibleCard, "close closes the open card").toBe("home")
     ev("SPARKY PASS", {acted: sparky.acted.length})
   }
 }
