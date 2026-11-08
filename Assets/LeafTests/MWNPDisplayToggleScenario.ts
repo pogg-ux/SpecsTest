@@ -85,21 +85,10 @@ export class MWNPDisplayToggleScenario extends Scenario {
     ev("display button targeting", {hits: hitNames})
     expect(hitNames.indexOf("Btn_DisplayToggle") >= 0, "mouse ray reaches the button: " + hitNames.join(",")).toBe(true)
 
-    // The cards now sit beside the cabinet (left of its backplate), so the button rides on the open card's top-right corner, which is
-    // the edge of the display facing the cabinet, and stays clear of the backplate.
-    const trainer = findSceneObjectByName("MWNPTrainer")
-    const tm = trainer.getTransform().getWorldTransform()
-    const plate = {x0: 9, x1: -9, y0: 9, y1: -9}
-    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-      const sp = cam.worldSpaceToScreenSpace(tm.multiplyPoint(new vec3(sx * 22, sy * 22, 0))) // the 44 cm backplate
-      plate.x0 = Math.min(plate.x0, sp.x)
-      plate.x1 = Math.max(plate.x1, sp.x)
-      plate.y0 = Math.min(plate.y0, sp.y)
-      plate.y1 = Math.max(plate.y1, sp.y)
-    }
+    // The cards drop over the cabinet's left side from the Library chip (overlap is fine: Hide clears them), so the button rides on the open
+    // card's top-right corner: checked against the card below. Here: it is on screen at all.
     const b = cam.worldSpaceToScreenSpace(to)
-    ev("display button position", {button: [+b.x.toFixed(3), +b.y.toFixed(3)], backplate: [plate.x0, plate.x1, plate.y0, plate.y1].map((v) => +v.toFixed(3))})
-    expect(b.x < plate.x0 || b.x > plate.x1 || b.y < plate.y0 || b.y > plate.y1, "button is clear of the backplate").toBe(true)
+    ev("display button position", {button: [+b.x.toFixed(3), +b.y.toFixed(3)]})
     expect(b.x > 0.02 && b.x < 0.98 && b.y > 0.02 && b.y < 0.98, "button is inside the view").toBe(true)
     const card = findSceneObjectByName("FindingCardCard")
     const csz: vec2 = (card.getComponent("Component.ScriptComponent") as any).size

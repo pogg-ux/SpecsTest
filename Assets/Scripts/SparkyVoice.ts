@@ -11,7 +11,7 @@
 import {normalize, parseCommand, VoiceCommand, wakeSegments} from "./MWNPSpeech"
 import {ask, OFFLINE, readToken, speak} from "./SparkyAsk"
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
-import {addCardHeader, addFitText, fitText, makeCardBody, TEXT_BODY} from "./MWNPSharedUI"
+import {addCardHeader, addFitText, fitText, makeCardBody, makeObj, MIN_GAP_CM, textWidthCm, TEXT_BODY} from "./MWNPSharedUI"
 
 const micIcon = requireAsset("../Icons/mic.png") as Texture
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
@@ -408,7 +408,8 @@ export class SparkyVoice extends BaseScriptComponent {
   /**
    * The answer card: the same panel as the Step card (UIKit BackPlate, same fill, header + rule, white text) at the Step card's real
    * width and text size. Built the first time it is needed (the Step card has to exist), and rebuilt if the Step card's width or
-   * text size changed (Text size option). Its height follows its text; MWNPMain.answerCardOffset says where its CENTER goes.
+   * text size changed (Text size option). Its height follows its text and it hangs from its chip: MWNPMain.answerAnchor gives the
+   * card's right edge and top edge (the chip sits above the cabinet's top-right corner, the card drops from it).
    */
   private ensureAnswerCard(): boolean {
     const step = this.main ? this.main.stepCard : null
@@ -429,6 +430,12 @@ export class SparkyVoice extends BaseScriptComponent {
     const card = makeCardBody(root, "SparkyAnswerCard", w, 1.4 * s, 0.5 * s, "top")
     addCardHeader(card.content, "AnswerHeader", "Answer", inner, root)
     this.answerTextComp = addFitText(card.content, "AnswerText", "", inner, em, {color: TEXT_BODY, minLines: 0})
+    // The chip the card hangs from: a small plate of the same style, its bottom edge MIN_GAP_CM above the card's top edge and its right
+    // edge on the card's right edge. Its text is the same size as the card's.
+    const chipW = textWidthCm("Sparky", em, true) + 2.0 * s
+    const chipHost = makeObj(root, "SparkyAnswerChipHost", new vec3(w / 2 - chipW / 2, MIN_GAP_CM / k, 0))
+    const chip = makeCardBody(chipHost, "SparkyAnswerChip", chipW, 0.5 * s, 0.3 * s, "bottom")
+    addFitText(chip.content, "AnswerChipText", "Sparky", chipW - 1.0 * s, em, {color: TEXT_BODY, bold: true})
     this.answerPlate = card.plate
     this.answerW = w
     this.answerEm = em
@@ -443,12 +450,11 @@ export class SparkyVoice extends BaseScriptComponent {
   private answerEm = 0
   private answerInner = 0
   private answerPlate: BackPlate | null = null
-  /** Where the answer card sits: x, and its vertical CENTER, relative to the mic indicator (MWNPMain.placeChips); its top follows its height. */
+  /** Hangs the answer card from its anchor (MWNPMain.placeChips): its right edge and top edge relative to the mic indicator. */
   private placeAnswerCard(): void {
     if (!this.answerRoot || !this.main) return
-    const ao: vec3 = this.main.answerCardOffset
-    const h = this.answerPlate && this.answerPlate.size ? this.answerPlate.size.y : 0
-    this.answerRoot.getTransform().setLocalPosition(new vec3(ao.x, ao.y + h / 2, 0))
+    const a: vec3 = this.main.answerAnchor
+    this.answerRoot.getTransform().setLocalPosition(new vec3(a.x - this.answerW / 2, a.y, 0))
   }
 
   /** The small answer card under the mic indicator (stays visible when the cards are hidden). */
@@ -611,7 +617,7 @@ export class SparkyVoice extends BaseScriptComponent {
   private placeIndicator(): void {
     if (!this.indRoot || !this.main) return
     const p: vec3 = this.main.voiceIndicatorPos
-    const ao: vec3 = this.main.answerCardOffset
+    const ao: vec3 = this.main.answerAnchor
     const key = p.x.toFixed(2) + "," + p.y.toFixed(2) + "," + p.z.toFixed(2) + "|" + ao.x.toFixed(2) + "," + ao.y.toFixed(2)
     if (key === this.lastPlacedKey) return
     this.lastPlacedKey = key

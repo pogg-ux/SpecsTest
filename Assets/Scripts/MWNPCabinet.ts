@@ -643,6 +643,56 @@ export class MWNPCabinet extends BaseScriptComponent {
     for (const k of Object.keys(this.traces)) this.setTrace(parseInt(k), "hidden")
   }
 
+  /** Changes whenever the current step's test point or wire changes (cards re-check what they cover). */
+  get focusKey(): string {
+    return this.activePointId + "|" + this.focusWire
+  }
+
+  /**
+   * Cabinet-local (x, y) spots the technician must be able to see for the current step: the active test point (its terminal or part, and
+   * the probe spot) and the current step's wire, sampled every 1.5 cm along its route. A card that drops over the cabinet keeps clear of them.
+   */
+  getFocusSamples(): vec2[] {
+    return this.getFocusPointSamples().concat(this.getFocusWireSamples())
+  }
+
+  /** The active test point alone (cabinet-local): a card must never cover it. */
+  getFocusPointSamples(): vec2[] {
+    const out: vec2[] = []
+    if (this.activePointId) {
+      const p = this.getPointPos(this.activePointId)
+      const terminal = LAYOUT.terminalX[this.activePointId] !== undefined
+      const dy = terminal ? 2.4 : 1.5
+      out.push(new vec2(p.x, p.y), new vec2(p.x, p.y + dy), new vec2(p.x, p.y - dy), new vec2(p.x - 1.2, p.y), new vec2(p.x + 1.2, p.y))
+      if (terminal) out.push(new vec2(p.x, LAYOUT.terminal.y - 3.0)) // the probe spot below the strip
+    }
+    return out
+  }
+
+  /** The current step's wire alone, sampled along its route (cabinet-local). A long wire cannot always be kept entirely clear: cards cover as little of it as they can. */
+  getFocusWireSamples(): vec2[] {
+    const out: vec2[] = []
+    const w = this.netlist && this.focusWire >= 0 ? this.netlist.data.wires[this.focusWire] : null
+    const r = w ? ROUTES[w.from + ">" + w.to] : null
+    if (r) {
+      for (let i = 0; i + 1 < r.pts.length; i++) {
+        const a = r.pts[i]
+        const b = r.pts[i + 1]
+        const len = Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]))
+        const n = Math.max(1, Math.ceil(len / 1.5))
+        for (let k = 0; k <= n; k++) out.push(new vec2(a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n))
+      }
+    }
+    return out
+  }
+
+  /** Cabinet-local (x, y) spots over the current point's "Expected" tag (about 8 x 3 cm): cards avoid them when they can. */
+  getExpectedTagSamples(): vec2[] {
+    if (!this.activePointId) return []
+    const t = this.getExpectedTagPos(this.activePointId)
+    return [new vec2(t.x, t.y), new vec2(t.x - 3, t.y), new vec2(t.x + 3, t.y), new vec2(t.x, t.y + 1.2), new vec2(t.x, t.y - 1.2)]
+  }
+
   /** Probe markers on the active test point and on the meter reference (black lead). */
   setActivePoint(pointId: string | null, refPointId: string | null): void {
     this.activePointId = pointId ? pointId : ""

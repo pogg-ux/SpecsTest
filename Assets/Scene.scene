@@ -22204,7 +22204,7 @@
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 32.000000
+      widthCm: !<float> 28.000000
       textEmCm: !<float> 1.000000
       headlineEmCm: 1.800000
       nextActionHeading: Next action
@@ -23060,7 +23060,7 @@
     {}
   ScriptInputs:
     "":
-      widthCm: !<float> 32.000000
+      widthCm: !<float> 28.000000
       textEmCm: !<float> 1.000000
       readoutEmCm: 1.200000
       keyWidthRealCm: !<float> 3.000000
