@@ -598,9 +598,11 @@ export class SparkyVoice extends BaseScriptComponent {
   private placeIndicator(): void {
     if (!this.indRoot || !this.main) return
     const p: vec3 = this.main.voiceIndicatorPos
-    const key = p.x.toFixed(2) + "," + p.y.toFixed(2) + "," + p.z.toFixed(2)
+    const ao: vec3 = this.main.answerCardOffset
+    const key = p.x.toFixed(2) + "," + p.y.toFixed(2) + "," + p.z.toFixed(2) + "|" + ao.x.toFixed(2) + "," + ao.y.toFixed(2)
     if (key === this.lastPlacedKey) return
     this.lastPlacedKey = key
+    if (this.answerRoot) this.answerRoot.getTransform().setLocalPosition(ao) // right of the cabinet (MWNPMain.placeChips)
     const t = this.indRoot.getTransform()
     t.setLocalPosition(p)
     // Same tilt as the cards (the Library's host carries the layout's rotation).

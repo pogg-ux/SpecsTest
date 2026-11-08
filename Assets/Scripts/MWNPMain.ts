@@ -68,6 +68,15 @@ interface UndoState {
 
 /** Real cm kept between the display area's edge and the card column; chip widths (real cm) for left-aligning the chips with it. */
 const FRAME_MARGIN_CM = 1.0
+/**
+ * How much farther from the user the whole layout sits than authored (cabinet 100 -> 175 cm, cards 75 -> 150 cm). At 100 cm the 46 cm
+ * board fills 79% of the 32 degree view, so no card can sit beside it; at 175 cm it fills 47% and the Step card (left) and the answer
+ * card (right) fit in the bands beside it. Real sizes are unchanged, so every text is still at least 1.0 cm tall.
+ */
+const LAYOUT_PULLBACK_CM = 75
+/** The answer card's size in cm (SparkyVoice builds it 19 x 9.5). */
+const ANSWER_CARD_W_CM = 19
+const ANSWER_CARD_H_CM = 9.5
 const LIBRARY_CHIP_CM = 7.5
 const STEP_CHIP_CM = 9.6
 
@@ -280,8 +289,13 @@ export class MWNPMain extends BaseScriptComponent {
     const rot = quat.angleAxis(yaw, vec3.up())
     const t = this.sceneObject.getTransform()
     t.setWorldRotation(rot)
-    t.setWorldPosition(camPos.sub(rot.multiplyVec3(this.authoredEyePos)))
+    t.setWorldPosition(camPos.sub(rot.multiplyVec3(this.layoutEye())))
     print("[MWNP] placed relative to user: camera " + camPos + " yaw " + ((yaw * 180) / Math.PI).toFixed(1) + "°")
+  }
+
+  /** The authored eye, moved back by LAYOUT_PULLBACK_CM: the point the layout is measured from (root space). */
+  private layoutEye(): vec3 {
+    return this.authoredEyePos.add(new vec3(0, 0, LAYOUT_PULLBACK_CM))
   }
 
   private start(): void {
@@ -537,6 +551,8 @@ export class MWNPMain extends BaseScriptComponent {
 
   /** Where SparkyVoice puts its listening indicator (root-local), set by placeChips: right of the Library chip. */
   voiceIndicatorPos: vec3 = new vec3(0, 20, -56)
+  /** Where the Ask answer card sits, relative to the mic indicator (set by placeChips: right of the cabinet). */
+  answerCardOffset: vec3 = new vec3(21, -6.2, 0)
   /** Clip names (Assets/Audio/Sparky) the last voice command wants spoken, in order; SparkyVoice plays those it has. */
   voiceClips: string[] = []
   private lastUndo: UndoState | null = null
@@ -1462,7 +1478,7 @@ export class MWNPMain extends BaseScriptComponent {
    * own space, so they sit above the cabinet even though the cards themselves are in the column to its left.
    */
   private placeChips(): void {
-    const eye = this.authoredEyePos
+    const eye = this.layoutEye()
     const rootW = this.sceneObject.getTransform().getWorldTransform()
     const toHost = (host: SceneObject, rootLocal: vec3): vec3 => host.getTransform().getInvertedWorldTransform().multiplyPoint(rootW.multiplyPoint(rootLocal))
     const libHost = this.libraryCard.sceneObject
@@ -1476,12 +1492,15 @@ export class MWNPMain extends BaseScriptComponent {
     // Left-aligned with the card column, at the top of the display area.
     const leftX = eye.x - this.viewTanH * dist + FRAME_MARGIN_CM
     this.voiceIndicatorPos = new vec3(leftX + LIBRARY_CHIP_CM + 1.2, yTop - chipH / 2, lp.z + 0.6 * s)
+    // The answer card goes to the right of the cabinet: right-aligned to the frame, top level with the chips (offset from the indicator).
+    const rightX = eye.x + this.viewTanH * dist - FRAME_MARGIN_CM
+    this.answerCardOffset = new vec3(rightX - ANSWER_CARD_W_CM / 2 - this.voiceIndicatorPos.x, yTop - ANSWER_CARD_H_CM / 2 - this.voiceIndicatorPos.y, 0)
     this.libraryCard.setChipOffset(toHost(libHost, new vec3(leftX + LIBRARY_CHIP_CM / 2, yTop - chipH / 2, lp.z + 0.6 * s)))
     this.stepCard.setChipOffset(toHost(stepHost, new vec3(leftX + STEP_CHIP_CM / 2, yTop - chipH - gap - chipH / 2, lp.z + 0.6 * s)))
   }
 
   private placeLeftColumn(): void {
-    const eye = this.authoredEyePos
+    const eye = this.layoutEye()
     const stepT = this.stepCard.sceneObject.getTransform()
     const libT = this.libraryCard.sceneObject.getTransform()
     libT.setWorldRotation(stepT.getWorldRotation())
@@ -1501,6 +1520,10 @@ export class MWNPMain extends BaseScriptComponent {
     ]
     for (const [host, widthLocal, isLibrary, keepY] of hosts) {
       const t = host.getTransform()
+      // Every card faces the camera square: no yaw, pitch or roll relative to the layout root (which carries only the user's heading),
+      // so a card's top edge is parallel to the image plane and renders level. (The hosts were authored with a -8.2 degree yaw toward
+      // the view's centre, which made every top edge slope in screen space.)
+      t.setLocalRotation(quat.quatIdentity())
       const lp = t.getLocalPosition()
       const s = t.getLocalScale().x
       // The column starts at the left edge of the display area (the camera's view at this card's distance), a margin in, and
