@@ -85,12 +85,10 @@ export class MWNPDisplayToggleScenario extends Scenario {
     ev("display button targeting", {hits: hitNames})
     expect(hitNames.indexOf("Btn_DisplayToggle") >= 0, "mouse ray reaches the button: " + hitNames.join(",")).toBe(true)
 
-    const trainer = findSceneObjectByName("MWNPTrainer")
-    const half = (trainer.getComponent("Component.ScriptComponent") as any).getBoardHalfSize() as vec2
-    const corner = cam.worldSpaceToScreenSpace(trainer.getTransform().getWorldTransform().multiplyPoint(new vec3(half.x, half.y, 0)))
+    // The cards drop over the cabinet's left side from the Library chip (overlap is fine: Hide clears them), so the button rides on the open
+    // card's top-right corner: checked against the card below. Here: it is on screen at all.
     const b = cam.worldSpaceToScreenSpace(to)
-    ev("display button position", {button: [+b.x.toFixed(3), +b.y.toFixed(3)], cabinetTopRight: [+corner.x.toFixed(3), +corner.y.toFixed(3)]})
-    expect(Math.abs(b.x - corner.x) < 0.1 && Math.abs(b.y - corner.y) < 0.1, "button is at the cabinet's top-right edge").toBe(true)
+    ev("display button position", {button: [+b.x.toFixed(3), +b.y.toFixed(3)]})
     expect(b.x > 0.02 && b.x < 0.98 && b.y > 0.02 && b.y < 0.98, "button is inside the view").toBe(true)
     const card = findSceneObjectByName("FindingCardCard")
     const csz: vec2 = (card.getComponent("Component.ScriptComponent") as any).size
@@ -99,6 +97,10 @@ export class MWNPDisplayToggleScenario extends Scenario {
     for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) top = Math.min(top, cam.worldSpaceToScreenSpace(m.multiplyPoint(new vec3((dx * csz.x) / 2, (dy * csz.y) / 2, 0))).y)
     // The Hide button is attached inside the top-right corner of the card's header (near its top edge, not floating above it).
     expect(b.y >= top - 0.002 && b.y < top + 0.08, "button sits in the card's header (button y " + b.y.toFixed(3) + ", card top " + top.toFixed(3) + ")").toBe(true)
+    // ... and at its right end: within 0.06 of the card's right edge on screen.
+    let right = -9
+    for (const [dx, dy] of [[1, -1], [1, 1]]) right = Math.max(right, cam.worldSpaceToScreenSpace(m.multiplyPoint(new vec3((dx * csz.x) / 2, (dy * csz.y) / 2, 0))).x)
+    expect(Math.abs(b.x - right) < 0.06 && b.x <= right + 0.002, "button sits at the card's top-right corner (button x " + b.x.toFixed(3) + ", card right " + right.toFixed(3) + ")").toBe(true)
 
     // Colors the display must give back after the fade.
     const titleColor = textOf("FindingTitle").textFill.color

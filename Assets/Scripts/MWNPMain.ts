@@ -68,6 +68,18 @@ interface UndoState {
 
 /** Real cm kept between the display area's edge and the card column; chip widths (real cm) for left-aligning the chips with it. */
 const FRAME_MARGIN_CM = 1.0
+/**
+ * How much farther from the user the whole layout sits than authored (cabinet 100 -> 120 cm, cards 75 -> 95 cm). The cabinet keeps its
+ * authored size and position in the layout; the extra distance makes it fill about 58% of the frame height (it was 70%) so the chips
+ * above its corners and the cards that drop over its sides fit in the frame. Real sizes are unchanged: every text is still >= 1.0 cm.
+ */
+const LAYOUT_PULLBACK_CM = 20
+/** Half the cabinet board (46 cm): the chips sit just above its top corners, the cards drop from them. */
+const BOARD_HALF_CM = 23
+/** Space between a chip's bottom and the board's top edge (cm at the chip's distance). */
+const CHIP_GAP_CM = 1.0
+/** Clear space kept between a nudged card and the current step's test point / wire (cm). */
+const KEEP_CLEAR_CM = 1.0
 const LIBRARY_CHIP_CM = 7.5
 const STEP_CHIP_CM = 9.6
 
@@ -280,8 +292,13 @@ export class MWNPMain extends BaseScriptComponent {
     const rot = quat.angleAxis(yaw, vec3.up())
     const t = this.sceneObject.getTransform()
     t.setWorldRotation(rot)
-    t.setWorldPosition(camPos.sub(rot.multiplyVec3(this.authoredEyePos)))
+    t.setWorldPosition(camPos.sub(rot.multiplyVec3(this.layoutEye())))
     print("[MWNP] placed relative to user: camera " + camPos + " yaw " + ((yaw * 180) / Math.PI).toFixed(1) + "°")
+  }
+
+  /** The authored eye, moved back by LAYOUT_PULLBACK_CM: the point the layout is measured from (root space). */
+  private layoutEye(): vec3 {
+    return this.authoredEyePos.add(new vec3(0, 0, LAYOUT_PULLBACK_CM))
   }
 
   private start(): void {
@@ -537,6 +554,16 @@ export class MWNPMain extends BaseScriptComponent {
 
   /** Where SparkyVoice puts its listening indicator (root-local), set by placeChips: right of the Library chip. */
   voiceIndicatorPos: vec3 = new vec3(0, 20, -56)
+  /** "Show Sparky's answers as text" (Options, default Off): when Off Sparky only speaks an Ask answer; when On the answer card opens too. */
+  get showAnswerText(): boolean {
+    return !!this.optionsCard && this.optionsCard.value("answerText") === "On"
+  }
+
+  /**
+   * Where the Ask answer card hangs, relative to the mic indicator (set by placeChips): x = its RIGHT edge (the board's top-right corner),
+   * y = its TOP edge (just below its chip, which sits above that corner).
+   */
+  answerAnchor: vec3 = new vec3(21, -6.2, 0)
   /** Clip names (Assets/Audio/Sparky) the last voice command wants spoken, in order; SparkyVoice plays those it has. */
   voiceClips: string[] = []
   private lastUndo: UndoState | null = null
@@ -1456,61 +1483,164 @@ export class MWNPMain extends BaseScriptComponent {
   private viewTanV = 0.33
   private viewTanH = 0.289
 
+  /** A corner of the cabinet board (sx, sy = -1 or 1), seen from the eye, on the plane at root-space z. Root space; the cabinet never moves. */
+  private boardPointAt(sx: number, sy: number, z: number): vec3 {
+    const eye = this.layoutEye()
+    const cabW = this.cabinet.sceneObject.getTransform().getWorldTransform()
+    const rootInv = this.sceneObject.getTransform().getInvertedWorldTransform()
+    const c = rootInv.multiplyPoint(cabW.multiplyPoint(new vec3(sx * BOARD_HALF_CM, sy * BOARD_HALF_CM, 0)))
+    const f = (eye.z - z) / (eye.z - c.z)
+    return new vec3(eye.x + (c.x - eye.x) * f, eye.y + (c.y - eye.y) * f, z)
+  }
+
   /**
-   * Places the two chips (Library, Step) inside the default frame, in the empty band above the cabinet (the Safety notice has
-   * gone by then): Library chip on top, Step chip below it. Their positions are given to each card as an offset in its host's
-   * own space, so they sit above the cabinet even though the cards themselves are in the column to its left.
+   * Places the chips just above the cabinet's top corners: the Library chip at the top-left (the mic indicator next to it, the Step chip
+   * below it) and, when an answer is showing, the answer chip at the top-right. Each chip's position is given to its card as an offset
+   * in the card host's own space, so the chip stays above the corner while the card drops down from it over the cabinet.
    */
   private placeChips(): void {
-    const eye = this.authoredEyePos
     const rootW = this.sceneObject.getTransform().getWorldTransform()
     const toHost = (host: SceneObject, rootLocal: vec3): vec3 => host.getTransform().getInvertedWorldTransform().multiplyPoint(rootW.multiplyPoint(rootLocal))
     const libHost = this.libraryCard.sceneObject
     const stepHost = this.stepCard.sceneObject
     const lp = libHost.getTransform().getLocalPosition()
     const s = libHost.getTransform().getLocalScale().x
-    const dist = eye.z - lp.z
-    const yTop = eye.y + this.viewTanV * dist - 1.0 // top of the frame at the cards' plane, less a margin
+    const z = lp.z + 0.6 * s
     const chipH = this.libraryCard.chipHeight * s // real cm
     const gap = MIN_GAP_CM
-    // Left-aligned with the card column, at the top of the display area.
-    const leftX = eye.x - this.viewTanH * dist + FRAME_MARGIN_CM
-    this.voiceIndicatorPos = new vec3(leftX + LIBRARY_CHIP_CM + 1.2, yTop - chipH / 2, lp.z + 0.6 * s)
-    this.libraryCard.setChipOffset(toHost(libHost, new vec3(leftX + LIBRARY_CHIP_CM / 2, yTop - chipH / 2, lp.z + 0.6 * s)))
-    this.stepCard.setChipOffset(toHost(stepHost, new vec3(leftX + STEP_CHIP_CM / 2, yTop - chipH - gap - chipH / 2, lp.z + 0.6 * s)))
+    const tl = this.boardPointAt(-1, 1, z)
+    const tr = this.boardPointAt(1, 1, z)
+    const chipBottom = tl.y + CHIP_GAP_CM
+    const leftX = tl.x // the chip's left edge is the board's left edge
+    this.voiceIndicatorPos = new vec3(leftX + LIBRARY_CHIP_CM + 1.2, chipBottom + chipH / 2, z)
+    this.libraryCard.setChipOffset(toHost(libHost, new vec3(leftX + LIBRARY_CHIP_CM / 2, chipBottom + chipH / 2, z)))
+    // The Step chip is the second chip: just above the top-right corner, its right edge on the board's right edge. The Step card drops from it.
+    this.stepChipBase = toHost(stepHost, new vec3(tr.x - STEP_CHIP_CM / 2, chipBottom + chipH / 2, z))
+    this.stepCard.setChipOffset(this.stepChipBase)
+    // The answer chip (only while the answer card is open, Options > "Show Sparky's answers as text") sits just left of the Step chip on the
+    // same row; its card hangs from it, right edges together, top a gap below the chip.
+    this.answerAnchor = new vec3(tr.x - STEP_CHIP_CM - CHIP_GAP_CM - this.voiceIndicatorPos.x, chipBottom - gap - this.voiceIndicatorPos.y, 0)
+  }
+
+  /** The Step chip's offset in the Step card host's space while the card is at home (the chip stays above the corner when the card is nudged). */
+  private stepChipBase: vec3 = new vec3(0, 0, 0)
+
+  /** Where each nudgeable card sits when nothing is in its way (host name -> root-space local position), and what its nudge did. */
+  private cardHome: {[name: string]: vec3} = {}
+  cardNudge: {[name: string]: {dx: number; dy: number; point: number; wire: number; wireSamples: number; key: string}} = {}
+  private nudgeKey: {[name: string]: string} = {}
+
+  /**
+   * The Step card and the Finding card drop from the Library chip over the cabinet's left side. Wherever the current step's test point or its
+   * highlighted wire would end up under the card, the CARD moves (left, toward the frame edge, and/or down) to the nearest spot that
+   * leaves them visible, never the cabinet. If no spot is clear it takes the one that covers the least. Re-checked when the step, the
+   * card's size or the card changes; the result is in cardNudge.
+   */
+  private nudgeCards(): void {
+    for (const host of [this.stepCard.sceneObject, this.findingCard.sceneObject]) this.nudgeCard(host)
+  }
+
+  private nudgeCard(host: SceneObject): void {
+    const home = this.cardHome[host.name]
+    const cb = this.cardBodyOf(host)
+    if (!home || !cb || !cb.plate.size || cb.plate.size.x < 1 || cb.plate.size.y < 1) return
+    const t = host.getTransform()
+    const s = t.getLocalScale().x
+    const w = cb.plate.size.x * s
+    const h = cb.plate.size.y * s
+    const key = this.cabinet.focusKey + "|" + w.toFixed(2) + "|" + h.toFixed(2)
+    if (this.nudgeKey[host.name] === key) return
+    this.nudgeKey[host.name] = key
+    const eye = this.layoutEye()
+    const z = home.z
+    const frameLeft = eye.x - this.viewTanH * (eye.z - z) + FRAME_MARGIN_CM
+    const frameBottom = eye.y - this.viewTanV * (eye.z - z) + FRAME_MARGIN_CM
+    const left0 = home.x - w / 2
+    const top0 = home.y
+    // What must stay visible: the current step's point and wire, in root space on the card's plane.
+    const cabW = this.cabinet.sceneObject.getTransform().getWorldTransform()
+    const rootInv = this.sceneObject.getTransform().getInvertedWorldTransform()
+    const toPlane = (p: vec2): vec2 => {
+      const c = rootInv.multiplyPoint(cabW.multiplyPoint(new vec3(p.x, p.y, 0)))
+      const f = (eye.z - z) / (eye.z - c.z)
+      return new vec2(eye.x + (c.x - eye.x) * f, eye.y + (c.y - eye.y) * f)
+    }
+    const keepPoint = this.cabinet.getFocusPointSamples().map(toPlane) // must stay visible: the step's test point
+    const keepWire = this.cabinet.getFocusWireSamples().map(toPlane) // as much of the step's highlighted wire as possible
+    const soft = this.cabinet.getExpectedTagSamples().map(toPlane) // should stay visible: the "Expected" tag (breaks ties only)
+    const count = (pts: vec2[], dx: number, dy: number): number => {
+      const x0 = left0 + dx - KEEP_CLEAR_CM
+      const x1 = left0 + dx + w + KEEP_CLEAR_CM
+      const y1 = top0 + dy + KEEP_CLEAR_CM
+      const y0 = top0 + dy - h - KEEP_CLEAR_CM
+      let n = 0
+      for (const p of pts) if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1) n++
+      return n
+    }
+    const frameRight = eye.x + this.viewTanH * (eye.z - z) - FRAME_MARGIN_CM
+    const maxLeft = Math.max(0, left0 - frameLeft) // the card may slide left until its edge reaches the frame margin,
+    const maxRight = Math.max(0, frameRight - (left0 + w)) // right until its edge reaches the other margin,
+    const maxDown = Math.max(0, top0 - h - frameBottom) // and down until its bottom reaches the frame margin
+    // Score (lower is better): a covered test point is out of the question; a covered wire sample costs 3 cm of travel, a covered tag
+    // sample 0.3 cm (so the tag only decides between equally good spots), and the move itself costs its length.
+    const score = (pt: number, n: number, sn: number, cost: number): number => pt * 1e6 + n * 3 + sn * 0.3 + cost
+    let best = {dx: 0, dy: 0, pt: count(keepPoint, 0, 0), n: count(keepWire, 0, 0), soft: count(soft, 0, 0), cost: 0, score: 0}
+    best.score = score(best.pt, best.n, best.soft, 0)
+    for (let dy = 0; dy <= maxDown + 1e-6; dy += 1.0) {
+      for (let dx = -maxLeft; dx <= maxRight + 1e-6; dx += 0.5) {
+        const pt = count(keepPoint, dx, -dy)
+        const n = count(keepWire, dx, -dy)
+        const sn = count(soft, dx, -dy)
+        const cost = Math.abs(dx) + 1.5 * dy // a vertical move costs a little more than a sideways one
+        const sc = score(pt, n, sn, cost)
+        if (sc < best.score) best = {dx, dy, pt, n, soft: sn, cost, score: sc}
+      }
+    }
+    const pos = new vec3(home.x + best.dx, home.y - best.dy, home.z)
+    const mo = this.motion.filter((m) => m.so === host)[0] // updateMotion writes the host's position from this base every frame
+    if (mo) mo.base = pos
+    else t.setLocalPosition(pos)
+    if (host === this.stepCard.sceneObject) this.stepCard.setChipOffset(this.stepChipBase.sub(new vec3(best.dx / s, -best.dy / s, 0))) // the chip stays above the corner
+    this.cardNudge[host.name] = {dx: best.dx, dy: -best.dy, point: best.pt, wire: best.n, wireSamples: keepWire.length, key}
+    print("[MWNP] card-nudge " + host.name + " dx " + best.dx.toFixed(1) + " dy " + (-best.dy).toFixed(1) + " covering point " + best.pt + ", wire " + best.n + " of " + keepWire.length + ", tag " + best.soft)
   }
 
   private placeLeftColumn(): void {
-    const eye = this.authoredEyePos
     const stepT = this.stepCard.sceneObject.getTransform()
     const libT = this.libraryCard.sceneObject.getTransform()
     libT.setWorldRotation(stepT.getWorldRotation())
     const chipRowLocal = this.libraryCard.chipHeight + realToLocal(this.libraryCard.sceneObject, MIN_GAP_CM)
-    // [host, widthCm, isLibrary, keepY]
-    const hosts: [SceneObject, number, boolean, boolean][] = [
-      [this.libraryCard.sceneObject, this.libraryCard.menuWidth, true, false],
-      [this.jobPanel.sceneObject, this.jobPanel.widthCm, false, false],
-      [this.stepCard.sceneObject, this.stepCard.widthCm, false, false],
-      [this.findingCard.sceneObject, this.findingCard.widthCm, false, false],
-      [this.summaryCard.sceneObject, this.summaryCard.widthCm, false, false],
-      [this.cameraCard.sceneObject, this.cameraCard.widthCm, false, false],
-      [this.optionsCard.sceneObject, this.optionsCard.widthCm, false, false],
-      [this.notesCard.sceneObject, this.notesCard.widthCm, false, false],
-      [this.photoViewer.sceneObject, this.photoViewer.widthCm, false, false],
-      [this.schematicPanel.sceneObject, this.schematicPanel.widthCm, false, true],
+    // [host, widthCm, isLibrary, keepY, fromRight]: the Step and Finding cards hang from the Step chip at the top-right, the others from the Library chip
+    const hosts: [SceneObject, number, boolean, boolean, boolean][] = [
+      [this.libraryCard.sceneObject, this.libraryCard.menuWidth, true, false, false],
+      [this.jobPanel.sceneObject, this.jobPanel.widthCm, false, false, false],
+      [this.stepCard.sceneObject, this.stepCard.widthCm, false, false, true],
+      [this.findingCard.sceneObject, this.findingCard.widthCm, false, false, true],
+      [this.summaryCard.sceneObject, this.summaryCard.widthCm, false, false, false],
+      [this.cameraCard.sceneObject, this.cameraCard.widthCm, false, false, false],
+      [this.optionsCard.sceneObject, this.optionsCard.widthCm, false, false, false],
+      [this.notesCard.sceneObject, this.notesCard.widthCm, false, false, false],
+      [this.photoViewer.sceneObject, this.photoViewer.widthCm, false, false, false],
+      [this.schematicPanel.sceneObject, this.schematicPanel.widthCm, false, true, false],
     ]
-    for (const [host, widthLocal, isLibrary, keepY] of hosts) {
+    const libScale = this.libraryCard.sceneObject.getTransform().getLocalScale().x
+    for (const [host, widthLocal, isLibrary, keepY, fromRight] of hosts) {
       const t = host.getTransform()
+      // Every card faces the camera square: no yaw, pitch or roll relative to the layout root (which carries only the user's heading),
+      // so a card's top edge is parallel to the image plane and renders level. (The hosts were authored with a -8.2 degree yaw toward
+      // the view's centre, which made every top edge slope in screen space.)
+      t.setLocalRotation(quat.quatIdentity())
       const lp = t.getLocalPosition()
       const s = t.getLocalScale().x
-      // The column starts at the left edge of the display area (the camera's view at this card's distance), a margin in, and
-      // runs right over the left side of the cabinet as far as the cards are wide (they sit in front of it, opaque).
-      const leftX = eye.x - this.viewTanH * (eye.z - lp.z) + FRAME_MARGIN_CM
-      // The column starts at the top of the view (the cards are tall), not at the cabinet's top.
-      const topY = eye.y + this.viewTanV * (eye.z - lp.z) - 1.0
-      // The Library menu (or its chip) is the top row; the open card sits right below it.
+      // The column hangs from the Library chip, which sits just above the cabinet's top-left corner: left edges on the board's left edge,
+      // the Library row on top, the open card right below it, running down over the cabinet's left side. The Step and Finding cards hang
+      // from the Step chip above the top-right corner instead: right edges on the board's right edge.
+      const corner = this.boardPointAt(fromRight ? 1 : -1, 1, lp.z)
+      const topY = corner.y + CHIP_GAP_CM + this.libraryCard.chipHeight * libScale
       const y = keepY ? lp.y : isLibrary ? topY : topY - chipRowLocal * s
-      t.setLocalPosition(new vec3(leftX + (widthLocal * s) / 2, y, lp.z))
+      const pos = new vec3(corner.x + (fromRight ? -1 : 1) * ((widthLocal * s) / 2), y, lp.z)
+      t.setLocalPosition(pos)
+      this.cardHome[host.name] = pos
     }
   }
 
@@ -1583,6 +1713,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.click()
     if (c.key === "labels" || c.key === "hideButton") this.applyHide()
     else if (c.key === "cardStyle") setCardOpaque(c.index === 1)
+    else if (c.key === "answerText" && c.index === 0 && (global as any).mwnpSparky) (global as any).mwnpSparky.hideAnswer() // Off: an open answer card closes
     else if (c.key === "textSize") {
       this.textFactor = [1, 1.25, 1.5][c.index]
       for (const h of this.cardHosts) h.cap = 99
@@ -1786,6 +1917,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.fader = new DisplayFader(this, [host.getParent() as SceneObject], null, 0.35, true)
     this.labelsFader = new DisplayFader(this, [this.partTags.sceneObject], this.cabinet)
     this.createEvent("UpdateEvent").bind(() => this.syncToggleLabels())
+    this.createEvent("UpdateEvent").bind(() => this.nudgeCards())
   }
 
   /**

@@ -10,6 +10,8 @@
 
 import {normalize, parseCommand, VoiceCommand, wakeSegments} from "./MWNPSpeech"
 import {ask, OFFLINE, readToken, speak} from "./SparkyAsk"
+import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
+import {addCardHeader, addFitText, fitText, makeCardBody, makeObj, MIN_GAP_CM, textWidthCm, TEXT_BODY} from "./MWNPSharedUI"
 
 const micIcon = requireAsset("../Icons/mic.png") as Texture
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
@@ -154,7 +156,6 @@ export class SparkyVoice extends BaseScriptComponent {
     this.main = (global as any).mwnpAssistant
     ;(global as any).mwnpAskTimerHost = this
     this.buildIndicator()
-    this.buildAnswerCard()
     if (this.asrEnabled) this.startAsr()
     this.refreshIndicator()
   }
@@ -311,6 +312,15 @@ export class SparkyVoice extends BaseScriptComponent {
     this.heardText = "Heard: " + label
     this.heardUntil = now + HEARD_SEC
     let result = "Not ready"
+    if (cmd.name === "repeat" && this.repeatLastAnswer()) {
+      // The last thing Sparky said was an Ask answer: say it again from the saved audio (the step card is left alone).
+      result = "Repeating the answer"
+      this.acted.push({name: cmd.name, arg: cmd.arg, result})
+      this.requested.push([])
+      this.log("ACT " + key + " -> " + result)
+      this.showMessage(result)
+      return
+    }
     try {
       if (this.main) result = this.main.voiceCommand(cmd.name, cmd.arg)
     } catch (e) {
@@ -344,12 +354,37 @@ export class SparkyVoice extends BaseScriptComponent {
     return (this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)).length > 0
   }
 
+  /** What Sparky said last: a step / reading clip, an Ask answer (its audio is kept), or the offline sentence. "Sparky, repeat" replays it. */
+  lastSpoken: "none" | "clip" | "answer" | "offline" = "none"
+  private lastAnswerTrack: AudioTrackAsset | null = null
+  private lastAnswerText = ""
+  /** Requests made for Ask (a chat call each) and for its speech (a text-to-speech call each): tests check that repeat makes none. */
+  askRequests = 0
+  speechRequests = 0
+
+  /** "Sparky, repeat" after an Ask answer: plays the saved answer audio again (and the card again when it is on). Returns true when it did. */
+  private repeatLastAnswer(): boolean {
+    if (this.lastSpoken === "answer" && this.lastAnswerTrack) {
+      this.showAnswer(this.lastAnswerText, true)
+      this.playTrack(this.lastAnswerTrack)
+      return true
+    }
+    if (this.lastSpoken === "offline") {
+      this.showAnswer(OFFLINE, true)
+      this.playClips(["live_needs_connection"])
+      this.lastSpoken = "offline"
+      return true
+    }
+    return false
+  }
+
   private runAsk(req: {question: string; context: string}): void {
     if (this.askState === "thinking") {
       this.showMessage("Still thinking...")
       return
     }
     this.askState = "thinking"
+    this.askRequests++
     this.showAnswer("Thinking...", false)
     const token = this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)
     const t0 = getTime()
@@ -358,13 +393,17 @@ export class SparkyVoice extends BaseScriptComponent {
       (text: string) => {
         this.log("ASK answer after " + (getTime() - t0).toFixed(2) + " s: " + text)
         this.answerText = text
+        this.lastAnswerText = text
         this.askState = "done"
         this.showAnswer(text, true)
         if (!this.askSpeak) return
         const s0 = getTime()
+        this.speechRequests++
         speak(text, token).then(
           (track: AudioTrackAsset) => {
             this.log("ASK speech ready after " + (getTime() - s0).toFixed(2) + " s")
+            this.lastAnswerTrack = track // "Sparky, repeat" plays this again: no new request
+            this.lastSpoken = "answer"
             this.playTrack(track)
           },
           (e: any) => this.log("ASK speech failed: " + e)
@@ -376,6 +415,7 @@ export class SparkyVoice extends BaseScriptComponent {
         this.askState = "failed"
         this.showAnswer(OFFLINE, true)
         this.playClips(["live_needs_connection"]) // skipped silently when the clip file does not exist
+        if (this.hasClip("live_needs_connection")) this.lastSpoken = "offline"
       }
     )
   }
@@ -404,46 +444,66 @@ export class SparkyVoice extends BaseScriptComponent {
     this.answerUntil = Math.max(this.answerUntil, getTime() + len + 6)
   }
 
-  private buildAnswerCard(): void {
-    if (!this.indRoot) return
+  /**
+   * The answer card: the same panel as the Step card (UIKit BackPlate, same fill, header + rule, white text) at the Step card's real
+   * width and text size. Built the first time it is needed (the Step card has to exist), and rebuilt if the Step card's width or
+   * text size changed (Text size option). Its height follows its text and it hangs from its chip: MWNPMain.answerAnchor gives the
+   * card's right edge and top edge (the chip sits above the cabinet's top-right corner, the card drops from it).
+   */
+  private ensureAnswerCard(): boolean {
+    const step = this.main ? this.main.stepCard : null
+    if (!this.indRoot || !step || !step.textEmLocal) return false
+    const hs = (step.sceneObject as SceneObject).getTransform().getWorldScale().y // real cm per Step card unit
+    const k = this.indRoot.getTransform().getWorldScale().y // real cm per unit here
+    const w = (step.widthCm * hs) / k
+    const em = (step.textEmLocal * hs) / k
+    if (this.answerRoot && Math.abs(w - this.answerW) < 0.01 && Math.abs(em - this.answerEm) < 0.001) return true
+    if (this.answerRoot) {
+      this.answerRoot.destroy()
+      this.answerRoot = null
+    }
+    const s = hs / k // the Step card's units -> ours
     const root = global.scene.createSceneObject("SparkyAnswer")
     root.setParent(this.indRoot)
-    root.getTransform().setLocalPosition(new vec3(21, -6.2, 0)) // free space right of the mic, above the cabinet, inside the display's right edge
-    const bgSO = global.scene.createSceneObject("SparkyAnswerBack")
-    bgSO.setParent(root)
-    const img = bgSO.createComponent("Component.Image") as Image
-    const mat = imageMaterial.clone()
-    const white = ProceduralTextureProvider.create(2, 2, Colorspace.RGBA)
-    ;(white.control as ProceduralTextureProvider).setPixels(0, 0, 2, 2, new Uint8Array(16).fill(255))
-    mat.mainPass.baseTex = white
-    mat.mainPass.baseColor = new vec4(0.3, 0.32, 0.36, 0.97) // mid grey like the cards: dark reads as transparent on the additive display
-    mat.mainPass.depthTest = true
-    mat.mainPass.depthWrite = false
-    img.clearMaterials()
-    img.addMaterial(mat)
-    bgSO.getTransform().setLocalScale(new vec3(19, 9.5, 1))
-    const textSO = global.scene.createSceneObject("SparkyAnswerText")
-    textSO.setParent(root)
-    textSO.getTransform().setLocalPosition(new vec3(0, 0, 0.05))
-    const t = textSO.createComponent("Component.Text") as Text
-    t.size = 40
-    t.horizontalAlignment = HorizontalAlignment.Left
-    t.verticalAlignment = VerticalAlignment.Center
-    t.horizontalOverflow = HorizontalOverflow.Wrap
-    t.verticalOverflow = VerticalOverflow.Shrink
-    t.layoutRect = Rect.create(-8.6, 8.6, -4.3, 4.3)
-    t.textFill.color = new vec4(1, 1, 1, 1)
-    t.text = ""
-    this.answerTextComp = t
+    const inner = w - 2.8 * s
+    const card = makeCardBody(root, "SparkyAnswerCard", w, 1.4 * s, 0.5 * s, "top")
+    addCardHeader(card.content, "AnswerHeader", "Answer", inner, root)
+    this.answerTextComp = addFitText(card.content, "AnswerText", "", inner, em, {color: TEXT_BODY, minLines: 0})
+    // The chip the card hangs from: a small plate of the same style, its bottom edge MIN_GAP_CM above the card's top edge and its right
+    // edge on the card's right edge. Its text is the same size as the card's.
+    const chipW = textWidthCm("Sparky", em, true) + 2.0 * s
+    const chipHost = makeObj(root, "SparkyAnswerChipHost", new vec3(w / 2 - chipW / 2, MIN_GAP_CM / k, 0))
+    const chip = makeCardBody(chipHost, "SparkyAnswerChip", chipW, 0.5 * s, 0.3 * s, "bottom")
+    addFitText(chip.content, "AnswerChipText", "Sparky", chipW - 1.0 * s, em, {color: TEXT_BODY, bold: true})
+    this.answerPlate = card.plate
+    this.answerW = w
+    this.answerEm = em
+    this.answerInner = inner
     this.answerRoot = root
     root.enabled = false
+    this.lastPlacedKey = "" // position it at the next placeIndicator
+    return true
+  }
+
+  private answerW = 0
+  private answerEm = 0
+  private answerInner = 0
+  private answerPlate: BackPlate | null = null
+  /** Hangs the answer card from its anchor (MWNPMain.placeChips): its right edge and top edge relative to the mic indicator. */
+  private placeAnswerCard(): void {
+    if (!this.answerRoot || !this.main) return
+    const a: vec3 = this.main.answerAnchor
+    this.answerRoot.getTransform().setLocalPosition(new vec3(a.x - this.answerW / 2, a.y, 0))
   }
 
   /** The small answer card under the mic indicator (stays visible when the cards are hidden). */
   private showAnswer(text: string, autoHide: boolean): void {
-    if (!this.answerRoot) return
-    if (this.answerTextComp) this.answerTextComp.text = text
+    // Sparky speaks the answer; the text card only opens when Options > "Show Sparky's answers as text" is On (default Off).
+    if (!this.main || !this.main.showAnswerText) return
+    if (!this.ensureAnswerCard() || !this.answerRoot) return
+    if (this.answerTextComp) fitText(this.answerTextComp, text, this.answerInner, this.answerEm, 1)
     this.answerRoot.enabled = true
+    this.placeAnswerCard()
     this.answerUntil = autoHide ? getTime() + 14 : -1
   }
 
@@ -479,6 +539,7 @@ export class SparkyVoice extends BaseScriptComponent {
   private playClips(names: string[]): void {
     const have = names.filter((n) => this.hasClip(n))
     if (have.length === 0) return
+    this.lastSpoken = "clip"
     this.queue = this.queue.concat(have)
     if (!this.asrPaused) this.pauseAsr()
     if (this.queue.length === have.length) this.playNext()
@@ -598,7 +659,8 @@ export class SparkyVoice extends BaseScriptComponent {
   private placeIndicator(): void {
     if (!this.indRoot || !this.main) return
     const p: vec3 = this.main.voiceIndicatorPos
-    const key = p.x.toFixed(2) + "," + p.y.toFixed(2) + "," + p.z.toFixed(2)
+    const ao: vec3 = this.main.answerAnchor
+    const key = p.x.toFixed(2) + "," + p.y.toFixed(2) + "," + p.z.toFixed(2) + "|" + ao.x.toFixed(2) + "," + ao.y.toFixed(2)
     if (key === this.lastPlacedKey) return
     this.lastPlacedKey = key
     const t = this.indRoot.getTransform()
@@ -612,6 +674,7 @@ export class SparkyVoice extends BaseScriptComponent {
   private tick(): void {
     const now = getTime()
     this.placeIndicator()
+    this.placeAnswerCard()
     this.refreshIndicator()
     if (this.answerUntil >= 0 && now > this.answerUntil) this.hideAnswer()
     // A command with an argument whose text has stopped changing.

@@ -4,8 +4,9 @@
 // cycles to the next value when pressed. Holds the values for the session; Main applies them.
 // API: show(), hide(), values (readable), set(key, index), events onChange({key, index, value}).
 // Options (first value is the default): labels [This step only, Always on], hideButton [Cards only, Everything],
-//   cardStyle [Translucent, Opaque] (starts on Opaque), textSize [Normal, Large, Extra large], schematic [Normal, Enlarged].
-// Test handles: "Opt_Labels", "Opt_HideButton", "Opt_CardStyle", "Opt_TextSize", "Opt_Schematic", card "OptionsCardCard".
+//   cardStyle [Translucent, Opaque] (starts on Opaque), textSize [Normal, Large, Extra large], schematic [Normal, Enlarged],
+//   answerText [Off, On] ("Show Sparky's answers as text": Off = Sparky only speaks an Ask answer, On = the answer card opens too).
+// Test handles: "Opt_Labels", "Opt_HideButton", "Opt_CardStyle", "Opt_TextSize", "Opt_Schematic", "Opt_AnswerText", card "OptionsCardCard".
 
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {addButton, addCardHeader, ButtonHandle, cardEm, deferDestroy, makeCardBody} from "./MWNPSharedUI"
@@ -22,6 +23,7 @@ export const OPTION_DEFS: OptionDef[] = [
   {key: "cardStyle", title: "Card style", values: ["Translucent", "Opaque"]},
   {key: "textSize", title: "Text size", values: ["Normal", "Large", "Extra large"]},
   {key: "schematic", title: "Schematic", values: ["Normal", "Enlarged"]},
+  {key: "answerText", title: "Show Sparky's answers as text", values: ["Off", "On"]},
 ]
 
 export interface OptionChange {
@@ -50,7 +52,7 @@ export class MWNPOptionsCardUI extends BaseScriptComponent {
   @ui.group_end
 
   /** Current value index per option key. */
-  indexes: {[key: string]: number} = {labels: 0, hideButton: 0, cardStyle: 1, textSize: 0, schematic: 0}
+  indexes: {[key: string]: number} = {labels: 0, hideButton: 0, cardStyle: 1, textSize: 0, schematic: 0, answerText: 0}
   get isVisible(): boolean {
     return !!this.body && this.body.enabled
   }
