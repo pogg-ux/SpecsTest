@@ -225,17 +225,16 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       } else if (a.id === "F2") {
         pos = new vec3(a.pos.x + 0.75 + 0.3 + w / 2, a.pos.y, a.pos.z) // beside the fuse, on the free side (the space left of F2 is only 1.75 cm, F1 is there)
       } else if (a.id === "L1" || a.id === "L2") {
-        pos = new vec3(Math.max(a.pos.x, -8.5 + w / 2), a.pos.y, a.pos.z) // clear of the S1 toggle
-      } else if (a.id === "S1") {
-        const wl = textWidthCm("L1", em, true) + PAD_X
-        const lRight = Math.max(-7.5, -8.5 + wl / 2) + wl / 2
-        pos = new vec3(Math.max(a.pos.x, lRight + 0.35 + w / 2), a.pos.y, a.pos.z) // clear of the L1 / L2 tags
+        // Clear of the S1 toggle, and nudged away from it (L1 up, L2 down) so the S1 tag fits between them, right beside the toggle.
+        pos = new vec3(Math.max(a.pos.x, -8.5 + w / 2), a.pos.y + (a.id === "L1" ? 0.8 : -0.7), a.pos.z)
       }
+      // S1: the tag stays at its anchor, directly right of the toggle's plate.
       const so = makeObj(this.sceneObject, "Tag_" + a.id, pos)
       let leaderSO: SceneObject | null = null
       if (leader) {
         leaderSO = makeObj(this.sceneObject, "TagLeader_" + a.id, new vec3(leader.x, (leader.y0 + leader.y1) / 2, a.pos.z - 0.8))
         makeLabelPlate(leaderSO, 0.16, Math.max(0.2, leader.y1 - leader.y0), PLATE_EDGE_IDLE, 0)
+        this.boxes.push({name: "TagLeader_" + a.id, cx: leader.x, cy: (leader.y0 + leader.y1) / 2, w: 0.3, h: leader.y1 - leader.y0}) // sleeves keep off the leader line too
       }
       if (a.rotDeg !== 0) so.getTransform().setLocalRotation(quat.fromEulerAngles(0, 0, (a.rotDeg * Math.PI) / 180))
       // Printed label: pure white bold text on a dark plate (terminal labels are vertical, as on the panel drawing).
@@ -363,8 +362,8 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     }
     const box = this.boxFor(text, this.overlayEmCm, this.overlayMaxWidthCm)
     this.expectedSO.enabled = true
-    // Terminal readings: the bubble sits to the right of the terminal tags, not over them.
-    if (pointId.indexOf("TS-") === 0) pos = new vec3(TS_TAGS_RIGHT + 0.5 + box.w / 2, pos.y, pos.z + 0.5)
+    // Terminal readings: the bubble sits at the cabinet's spot, in the open space right of the PS1 wires.
+    if (pointId.indexOf("TS-") === 0) pos = new vec3(pos.x, pos.y, pos.z + 0.5)
     // F1's tag sits beside its fuse (left): the bubble goes to the right of the fuse row, over the empty fuse spots, not over the tag.
     if (pointId.indexOf("F1:") === 0) pos = new vec3(-6.8 + box.w / 2, pos.y, pos.z + 0.5)
     this.expectedSO.getTransform().setLocalPosition(pos)

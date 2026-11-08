@@ -48,7 +48,7 @@ const LAYOUT = {
   openFuseX: [-5.3, -2.0, 1.4, 4.6, 7.9, 11.2],
   // Tag placement (cabinet-local). ID tags: em 1.5 cm. Overlays (expected/badge/info): em 1.0 cm.
   tagZ: {ps1: 5.3, terminal: 4.6, fuse: 2.3, plate: 1.8}, // terminal labels sit in front of the part outline
-  switchTagX: {L1: -7.5, L2: -7.5, S1: -4.9} as {[id: string]: number},
+  switchTagX: {L1: -7.5, L2: -7.5, S1: -7.8} as {[id: string]: number},
 }
 
 // Terminal / connection points (cabinet-local x,y).
@@ -164,6 +164,7 @@ const RC = {
   holeRing: k(0.5, 0.52, 0.57),
   holePlug: k(0.72, 0.74, 0.79),
   nameplate: k(0.33, 0.36, 0.42),
+  s1Plate: k(0.1, 0.11, 0.14), // dark escutcheon behind the S1 toggle so it stands apart from the chrome lamp bezels
   tie: k(0.3, 0.31, 0.35),
   white: k(1, 1, 1),
 }
@@ -173,8 +174,8 @@ const RC_V = {
   fuseHolder: flatFor(0.82, 0.84, 0.87), // the plate color: the fuse base disappears into the plate, the clips and the fuse are in the kit
 }
 /** Realistic look: amber pilot lamps. */
-const AMBER_ON = c4(1.0, 0.72, 0.18)
-const AMBER_OFF = c4(0.46, 0.31, 0.1)
+const AMBER_ON = c4(1.0, 0.82, 0.25)
+const AMBER_OFF = c4(0.2, 0.14, 0.09) // clearly dark: an unlit lamp must never read as lit, even inside a focus frame
 
 @component
 export class MWNPCabinet extends BaseScriptComponent {
@@ -401,7 +402,7 @@ export class MWNPCabinet extends BaseScriptComponent {
    */
   getExpectedTagPos(pointId: string): vec3 {
     const tx = LAYOUT.terminalX[pointId]
-    if (tx !== undefined) return new vec3(Math.min(tx + 3.8, -3.5), 9.6, 5.6) // above the rail, below PS1
+    if (tx !== undefined) return new vec3(14.0, 8.6, 5.6) // open space right of the PS1 wires (x > 8): clear of wire 0 and the PS1 run
     const p = this.getPointPos(pointId)
     if (pointId.indexOf("F") === 0) return new vec3(-17.0, p.y, 3.0) // left of the fuse row
     return new vec3(-16.5, p.y, 3.0) // left of the switch/lamp strip
@@ -785,13 +786,14 @@ export class MWNPCabinet extends BaseScriptComponent {
       lever.getTransform().setLocalPosition(new vec3(0, 0, 1.2))
       lever.getTransform().setLocalScale(new vec3(1, 1, 1))
       const lk = new CabinetKit()
-      lk.cyl([0, 0, -1.2], [0, 0, 1.2], 0.32, 0.2, 14, RC.chrome)
-      lk.cyl([-0.09, 0.12, -1.1], [-0.06, 0.09, 1.1], 0.05, 0.04, 5, RC.white) // chrome highlight stripe
+      lk.cyl([0, 0, -1.2], [0, 0, 1.4], 0.5, 0.32, 14, RC.chrome) // thick tapered shaft
+      lk.cyl([-0.16, 0.2, -1.1], [-0.1, 0.14, 1.3], 0.08, 0.06, 5, RC.white) // chrome highlight stripe
       this.addMesh(lever, lk.build(), this.vertexMaterial)
       const tip = this.obj(this.leverPivot, "S1_LeverTip")
-      tip.getTransform().setLocalPosition(new vec3(0, 0, 2.55))
+      tip.getTransform().setLocalPosition(new vec3(0, 0, 2.7))
       const tk = new CabinetKit()
-      tk.sphere([0, 0, 0], 0.45, RC.chrome, 14, 9)
+      tk.sphere([0, 0, 0], 0.72, RC.chrome, 16, 10) // large bat handle
+      tk.sphere([-0.25, 0.28, 0.45], 0.14, RC.white, 6, 4) // glint
       this.addMesh(tip, tk.build(), this.vertexMaterial)
     } else {
       lever.getTransform().setLocalPosition(new vec3(0, 0, 0.9))
@@ -948,8 +950,9 @@ export class MWNPCabinet extends BaseScriptComponent {
     }
     if (this.netlist && this.netlist.component("S1")) {
       const p = LAYOUT.s1
-      kit.cyl([p[0], p[1], 0.8], [p[0], p[1], 0.92], 0.86, 0.86, 16, RC.chrome)
-      kit.cyl([p[0], p[1], 0.92], [p[0], p[1], 1.3], 0.75, 0.75, 6, RC.chrome)
+      kit.box(p[0], p[1], 0.88, 2.6, 1.4, 0.16, RC.s1Plate) // distinct dark plate behind the toggle
+      kit.cyl([p[0], p[1], 0.96], [p[0], p[1], 1.06], 0.86, 0.86, 16, RC.chrome)
+      kit.cyl([p[0], p[1], 1.06], [p[0], p[1], 1.3], 0.75, 0.75, 6, RC.chrome)
       kit.cyl([p[0], p[1], 1.3], [p[0], p[1], 1.6], 0.45, 0.4, 12, RC.chrome)
     }
   }
