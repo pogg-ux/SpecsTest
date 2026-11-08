@@ -1,7 +1,3 @@
-# Local secrets: never commit (RSG token for "Sparky, ask")
-Assets/Local/
-**/RsgSecret*
-
 # Shipped by Lens Studio
 
 # The lines below are automatically generated and updated by Lens Studio.
@@ -21,6 +17,10 @@ Workspaces/**
 *.lock
 
 # Shipped by Lens Studio
+# Local secrets: never commit (RSG token for "Sparky, ask")
+Assets/Local/
+**/RsgSecret*
+
 # BEGIN Lens Studio managed Agents-Docs block
 .mcp.json
 .cursor/mcp.json
