@@ -513,7 +513,7 @@ export interface LabelPlate {
  * board and the backdrop. Visual only (no collider, so it never takes a click from the tag's own pinch target).
  * The object is named "LabelPlate" (the display fader looks for that name).
  */
-export function makeLabelPlate(parent: SceneObject, w: number, h: number, edge: vec4 = PLATE_EDGE_IDLE, z: number = -0.06): LabelPlate {
+export function makeLabelPlate(parent: SceneObject, w: number, h: number, edge: vec4 = PLATE_EDGE_IDLE, z: number = -0.06, fill: vec4 = CARD_FILL): LabelPlate {
   const so = makeObj(parent, "LabelPlate", new vec3(0, 0, z))
   const rr = so.createComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
   rr.initialize()
@@ -521,7 +521,7 @@ export function makeLabelPlate(parent: SceneObject, w: number, h: number, edge: 
   rr.renderMeshVisual.mainPass.colorMask = new vec4b(true, true, true, true)
   rr.renderOrder = 5
   rr.gradient = false
-  rr.backgroundColor = CARD_FILL
+  rr.backgroundColor = fill
   rr.border = true
   rr.borderSize = 0.07
   rr.borderColor = edge

@@ -73,7 +73,7 @@ function childNamed(so: SceneObject, name: string): SceneObject | null {
   return null
 }
 
-/** Checks one label's style: bold text on a 90% smoke-gray plate with a thin bright edge. Returns its text color. */
+/** Checks one label's style: bold text on a 90% smoke-gray plate with a thin bright edge (wire number labels are cream wire sleeves with dark text). Returns its text color. */
 function checkLabelStyle(so: SceneObject): vec4 {
   const lbl = childNamed(so, "Label")
   const plate = childNamed(so, "LabelPlate")
@@ -84,10 +84,12 @@ function checkLabelStyle(so: SceneObject): vec4 {
   expect(t.outlineSettings.enabled, so.name + " has no blurring outline").toBe(false)
   const rr = (plate as SceneObject).getComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
   const fill = rr.backgroundColor
-  expect(fill.w >= 0.85 && fill.x <= 0.2, so.name + " plate is dark smoke-gray at 90%: " + colorStr(fill)).toBe(true)
+  const sleeve = so.name.indexOf("WireLabel_") === 0
+  if (sleeve) expect(fill.w >= 0.99 && fill.x >= 0.9 && fill.y >= 0.85 && fill.z >= 0.6 && fill.z <= 0.9, so.name + " plate is a cream sleeve: " + colorStr(fill)).toBe(true)
+  else expect(fill.w >= 0.85 && fill.x <= 0.2, so.name + " plate is dark smoke-gray at 90%: " + colorStr(fill)).toBe(true)
   expect(rr.border, so.name + " plate has an edge").toBe(true)
   const e = rr.borderColor
-  expect(Math.max(e.x, e.y, e.z) >= 0.85 && e.w >= 0.99, so.name + " plate edge is bright: " + colorStr(e)).toBe(true)
+  if (!sleeve) expect(Math.max(e.x, e.y, e.z) >= 0.85 && e.w >= 0.99, so.name + " plate edge is bright: " + colorStr(e)).toBe(true)
   expect(rr.opacity, so.name + " plate fully opaque (not faded)").toBe(1)
   return t.textFill.color
 }
@@ -125,7 +127,8 @@ export class MWNPLayoutScenario extends Scenario {
       expect(labels.length >= 20, "found the model's labels: " + labels.length).toBe(true)
       for (const so of labels) {
         const c = checkLabelStyle(so)
-        expect(c.x === 1 && c.y === 1 && c.z === 1 && c.w === 1, so.name + " is pure white at full brightness: " + colorStr(c)).toBe(true)
+        if (so.name.indexOf("WireLabel_") === 0) expect(Math.max(c.x, c.y, c.z) <= 0.2 && c.w === 1, so.name + " sleeve text is dark: " + colorStr(c)).toBe(true)
+        else expect(c.x === 1 && c.y === 1 && c.z === 1 && c.w === 1, so.name + " is pure white at full brightness: " + colorStr(c)).toBe(true)
       }
       // Terminal labels are printed on TS-1..TS-5: white bold text on a dark plate, one per terminal.
       for (const id of ["TS-1", "TS-2", "TS-3", "TS-4", "TS-5"]) {
@@ -298,7 +301,10 @@ export class MWNPLayoutScenario extends Scenario {
         if (w.name.indexOf("Wire_2b_") === 0 && w.getChildrenCount() > 0) wireSeg = w.getChild(0).getComponent("Component.RenderMeshVisual") as RenderMeshVisual
       }
       const wc = (wireSeg as RenderMeshVisual).mainMaterial.mainPass.baseColor
-      expect(wc.x >= 0.25 && wc.x <= 0.35 && wc.y <= 0.08, "supply wires are red at 30% (dimmed, not the current step's wire): " + colorStr(wc)).toBe(true)
+      // Dimmed body opacity: 30% (the original rule), or the cabinet's wireBodyAlpha with the realistic look (round wires, default 70%).
+      const cabScript = trainer0.getComponent("Component.ScriptComponent") as any
+      const bodyAlpha = cabScript && cabScript.realisticLook && cabScript.vertexMaterial ? cabScript.wireBodyAlpha : 0.3
+      expect(Math.abs(wc.x - bodyAlpha) < 0.04 && Math.abs(wc.y - 0.16 * bodyAlpha) < 0.03, "supply wires are red at " + Math.round(bodyAlpha * 100) + "% (dimmed, not the current step's wire): " + colorStr(wc)).toBe(true)
       const plate = findSceneObjectByName("StepCardCard").getComponent("Component.ScriptComponent") as any
       const fillA = plate && plate.roundedRectangle ? plate.roundedRectangle.backgroundColor.w : 0
       ev("layout colors", {traceThicknessCm: tcomp.traceThicknessCm, traceColor: colorStr(tc), wireColor: colorStr(wc), cardFillAlpha: +fillA.toFixed(2)})
