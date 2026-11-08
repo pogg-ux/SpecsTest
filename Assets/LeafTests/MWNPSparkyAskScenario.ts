@@ -25,6 +25,21 @@ export class MWNPSparkyAskScenario extends Scenario {
     expect(q("what s the fuse rating"), "what's ...").toBe("what s the fuse rating")
     expect(q("what does f1 protect"), "what does ...").toBe("what does f1 protect")
     expect(q("next"), "next is not a question").toBe("-")
+    // Any question opener, or a trailing "?", is an ask (the three sample questions, spoken without "ask").
+    expect(q("what feeds L1"), "what feeds ...").toBe("what feeds l1")
+    expect(q("why is L2 dead"), "why is ...").toBe("why is l2 dead")
+    expect(q("what should TS-4 read"), "what should ...").toBe("what should ts 4 read")
+    expect(q("how does the switch work"), "how ...").toBe("how does the switch work")
+    expect(q("where is F2"), "where ...").toBe("where is f2")
+    expect(q("when does L1 come on"), "when ...").toBe("when does l1 come on")
+    expect(q("is F1 blown"), "is ...").toBe("is f1 blown")
+    expect(q("can I trust TS-4"), "can ...").toBe("can i trust ts 4")
+    expect(q("the lamp is off?"), "trailing ?").toBe("lamp is off")
+    expect(q("whatever"), "a word that only starts with what is not a question").toBe("-")
+    // Commands always win over the question rule.
+    expect(q("how"), "a bare opener with nothing after it is not a question").toBe("-")
+    const up = parseCommand("is one up")
+    expect(up ? up.name : "-", "'is one up' stays the S1 command").toBe("s1_up")
 
     const ui = new MWNPLeafInteractor()
     await ui.startExtendDiagnosis()
@@ -86,6 +101,23 @@ export class MWNPSparkyAskScenario extends Scenario {
     await sleep(2200)
     const a4 = await askAndWait("what's the torque spec")
     expect(a4.indexOf(REFUSAL) === 0, "not in the files -> starts with the refusal: " + a4).toBe(true)
+    // The three sample questions, spoken without "ask": EXTEND and RETRACT must both be answerable from the job files.
+    const sample = ["what feeds L1", "why is L2 dead", "what should TS-4 read", "what feeds L2"]
+    const answers: string[] = []
+    for (const t of sample) {
+      await sleep(2200)
+      answers.push(await askAndWait(t))
+    }
+    expect(answers[0].indexOf("L1") >= 0 && answers[0].indexOf(REFUSAL) < 0, "what feeds L1 is answered: " + answers[0]).toBe(true)
+    expect(answers[1].indexOf("TS-5") >= 0 && answers[1].indexOf("S1 DOWN") >= 0, "no L2 readings in the job, so a grounded next check from the RETRACT steps: " + answers[1]).toBe(true)
+    expect(answers[2].indexOf("12") >= 0 || answers[2].indexOf("10.8") >= 0, "TS-4 expected reading: " + answers[2]).toBe(true)
+    expect(answers[3].indexOf("F2") >= 0 && answers[3].indexOf(REFUSAL) < 0, "what feeds L2 is answered from the RETRACT path: " + answers[3]).toBe(true)
+    // Grounding: no answer names a part or test point that is not in the netlist.
+    const known = ["PS1", "TS-1", "TS-2", "TS-3", "TS-4", "TS-5", "S1", "F1", "F2", "L1", "L2"]
+    for (const a of answers) {
+      const ids = a.match(/\b(?:PS|TS-|S|F|L)\d+\b/g) || []
+      for (const id of ids) expect(known.indexOf(id) >= 0, "answer names a part that is in the job files (" + id + "): " + a).toBe(true)
+    }
     ev("SPARKY ASK PASS", {})
   }
 }

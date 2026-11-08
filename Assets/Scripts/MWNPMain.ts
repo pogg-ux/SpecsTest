@@ -659,6 +659,15 @@ export class MWNPMain extends BaseScriptComponent {
     lines.push("JOB FILES (netlist.json, complete):")
     lines.push(JSON.stringify(nl.data))
     lines.push("")
+    // Every symptom's step list (EXTEND and RETRACT, not just the current job's), so questions about either lamp can be answered.
+    for (let i = 0; i < nl.faultCount(); i++) {
+      lines.push("STEPS FOR SYMPTOM: " + nl.symptomLabel(i))
+      nl.steps(i).forEach((st) => {
+        const r = st.pointId ? nl.rangeText(st.pointId) : ""
+        lines.push("  " + (st.index + 1) + ". " + st.text + (r ? " [expected " + r + " at " + nl.display(st.pointId as string) + "]" : ""))
+      })
+    }
+    lines.push("")
     lines.push("CURRENT JOB:")
     if (!this.jobActive || agent.faultIndex < 0) {
       lines.push("No symptom reported yet.")

@@ -119,7 +119,6 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^save( the)? note$/.test(t)) return done("save_note")
   const askQ = /^ask (.+)$/.exec(t)
   if (askQ) return {name: "ask", arg: askQ[1], complete: true, needsSettle: true, settleSec: 2.0}
-  if (/^(why|whys|what is|what s|whats|what does|what do|what are|how much|how many|which)\b.+/.test(t)) return {name: "ask", arg: t, complete: true, needsSettle: true, settleSec: 2.0}
   const note = /^note (.+)$/.exec(t)
   if (note) return {name: "note", arg: note[1], complete: true, needsSettle: true}
   if (/^(dismiss|ok|okay|understood)$/.test(t)) return done("dismiss")
@@ -140,6 +139,8 @@ export function parseCommand(segment: string): VoiceCommand | null {
   }
   const hl = /^highlight (?:wire )?(.+)$/.exec(t)
   if (hl) return {name: "highlight", arg: hl[1], complete: true, needsSettle: true}
+  // Last, so every command above wins: anything that sounds like a question is an ask.
+  if (/^(what|whats|why|whys|how|which|where|when|is|does|can|should)\b.+/.test(t) || /\?\s*$/.test(segment.trim())) return {name: "ask", arg: t, complete: true, needsSettle: true, settleSec: 2.0}
   return null
 }
 
