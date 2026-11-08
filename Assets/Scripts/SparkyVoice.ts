@@ -10,6 +10,8 @@
 
 import {normalize, parseCommand, VoiceCommand, wakeSegments} from "./MWNPSpeech"
 import {ask, OFFLINE, readToken, speak} from "./SparkyAsk"
+import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
+import {addCardHeader, addFitText, fitText, makeCardBody, TEXT_BODY} from "./MWNPSharedUI"
 
 const micIcon = requireAsset("../Icons/mic.png") as Texture
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
@@ -154,7 +156,6 @@ export class SparkyVoice extends BaseScriptComponent {
     this.main = (global as any).mwnpAssistant
     ;(global as any).mwnpAskTimerHost = this
     this.buildIndicator()
-    this.buildAnswerCard()
     if (this.asrEnabled) this.startAsr()
     this.refreshIndicator()
   }
@@ -404,46 +405,58 @@ export class SparkyVoice extends BaseScriptComponent {
     this.answerUntil = Math.max(this.answerUntil, getTime() + len + 6)
   }
 
-  private buildAnswerCard(): void {
-    if (!this.indRoot) return
+  /**
+   * The answer card: the same panel as the Step card (UIKit BackPlate, same fill, header + rule, white text) at the Step card's real
+   * width and text size. Built the first time it is needed (the Step card has to exist), and rebuilt if the Step card's width or
+   * text size changed (Text size option). Its height follows its text; MWNPMain.answerCardOffset says where its CENTER goes.
+   */
+  private ensureAnswerCard(): boolean {
+    const step = this.main ? this.main.stepCard : null
+    if (!this.indRoot || !step || !step.textEmLocal) return false
+    const hs = (step.sceneObject as SceneObject).getTransform().getWorldScale().y // real cm per Step card unit
+    const k = this.indRoot.getTransform().getWorldScale().y // real cm per unit here
+    const w = (step.widthCm * hs) / k
+    const em = (step.textEmLocal * hs) / k
+    if (this.answerRoot && Math.abs(w - this.answerW) < 0.01 && Math.abs(em - this.answerEm) < 0.001) return true
+    if (this.answerRoot) {
+      this.answerRoot.destroy()
+      this.answerRoot = null
+    }
+    const s = hs / k // the Step card's units -> ours
     const root = global.scene.createSceneObject("SparkyAnswer")
     root.setParent(this.indRoot)
-    root.getTransform().setLocalPosition(new vec3(21, -6.2, 0)) // free space right of the mic, above the cabinet, inside the display's right edge
-    const bgSO = global.scene.createSceneObject("SparkyAnswerBack")
-    bgSO.setParent(root)
-    const img = bgSO.createComponent("Component.Image") as Image
-    const mat = imageMaterial.clone()
-    const white = ProceduralTextureProvider.create(2, 2, Colorspace.RGBA)
-    ;(white.control as ProceduralTextureProvider).setPixels(0, 0, 2, 2, new Uint8Array(16).fill(255))
-    mat.mainPass.baseTex = white
-    mat.mainPass.baseColor = new vec4(0.3, 0.32, 0.36, 0.97) // mid grey like the cards: dark reads as transparent on the additive display
-    mat.mainPass.depthTest = true
-    mat.mainPass.depthWrite = false
-    img.clearMaterials()
-    img.addMaterial(mat)
-    bgSO.getTransform().setLocalScale(new vec3(19, 9.5, 1))
-    const textSO = global.scene.createSceneObject("SparkyAnswerText")
-    textSO.setParent(root)
-    textSO.getTransform().setLocalPosition(new vec3(0, 0, 0.05))
-    const t = textSO.createComponent("Component.Text") as Text
-    t.size = 40
-    t.horizontalAlignment = HorizontalAlignment.Left
-    t.verticalAlignment = VerticalAlignment.Center
-    t.horizontalOverflow = HorizontalOverflow.Wrap
-    t.verticalOverflow = VerticalOverflow.Shrink
-    t.layoutRect = Rect.create(-8.6, 8.6, -4.3, 4.3)
-    t.textFill.color = new vec4(1, 1, 1, 1)
-    t.text = ""
-    this.answerTextComp = t
+    const inner = w - 2.8 * s
+    const card = makeCardBody(root, "SparkyAnswerCard", w, 1.4 * s, 0.5 * s, "top")
+    addCardHeader(card.content, "AnswerHeader", "Answer", inner, root)
+    this.answerTextComp = addFitText(card.content, "AnswerText", "", inner, em, {color: TEXT_BODY, minLines: 0})
+    this.answerPlate = card.plate
+    this.answerW = w
+    this.answerEm = em
+    this.answerInner = inner
     this.answerRoot = root
     root.enabled = false
+    this.lastPlacedKey = "" // position it at the next placeIndicator
+    return true
+  }
+
+  private answerW = 0
+  private answerEm = 0
+  private answerInner = 0
+  private answerPlate: BackPlate | null = null
+  /** Where the answer card sits: x, and its vertical CENTER, relative to the mic indicator (MWNPMain.placeChips); its top follows its height. */
+  private placeAnswerCard(): void {
+    if (!this.answerRoot || !this.main) return
+    const ao: vec3 = this.main.answerCardOffset
+    const h = this.answerPlate && this.answerPlate.size ? this.answerPlate.size.y : 0
+    this.answerRoot.getTransform().setLocalPosition(new vec3(ao.x, ao.y + h / 2, 0))
   }
 
   /** The small answer card under the mic indicator (stays visible when the cards are hidden). */
   private showAnswer(text: string, autoHide: boolean): void {
-    if (!this.answerRoot) return
-    if (this.answerTextComp) this.answerTextComp.text = text
+    if (!this.ensureAnswerCard() || !this.answerRoot) return
+    if (this.answerTextComp) fitText(this.answerTextComp, text, this.answerInner, this.answerEm, 1)
     this.answerRoot.enabled = true
+    this.placeAnswerCard()
     this.answerUntil = autoHide ? getTime() + 14 : -1
   }
 
@@ -602,7 +615,6 @@ export class SparkyVoice extends BaseScriptComponent {
     const key = p.x.toFixed(2) + "," + p.y.toFixed(2) + "," + p.z.toFixed(2) + "|" + ao.x.toFixed(2) + "," + ao.y.toFixed(2)
     if (key === this.lastPlacedKey) return
     this.lastPlacedKey = key
-    if (this.answerRoot) this.answerRoot.getTransform().setLocalPosition(ao) // right of the cabinet (MWNPMain.placeChips)
     const t = this.indRoot.getTransform()
     t.setLocalPosition(p)
     // Same tilt as the cards (the Library's host carries the layout's rotation).
@@ -614,6 +626,7 @@ export class SparkyVoice extends BaseScriptComponent {
   private tick(): void {
     const now = getTime()
     this.placeIndicator()
+    this.placeAnswerCard()
     this.refreshIndicator()
     if (this.answerUntil >= 0 && now > this.answerUntil) this.hideAnswer()
     // A command with an argument whose text has stopped changing.

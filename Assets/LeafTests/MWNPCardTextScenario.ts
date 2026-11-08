@@ -10,7 +10,7 @@ import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {MWNPLeafInteractor, cardIs, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
-const CARDS = ["LibraryCardCard", "JobCard", "SymptomCard", "JobControlCard", "JobConfirmCard", "StepCardCard", "FindingCardCard", "SummaryCardCard", "CameraCardCard", "OptionsCardCard", "NotesCardCard", "PhotoViewerCardCard"]
+const CARDS = ["LibraryCardCard", "JobCard", "SymptomCard", "JobControlCard", "JobConfirmCard", "StepCardCard", "SparkyAnswerCard", "FindingCardCard", "SummaryCardCard", "CameraCardCard", "OptionsCardCard", "NotesCardCard", "PhotoViewerCardCard"]
 /** Titles and body text that must be pure white (everything else only has to be opaque: amber primary labels, status colors). */
 const WHITE_NAMES = [
   "LibraryTitle", "LibraryAppName", "JobHeader", "JobTitle", "FilesLoaded", "NoJobText", "SymptomsHeader", "SymptomHeading", "JobControlHeader", "JobControlTitle",
@@ -31,8 +31,11 @@ function problems(): string[] {
     const rr = plate ? ((plate as any).roundedRectangle as RoundedRectangleLike | undefined) : undefined
     if (rr) {
       if (rr.opacity < 0.97) bad.push(cardName + " backing opacity " + rr.opacity.toFixed(2))
+      // The backing is the 90% smoke-gray in the Translucent card style and fully solid in the Opaque style (the default): either way
+      // exactly that, never a half-faded copy.
       const a = rr.backgroundColor.w
-      if (!near(a, 0.9, 0.03)) bad.push(cardName + " backing alpha " + a.toFixed(2) + " (want 0.90)")
+      const want = mwnpState().options.cardStyle === "Opaque" ? 1.0 : 0.9
+      if (!near(a, want, 0.03)) bad.push(cardName + " backing alpha " + a.toFixed(2) + " (want " + want.toFixed(2) + ")")
     }
     const walk = (o: SceneObject) => {
       if (!o.enabled) return
@@ -72,7 +75,7 @@ export class MWNPCardTextScenario extends Scenario {
       const cm = app.motion.filter((m: any) => m.so === app.cameraCard.sceneObject)[0]
       const cf = app.cameraCard.closeFader
       ev("audit " + what, {bad, motion: cm ? {a: cm.fader.alpha, h: cm.fader.hidden, f: cm.fader.isFading, open: cm.open} : null, close: cf ? {a: cf.alpha, h: cf.hidden, f: cf.isFading} : null, enabled: app.cameraCard.sceneObject.enabled})
-      expect(bad.join("; "), what + ": every visible card is fully opaque, white, 90% backing").toBe("")
+      expect(bad.join("; "), what + ": every visible card is fully opaque, white, with its full backing").toBe("")
     }
     const pick = async (button: string, card: string) => {
       await ui.tap(button)

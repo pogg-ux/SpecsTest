@@ -85,12 +85,21 @@ export class MWNPDisplayToggleScenario extends Scenario {
     ev("display button targeting", {hits: hitNames})
     expect(hitNames.indexOf("Btn_DisplayToggle") >= 0, "mouse ray reaches the button: " + hitNames.join(",")).toBe(true)
 
+    // The cards now sit beside the cabinet (left of its backplate), so the button rides on the open card's top-right corner, which is
+    // the edge of the display facing the cabinet, and stays clear of the backplate.
     const trainer = findSceneObjectByName("MWNPTrainer")
-    const half = (trainer.getComponent("Component.ScriptComponent") as any).getBoardHalfSize() as vec2
-    const corner = cam.worldSpaceToScreenSpace(trainer.getTransform().getWorldTransform().multiplyPoint(new vec3(half.x, half.y, 0)))
+    const tm = trainer.getTransform().getWorldTransform()
+    const plate = {x0: 9, x1: -9, y0: 9, y1: -9}
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const sp = cam.worldSpaceToScreenSpace(tm.multiplyPoint(new vec3(sx * 22, sy * 22, 0))) // the 44 cm backplate
+      plate.x0 = Math.min(plate.x0, sp.x)
+      plate.x1 = Math.max(plate.x1, sp.x)
+      plate.y0 = Math.min(plate.y0, sp.y)
+      plate.y1 = Math.max(plate.y1, sp.y)
+    }
     const b = cam.worldSpaceToScreenSpace(to)
-    ev("display button position", {button: [+b.x.toFixed(3), +b.y.toFixed(3)], cabinetTopRight: [+corner.x.toFixed(3), +corner.y.toFixed(3)]})
-    expect(Math.abs(b.x - corner.x) < 0.1 && Math.abs(b.y - corner.y) < 0.1, "button is at the cabinet's top-right edge").toBe(true)
+    ev("display button position", {button: [+b.x.toFixed(3), +b.y.toFixed(3)], backplate: [plate.x0, plate.x1, plate.y0, plate.y1].map((v) => +v.toFixed(3))})
+    expect(b.x < plate.x0 || b.x > plate.x1 || b.y < plate.y0 || b.y > plate.y1, "button is clear of the backplate").toBe(true)
     expect(b.x > 0.02 && b.x < 0.98 && b.y > 0.02 && b.y < 0.98, "button is inside the view").toBe(true)
     const card = findSceneObjectByName("FindingCardCard")
     const csz: vec2 = (card.getComponent("Component.ScriptComponent") as any).size
@@ -99,6 +108,10 @@ export class MWNPDisplayToggleScenario extends Scenario {
     for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) top = Math.min(top, cam.worldSpaceToScreenSpace(m.multiplyPoint(new vec3((dx * csz.x) / 2, (dy * csz.y) / 2, 0))).y)
     // The Hide button is attached inside the top-right corner of the card's header (near its top edge, not floating above it).
     expect(b.y >= top - 0.002 && b.y < top + 0.08, "button sits in the card's header (button y " + b.y.toFixed(3) + ", card top " + top.toFixed(3) + ")").toBe(true)
+    // ... and at its right end: within 0.06 of the card's right edge on screen.
+    let right = -9
+    for (const [dx, dy] of [[1, -1], [1, 1]]) right = Math.max(right, cam.worldSpaceToScreenSpace(m.multiplyPoint(new vec3((dx * csz.x) / 2, (dy * csz.y) / 2, 0))).x)
+    expect(Math.abs(b.x - right) < 0.06 && b.x <= right + 0.002, "button sits at the card's top-right corner (button x " + b.x.toFixed(3) + ", card right " + right.toFixed(3) + ")").toBe(true)
 
     // Colors the display must give back after the fade.
     const titleColor = textOf("FindingTitle").textFill.color

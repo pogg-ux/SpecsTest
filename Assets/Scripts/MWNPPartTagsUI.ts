@@ -218,12 +218,15 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
         } else {
           const y = a.strip.top + gap + len + gap + len / 2 // a second row above, with a leader line down to the terminal
           pos = new vec3(a.pos.x, y, a.pos.z + 1.5)
-          leader = {x: a.pos.x, y0: a.strip.top, y1: y - len / 2}
+          leader = {x: a.pos.x, y0: a.strip.top, y1: y - len / 2 - 0.06} // stops 0.6 mm short of the tag, so the two never overlap
         }
       } else if (a.id === "F1") {
         pos = new vec3(a.pos.x - 0.75 - 0.3 - w / 2, a.pos.y, a.pos.z) // beside the fuse, off F1 IN / OUT
       } else if (a.id === "F2") {
         pos = new vec3(a.pos.x + 0.75 + 0.3 + w / 2, a.pos.y, a.pos.z) // beside the fuse, on the free side (the space left of F2 is only 1.75 cm, F1 is there)
+      } else if (a.id === "S1") {
+        // Right beside the toggle, never on it: the tag's left edge clears the toggle's key area (right edge at -8.8 cm) by 0.2 cm.
+        pos = new vec3(Math.max(a.pos.x, -8.8 + 0.2 + w / 2), a.pos.y, a.pos.z)
       } else if (a.id === "L1" || a.id === "L2") {
         // Clear of the S1 toggle, and nudged away from it (L1 up, L2 down) so the S1 tag fits between them, right beside the toggle.
         pos = new vec3(Math.max(a.pos.x, -8.5 + w / 2), a.pos.y + (a.id === "L1" ? 0.8 : -0.7), a.pos.z)

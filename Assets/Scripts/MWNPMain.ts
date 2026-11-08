@@ -69,14 +69,16 @@ interface UndoState {
 /** Real cm kept between the display area's edge and the card column; chip widths (real cm) for left-aligning the chips with it. */
 const FRAME_MARGIN_CM = 1.0
 /**
- * How much farther from the user the whole layout sits than authored (cabinet 100 -> 175 cm, cards 75 -> 150 cm). At 100 cm the 46 cm
- * board fills 79% of the 32 degree view, so no card can sit beside it; at 175 cm it fills 47% and the Step card (left) and the answer
- * card (right) fit in the bands beside it. Real sizes are unchanged, so every text is still at least 1.0 cm tall.
+ * How much farther from the user the whole layout sits than authored (cabinet 100 -> 165 cm, cards 75 -> 140 cm). At 100 cm the 46 cm
+ * board fills 79% of the 32 degree view, so no card can sit beside it; at 165 cm the board is 42% of the frame height and 28% of its
+ * width, and the Step card (left) and the answer card (right) fit in the bands beside it, clear of the backplate. Real sizes are
+ * unchanged, so every text is still at least 1.0 cm tall.
  */
-const LAYOUT_PULLBACK_CM = 75
-/** The answer card's size in cm (SparkyVoice builds it 19 x 9.5). */
-const ANSWER_CARD_W_CM = 19
-const ANSWER_CARD_H_CM = 9.5
+const LAYOUT_PULLBACK_CM = 65
+/** Clear space kept between a card and the cabinet's backplate (cm, at the card's distance). */
+const BACKPLATE_GAP_CM = 0.8
+/** The backplate's half width (cm): the board is 46 cm with a 1 cm frame, and cards may overlap the frame but not the plate. */
+const BACKPLATE_HALF_W_CM = 22
 const LIBRARY_CHIP_CM = 7.5
 const STEP_CHIP_CM = 9.6
 
@@ -1492,11 +1494,44 @@ export class MWNPMain extends BaseScriptComponent {
     // Left-aligned with the card column, at the top of the display area.
     const leftX = eye.x - this.viewTanH * dist + FRAME_MARGIN_CM
     this.voiceIndicatorPos = new vec3(leftX + LIBRARY_CHIP_CM + 1.2, yTop - chipH / 2, lp.z + 0.6 * s)
-    // The answer card goes to the right of the cabinet: right-aligned to the frame, top level with the chips (offset from the indicator).
+    // The answer card goes to the right of the cabinet: the Step card's width, its right edge at the frame margin, its vertical CENTER on
+    // the cabinet's center (SparkyVoice puts its top half its height above that).
+    const stepScale = stepHost.getTransform().getWorldScale().y
+    const answerW = this.stepCard.widthCm * stepScale
     const rightX = eye.x + this.viewTanH * dist - FRAME_MARGIN_CM
-    this.answerCardOffset = new vec3(rightX - ANSWER_CARD_W_CM / 2 - this.voiceIndicatorPos.x, yTop - ANSWER_CARD_H_CM / 2 - this.voiceIndicatorPos.y, 0)
+    this.answerCardOffset = new vec3(rightX - answerW / 2 - this.voiceIndicatorPos.x, this.cabinetCenterYAt(lp.z + 0.6 * s) - this.voiceIndicatorPos.y, 0)
     this.libraryCard.setChipOffset(toHost(libHost, new vec3(leftX + LIBRARY_CHIP_CM / 2, yTop - chipH / 2, lp.z + 0.6 * s)))
     this.stepCard.setChipOffset(toHost(stepHost, new vec3(leftX + STEP_CHIP_CM / 2, yTop - chipH - gap - chipH / 2, lp.z + 0.6 * s)))
+  }
+
+  /** Root-space y of the cabinet's center, seen from the eye, on the plane at root-space z (so a card there is centered on the cabinet on screen). */
+  private cabinetCenterYAt(z: number): number {
+    const eye = this.layoutEye()
+    const cab = this.cabinet.sceneObject.getTransform()
+    const rootInv = this.sceneObject.getTransform().getInvertedWorldTransform()
+    const c = rootInv.multiplyPoint(cab.getWorldPosition())
+    return eye.y + (c.y - eye.y) * ((eye.z - z) / (eye.z - c.z))
+  }
+
+  private stepCenterH = -1
+
+  /**
+   * The Step card is centered vertically on the cabinet (its height changes with its content, so this follows it). The other cards
+   * keep the top-aligned column under the Library chip. Runs every frame; moves the card only when its height changed.
+   */
+  private centerStepCard(): void {
+    const host = this.stepCard.sceneObject
+    const cb = this.cardBodyOf(host)
+    if (!cb || !cb.plate.size) return
+    const t = host.getTransform()
+    const mo = this.motion.filter((m) => m.so === host)[0] // updateMotion writes the host's position from this base every frame
+    const base: vec3 = mo ? mo.base : t.getLocalPosition()
+    const h = cb.plate.size.y
+    const want = this.cabinetCenterYAt(base.z) + (h * t.getLocalScale().y) / 2
+    if (Math.abs(want - base.y) < 0.005 && Math.abs(h - this.stepCenterH) < 0.001) return
+    this.stepCenterH = h
+    if (mo) mo.base = new vec3(base.x, want, base.z)
+    else t.setLocalPosition(new vec3(base.x, want, base.z))
   }
 
   private placeLeftColumn(): void {
@@ -1809,6 +1844,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.fader = new DisplayFader(this, [host.getParent() as SceneObject], null, 0.35, true)
     this.labelsFader = new DisplayFader(this, [this.partTags.sceneObject], this.cabinet)
     this.createEvent("UpdateEvent").bind(() => this.syncToggleLabels())
+    this.createEvent("UpdateEvent").bind(() => this.centerStepCard())
   }
 
   /**
