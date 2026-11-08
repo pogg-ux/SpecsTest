@@ -101,7 +101,7 @@ export function speak(text: string, token: string): Promise<AudioTrackAsset> {
   if (!token) return Promise.reject(OFFLINE)
   useToken(token)
   return withTimeout(
-    OpenAI.speech({model: TTS_MODEL, input: text, voice: "coral", instructions: "Calm, clear, brisk pace, like a workshop assistant."}),
+    OpenAI.speech({model: TTS_MODEL, input: text, voice: "verse", instructions: "Calm, clear, brisk pace, like a workshop assistant."}),
     "speech"
   )
 }
