@@ -31,6 +31,14 @@ export class SparkyVoice extends BaseScriptComponent {
   @input
   @hint("Listen with the microphone. Off = only typed-text injection (tests).")
   enableAsr: boolean = true
+  @input
+  @hint("Pre-recorded Sparky clips from Assets/Audio/Sparky, matched by file name (step_EXTEND_2, logged, undone, ...). A clip that is not here is skipped silently.")
+  clips: AudioTrackAsset[]
+
+  /** Clip names each command asked for (whether or not the file exists): for tests and the log. */
+  requested: string[][] = []
+  /** True while a clip is playing and ASR is stopped. */
+  asrPaused: boolean = false
 
   /** What ran, in order: for tests and for the log. */
   acted: {name: string; arg: string; result: string}[] = []
@@ -63,6 +71,13 @@ export class SparkyVoice extends BaseScriptComponent {
   private msgText = ""
   private msgUntil = 0
   private lastPlacedKey = ""
+  // Clips.
+  private audio: AudioComponent | null = null
+  private queue: string[] = []
+  private clipTimer: DelayedCallbackEvent | null = null
+  private clipToken = 0
+  /** Test aid: clip name -> seconds. A fake clip "plays" silently for that long, so the ASR pause / resume can be tested without audio files. */
+  private fakeClips: {[name: string]: number} = {}
 
   onAwake() {
     ;(global as any).mwnpSparky = this
@@ -76,6 +91,18 @@ export class SparkyVoice extends BaseScriptComponent {
   /** Typed-text hook: handles `text` exactly as a transcript from ASR (a final by default). */
   inject(text: string, isFinal: boolean = true): void {
     this.onTranscript(text, isFinal)
+  }
+
+  /** Test aid: registers a silent stand-in clip of `seconds` (see fakeClips). */
+  addFakeClip(name: string, seconds: number): void {
+    this.fakeClips[name.toLowerCase()] = seconds
+  }
+
+  /** Names of the real clips that are loaded (lower case, no extension). */
+  clipNames(): string[] {
+    const out: string[] = []
+    for (const c of this.clips || []) if (c) out.push(c.name.toLowerCase().replace(/\.[a-z0-9]+$/, ""))
+    return out
   }
 
   setAsrEnabled(on: boolean): void {
@@ -120,6 +147,7 @@ export class SparkyVoice extends BaseScriptComponent {
         this.onTranscript(e.text, e.isFinal)
       })
       options.onTranscriptionErrorEvent.add((code: AsrModule.AsrStatusCode) => {
+        if (this.asrPaused) return // stopped on purpose while a clip plays
         this.log("ASR error " + code + ": restarting")
         this.listening = false
         this.errorShown = true
@@ -149,6 +177,7 @@ export class SparkyVoice extends BaseScriptComponent {
   // ── Transcripts ───────────────────────────────────────────────────────────
 
   private onTranscript(text: string, isFinal: boolean): void {
+    if (this.asrPaused) return // a clip is playing: Sparky must not hear itself
     const now = getTime()
     const segs = wakeSegments(text)
     if (segs.length > 0) this.log((isFinal ? "final: " : "partial: ") + '"' + text + '"')
@@ -204,6 +233,78 @@ export class SparkyVoice extends BaseScriptComponent {
     this.acted.push({name: cmd.name, arg: cmd.arg, result})
     this.log("ACT " + key + " -> " + result)
     this.showMessage(result)
+    const wanted: string[] = ((this.main && this.main.voiceClips) || []).filter((n: string) => n.length > 0)
+    this.requested.push(wanted.slice())
+    this.playClips(wanted)
+  }
+
+  // ── Pre-recorded clips ────────────────────────────────────────────────────
+
+  private hasClip(name: string): boolean {
+    const n = name.toLowerCase()
+    return this.fakeClips[n] !== undefined || this.clipNames().indexOf(n) >= 0
+  }
+
+  /** Plays the clips that exist, in order; ASR is stopped while they play and restarted after. A missing clip is skipped silently. */
+  private playClips(names: string[]): void {
+    const have = names.filter((n) => this.hasClip(n))
+    if (have.length === 0) return
+    this.queue = this.queue.concat(have)
+    if (!this.asrPaused) this.pauseAsr()
+    if (this.queue.length === have.length) this.playNext()
+  }
+
+  private pauseAsr(): void {
+    this.asrPaused = true
+    this.listening = false
+    if (this.asr && this.asrEnabled) {
+      try {
+        this.asr.stopTranscribing()
+      } catch (e) {
+        /* nothing running */
+      }
+    }
+    this.handled = 0
+    this.lastText = ""
+    this.lastSegs = []
+    this.refreshIndicator()
+  }
+
+  private resumeAsr(): void {
+    this.asrPaused = false
+    this.startAsr()
+  }
+
+  private playNext(): void {
+    const name = this.queue.shift()
+    if (name === undefined) {
+      this.resumeAsr()
+      return
+    }
+    const key = name.toLowerCase()
+    const token = ++this.clipToken
+    const next = () => {
+      if (token !== this.clipToken) return // superseded
+      this.playNext()
+    }
+    let seconds = 0.2
+    if (this.fakeClips[key] !== undefined) seconds = this.fakeClips[key]
+    else {
+      let asset: AudioTrackAsset | null = null
+      for (const c of this.clips || []) if (c && c.name.toLowerCase().replace(/\.[a-z0-9]+$/, "") === key) asset = c
+      try {
+        if (!this.audio) this.audio = this.sceneObject.createComponent("Component.AudioComponent") as AudioComponent
+        this.audio.audioTrack = asset as AudioTrackAsset
+        this.audio.play(1)
+        seconds = Math.max(0.2, this.audio.duration || 1)
+      } catch (e) {
+        this.log("clip " + name + " could not play: " + e)
+      }
+    }
+    this.log("clip " + name + " (" + seconds.toFixed(1) + " s)")
+    if (!this.clipTimer) this.clipTimer = this.createEvent("DelayedCallbackEvent") as DelayedCallbackEvent
+    this.clipTimer.bind(next)
+    this.clipTimer.reset(seconds + 0.3) // a short tail so the room's last echo is gone before ASR restarts
   }
 
   // ── Indicator ─────────────────────────────────────────────────────────────
@@ -279,7 +380,7 @@ export class SparkyVoice extends BaseScriptComponent {
     this.refreshIndicator()
     // A command with an argument whose text has stopped changing.
     if (!this.lastIsFinal && this.lastSegs.length > 0 && now - this.lastChangeT >= SETTLE_SEC) this.process("settled")
-    if (this.asrEnabled) {
+    if (this.asrEnabled && !this.asrPaused) {
       if (this.restartAt >= 0 && now >= this.restartAt) {
         this.restartAt = -1
         this.startAsr()

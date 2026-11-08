@@ -28,6 +28,7 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    clips: false
     enableAsr: false
   ScriptTypesHidden:
     {}
@@ -39,6 +40,8 @@
     []
   DefaultScriptInputs:
     - enableAsr: true
+      clips: !<reference.AudioTrackAsset[]>
+        []
   ScriptTypes:
     -
       {}
@@ -46,3 +49,4 @@
     - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">SparkyVoice – wake word \"Sparky\", continuous ASR, commands</span>"}'
     - '// @ui {"widget":"separator"}'
     - '// @input bool enableAsr = true {"hint":"Listen with the microphone. Off = only typed-text injection (tests)."}'
+    - '// @input Asset.AudioTrackAsset[] clips {"hint":"Pre-recorded Sparky clips from Assets/Audio/Sparky, matched by file name (step_EXTEND_2, logged, undone, ...). A clip that is not here is skipped silently."}'

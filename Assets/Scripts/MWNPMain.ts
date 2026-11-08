@@ -528,6 +528,8 @@ export class MWNPMain extends BaseScriptComponent {
 
   /** Where SparkyVoice puts its listening indicator (root-local), set by placeChips: right of the Library chip. */
   voiceIndicatorPos: vec3 = new vec3(0, 20, -56)
+  /** Clip names (Assets/Audio/Sparky) the last voice command wants spoken, in order; SparkyVoice plays those it has. */
+  voiceClips: string[] = []
   private lastUndo: UndoState | null = null
   /** A wire the tech asked to highlight by voice (netlist index), -1 = follow the current step's wire. */
   private highlightIdx = -1
@@ -546,6 +548,13 @@ export class MWNPMain extends BaseScriptComponent {
       resultText: this.stepCard.resultText,
       resultColor: this.stepCard.resultColorWord,
     }
+  }
+
+  /** "step_<SYMPTOM>_<n>" for the step now showing ("step_EXTEND_2"), or "" when no step is showing. */
+  private stepClipName(): string {
+    const agent = this.agent as MWNPAgent
+    const nl = this.nl as Netlist
+    return agent.phase === "steps" && agent.faultIndex >= 0 ? "step_" + nl.symptomKey(agent.faultIndex) + "_" + (agent.stepIndex + 1) : ""
   }
 
   /** Brings the current step back on screen and fresh: card mode, schematic closed, texts and cabinet visuals refreshed. */
@@ -609,6 +618,10 @@ export class MWNPMain extends BaseScriptComponent {
     for (let i = 0; i < value.length; i++) agent.key(value.charAt(i))
     this.onEnter()
     if (agent.readings.length === before) return "Couldn't log " + value
+    const cls = agent.readings[agent.readings.length - 1].cls
+    this.voiceClips.push(cls === "open" ? "out_of_range" : cls === "unexplained" ? "cant_confirm" : "logged")
+    const next = this.stepClipName()
+    if (next && cls !== "unexplained") this.voiceClips.push(next)
     return "Logged " + value + " V. Say 'undo' to remove."
   }
 
@@ -619,8 +632,12 @@ export class MWNPMain extends BaseScriptComponent {
   voiceCommand(name: string, arg: string = ""): string {
     const agent = this.agent as MWNPAgent | null
     const nl = this.nl as Netlist | null
+    this.voiceClips = []
     if (!agent || !nl || !this.initialized) return "Not ready"
-    if (this.visibleCard === "safety") return "Dismiss the safety notice first"
+    if (this.visibleCard === "safety") {
+      this.voiceClips.push("dismiss_safety")
+      return "Dismiss the safety notice first"
+    }
     const steps = this.jobActive && agent.phase === "steps"
     switch (name) {
       case "next":
@@ -630,6 +647,7 @@ export class MWNPMain extends BaseScriptComponent {
         this.highlightIdx = -1
         this.showStepAgain()
         this.log("voice " + name)
+        this.voiceClips.push(this.stepClipName())
         return "Step " + (agent.stepIndex + 1) + " of " + agent.steps.length
       }
       case "repeat": {
@@ -637,12 +655,19 @@ export class MWNPMain extends BaseScriptComponent {
         this.highlightIdx = -1
         this.showStepAgain()
         this.log("voice repeat")
+        this.voiceClips.push(this.stepClipName())
         return "Repeating the step"
       }
       case "log":
         return this.voiceLog(arg)
-      case "undo":
-        return this.undoLastReading()
+      case "undo": {
+        const r = this.undoLastReading()
+        if (r === "Undone") {
+          this.voiceClips.push("undone")
+          this.voiceClips.push(this.stepClipName())
+        } else if (r === "Nothing to undo") this.voiceClips.push("nothing_to_undo")
+        return r
+      }
       case "show_schematic": {
         if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "The schematic is for a step"
         if (this.schematicPanel.isOpen) return "The schematic is open"
@@ -684,9 +709,11 @@ export class MWNPMain extends BaseScriptComponent {
           if (ids.indexOf(w.id) < 0) ids.push(w.id)
         })
         const r = resolveWire(arg, ids)
-        if (!r.id) return "Which wire?"
-        const idx = nl.wireIndicesById(r.id)[0]
-        if (idx === undefined) return "Which wire?"
+        const idx = r.id ? nl.wireIndicesById(r.id)[0] : undefined
+        if (!r.id || idx === undefined) {
+          this.voiceClips.push("which_wire")
+          return "Which wire?"
+        }
         this.highlightIdx = idx
         this.applyTrace()
         if (this.schematicPanel.isOpen) this.schematicPanel.highlight(r.id)

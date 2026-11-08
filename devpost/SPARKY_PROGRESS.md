@@ -1,3 +1,3 @@
-Done: Sparky core commands merged to main (d0e104a); mwnp-sparky-voice, c1-c5, camera-card pass.
-In progress: audio-clip stretch on branch sparky-voice (SparkyVoice plays named clips from an AudioTrackAsset list; stops ASR during a clip; missing clip = silent skip).
-Next step: Main.voiceClips per command, clip queue + ASR pause/resume in SparkyVoice, scenario checks, devpost/SPARKY_CLIPS.md (exact filenames + lines for ElevenLabs), then commit.
+Done: Sparky core merged to main (d0e104a); clip stretch built on branch sparky-voice (SparkyVoice plays named clips from its Clips list, stops ASR while one plays, restarts after, missing clip = silent skip); scenarios mwnp-sparky-voice and mwnp-sparky-clips PASS; clip list in devpost/SPARKY_CLIPS.md (16 files).
+In progress: nothing; waiting for the mp3 files in Assets/Audio/Sparky and a decision to merge the clip stretch into main.
+Next step: when the clips exist, wire them into SparkyVoice > Clips (drag, or ask Claude to 'wire the Sparky clips'), test by ear in the Preview, then merge sparky-voice into main.

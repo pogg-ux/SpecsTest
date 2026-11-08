@@ -2167,11 +2167,14 @@
   ScriptAsset: !<reference> 21928d45-6785-47c7-832a-cad3bcad734a
   ScriptInputsDefault:
     enableAsr: true
+    clips: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       enableAsr: true
+      clips: !<reference.AudioTrackAsset[]>
+        []
   ScriptTypes:
     "":
       {}
