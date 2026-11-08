@@ -30,11 +30,19 @@ export interface TagAnchor {
   strip?: {top: number; bottom: number; index: number}
 }
 
-/** A cream wire-sleeve marker on a wire near one end (decorative twin of the wire's number label; shows and hides with it). */
-export interface WireSleeve {
+/** A wire's route (cabinet cm): its cream sleeve markers are placed along it, one near each end. */
+export interface WireRoute {
   wireName: string
   text: string
-  pos: vec3
+  pts: [number, number][]
+}
+
+/** A rectangle the sleeves keep off: parts and the spots the technician reaches. */
+export interface AvoidRect {
+  cx: number
+  cy: number
+  w: number
+  h: number
 }
 
 /** Cream sleeve marker look: cream fill, thin tan edge, dark text. */
@@ -146,7 +154,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     return this.boxes
   }
 
-  build(anchors: TagAnchor[], wireLabels: WireLabel[], note: {text: string; pos: vec3} | null = null, sleeves: WireSleeve[] = []): void {
+  build(anchors: TagAnchor[], wireLabels: WireLabel[], note: {text: string; pos: vec3} | null = null, routes: WireRoute[] = [], avoid: AvoidRect[] = []): void {
     // The cabinet may be scaled down to fit the frame: raise each label size (in cabinet cm) so that, after that scale,
     // every label is still at least MIN_TEXT_EM_CM (1.0 cm) tall in the real world.
     const floorEm = MIN_TEXT_EM_CM / Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
@@ -156,6 +164,7 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
     this.noteEmCm = Math.max(this.noteEmCm, floorEm)
     // Bubbles keep their real width (so their text wraps at words, not mid-word) when the cabinet is scaled down.
     this.overlayMaxWidthCm = this.overlayMaxWidthCm / Math.max(0.05, this.sceneObject.getTransform().getWorldScale().y)
+    const pending: {name: string; so: SceneObject; w: number; h: number; pts: [number, number][]; fromEnd: boolean}[] = []
     for (const wl of wireLabels) {
       const so = makeObj(this.sceneObject, wl.name, wl.pos)
       this.wireLabelSOs[wl.name] = so
@@ -164,20 +173,20 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       const w = textWidthCm(wl.text, this.wireEmCm, true) + PAD_X
       const h = this.wireEmCm * PLATE_H
       makeLabelPlate(so, w, h, SLEEVE_EDGE, -0.06, SLEEVE_FILL)
-      this.boxes.push({name: wl.name, cx: wl.pos.x, cy: wl.pos.y, w, h})
-    }
-    // The twin sleeve near the wire's other end.
-    for (const sl of sleeves) {
-      const name = "WireEnd_" + sl.wireName
-      const so = makeObj(this.sceneObject, name, sl.pos)
-      const t = this.makeLabel(makeObj(so, "Label", new vec3(0, 0, 0.05)), sl.text, this.wireEmCm, 4)
-      styleLabelText(t, SLEEVE_TEXT)
-      const w = textWidthCm(sl.text, this.wireEmCm, true) + PAD_X
-      const h = this.wireEmCm * PLATE_H
-      makeLabelPlate(so, w, h, SLEEVE_EDGE, -0.06, SLEEVE_FILL)
-      if (!this.wireEndSOs[sl.wireName]) this.wireEndSOs[sl.wireName] = []
-      this.wireEndSOs[sl.wireName].push(so)
-      this.boxes.push({name, cx: sl.pos.x, cy: sl.pos.y, w, h})
+      const route = routes.filter((r) => r.wireName === wl.name)[0]
+      if (route) {
+        // With a route the sleeve is placed on the wire after the tags are placed (see placeSleeves); the twin goes near the other end.
+        const twinName = "WireEnd_" + wl.name
+        const tso = makeObj(this.sceneObject, twinName, wl.pos)
+        const tt = this.makeLabel(makeObj(tso, "Label", new vec3(0, 0, 0.05)), wl.text, this.wireEmCm, 4)
+        styleLabelText(tt, SLEEVE_TEXT)
+        makeLabelPlate(tso, w, h, SLEEVE_EDGE, -0.06, SLEEVE_FILL)
+        this.wireEndSOs[wl.name] = [tso]
+        pending.push({name: wl.name, so, w, h, pts: route.pts, fromEnd: false})
+        pending.push({name: twinName, so: tso, w, h, pts: route.pts, fromEnd: true})
+      } else {
+        this.boxes.push({name: wl.name, cx: wl.pos.x, cy: wl.pos.y, w, h})
+      }
     }
     if (note) {
       // Footnote: hidden in the default view, shown only through setBoardNoteVisible (the "More" view).
@@ -213,8 +222,14 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
         }
       } else if (a.id === "F1") {
         pos = new vec3(a.pos.x - 0.75 - 0.3 - w / 2, a.pos.y, a.pos.z) // beside the fuse, off F1 IN / OUT
+      } else if (a.id === "F2") {
+        pos = new vec3(a.pos.x + 0.75 + 0.3 + w / 2, a.pos.y, a.pos.z) // beside the fuse, on the free side (the space left of F2 is only 1.75 cm, F1 is there)
       } else if (a.id === "L1" || a.id === "L2") {
         pos = new vec3(Math.max(a.pos.x, -8.5 + w / 2), a.pos.y, a.pos.z) // clear of the S1 toggle
+      } else if (a.id === "S1") {
+        const wl = textWidthCm("L1", em, true) + PAD_X
+        const lRight = Math.max(-7.5, -8.5 + wl / 2) + wl / 2
+        pos = new vec3(Math.max(a.pos.x, lRight + 0.35 + w / 2), a.pos.y, a.pos.z) // clear of the L1 / L2 tags
       }
       const so = makeObj(this.sceneObject, "Tag_" + a.id, pos)
       let leaderSO: SceneObject | null = null
@@ -249,6 +264,59 @@ export class MWNPPartTagsUI extends BaseScriptComponent {
       this.tags[a.id] = tag
       this.anchors[a.id] = a
       this.setTagState(a.id, "dim")
+    }
+    this.placeSleeves(pending, avoid)
+  }
+
+  /**
+   * Places each wire's two cream sleeves ON the wire, the first near its start and the twin near its end: walking along the route from that
+   * end, the first spot where the sleeve is inside the backplate and clear of every tag, every sleeve already placed, the key spots and the
+   * parts. Falls back to the spot nearest the end (and says so in the log) if a wire has no clear spot.
+   */
+  private placeSleeves(pending: {name: string; so: SceneObject; w: number; h: number; pts: [number, number][]; fromEnd: boolean}[], avoid: AvoidRect[]): void {
+    const margin = 21.3
+    for (const p of pending) {
+      const pts = p.fromEnd ? p.pts.slice().reverse() : p.pts.slice()
+      const fits = (x: number, y: number): boolean => {
+        if (Math.abs(x) + p.w / 2 > margin || Math.abs(y) + p.h / 2 > margin) return false
+        for (const o of this.boxes) if (Math.abs(x - o.cx) < (p.w + o.w) / 2 + 0.1 && Math.abs(y - o.cy) < (p.h + o.h) / 2 + 0.1) return false
+        for (const a of avoid) if (Math.abs(x - a.cx) < (p.w + a.w) / 2 + 0.1 && Math.abs(y - a.cy) < (p.h + a.h) / 2 + 0.1) return false
+        return true
+      }
+      let total = 0
+      for (let k = 0; k < pts.length - 1; k++) total += Math.hypot(pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1])
+      const at = (d: number): [number, number] => {
+        let left = d
+        for (let k = 0; k < pts.length - 1; k++) {
+          const len = Math.hypot(pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1])
+          if (left <= len) {
+            const f = left / Math.max(0.001, len)
+            return [pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f]
+          }
+          left -= len
+        }
+        return pts[pts.length - 1]
+      }
+      let chosen: [number, number] | null = null
+      for (let d = 0.9; d <= total && !chosen; d += 0.3) {
+        const c = at(d)
+        if (fits(c[0], c[1])) chosen = c
+      }
+      if (!chosen && p.fromEnd) {
+        // A short wire has room for one sleeve only (the other end is taken by a probe point, a lamp or another label): drop the twin.
+        p.so.destroy()
+        const wireName = p.name.substring("WireEnd_".length)
+        this.wireEndSOs[wireName] = (this.wireEndSOs[wireName] || []).filter((s) => s !== p.so)
+        print("[PartTags] " + p.name + ": no clear spot, one sleeve only")
+        continue
+      }
+      if (!chosen) {
+        chosen = at(Math.min(1.9, total))
+        print("[PartTags] no clear spot for " + p.name + "; left near the end of its wire")
+      }
+      // z 2.2: in front of the wire tubes (top at 1.23), the focus wire (1.43) and the trace overlays (1.73), so a sleeve on a traced wire is not hidden.
+      p.so.getTransform().setLocalPosition(new vec3(chosen[0], chosen[1], 2.2))
+      this.boxes.push({name: p.name, cx: chosen[0], cy: chosen[1], w: p.w, h: p.h})
     }
   }
 

@@ -338,7 +338,7 @@ export class MWNPCabinet extends BaseScriptComponent {
     netlist.data.wires.forEach((w, i) => {
       const r = ROUTES[w.from + ">" + w.to]
       if (!r) return
-      const color = netlist.isReturnWire(i) ? PALETTE.wireReturn : PALETTE.wireSupply
+      const color = netlist.isReturnWire(i) ? (real ? c4(0.42, 0.76, 1.0) : PALETTE.wireReturn) : PALETTE.wireSupply
       const wso = this.obj(root, "Wire_" + w.id + "_" + i)
       const wm = this.mat(color)
       let hlMat: Material | undefined
@@ -478,6 +478,29 @@ export class MWNPCabinet extends BaseScriptComponent {
     return out
   }
 
+  /** Footprints of the parts that stand in front of the backplate (cabinet cm): wire sleeves must not sit behind or under them. */
+  getPartRects(): {id: string; cx: number; cy: number; w: number; h: number}[] {
+    const out: {id: string; cx: number; cy: number; w: number; h: number}[] = []
+    const ps = LAYOUT.ps1
+    // Sizes include the amber selection frame (part + 1 cm margin, terminals 0.4 cm, + the 0.22 cm bars) so a sleeve never touches a frame.
+    out.push({id: "PS1", cx: ps.c[0], cy: ps.c[1], w: ps.s[0] + 1.3, h: ps.s[1] + 1.3})
+    out.push({id: "Nameplate", cx: 0, cy: 20.6, w: 20.6, h: 1.6})
+    let minX = 999
+    let maxX = -999
+    for (const id of Object.keys(LAYOUT.terminalX)) {
+      const x = LAYOUT.terminalX[id]
+      minX = Math.min(minX, x)
+      maxX = Math.max(maxX, x)
+      out.push({id, cx: x, cy: LAYOUT.terminal.y, w: LAYOUT.terminal.s[0] + 0.7, h: LAYOUT.terminal.s[1] + 0.7})
+    }
+    out.push({id: "EndStop_L", cx: minX - 1.4, cy: LAYOUT.terminal.y, w: 0.7, h: 4.6})
+    out.push({id: "EndStop_R", cx: maxX + 1.4, cy: LAYOUT.terminal.y, w: 0.7, h: 4.6})
+    for (const id of Object.keys(LAYOUT.fuses)) out.push({id, cx: LAYOUT.fuses[id][0], cy: LAYOUT.fuses[id][1], w: 2.9, h: 5.8})
+    for (const id of Object.keys(LAYOUT.lamps)) out.push({id, cx: LAYOUT.lamps[id][0], cy: LAYOUT.lamps[id][1], w: 2.7, h: 2.7})
+    out.push({id: "S1", cx: LAYOUT.s1[0], cy: LAYOUT.s1[1], w: 3.4, h: 3.4})
+    return out
+  }
+
   /** Board extents in cabinet-local cm (for tests). */
   getBoardHalfSize(): vec2 {
     return new vec2(LAYOUT.board.w / 2, LAYOUT.board.h / 2)
@@ -490,7 +513,8 @@ export class MWNPCabinet extends BaseScriptComponent {
   geometrySnapshot(): string {
     const r = (n: number): number => Math.round(n * 1000) / 1000
     const v = (p: vec3): number[] => [r(p.x), r(p.y), r(p.z)]
-    const out: any = {points: {}, boxes: {}, anchors: [], expected: {}, badges: {}, routes: ROUTES, wireLabels: [], keyAreas: [], half: []}
+    const out: any = {points: {}, boxes: {}, anchors: [], expected: {}, badges: {}, routes: {}, keyAreas: [], half: []}
+    for (const key of Object.keys(ROUTES)) out.routes[key] = ROUTES[key].pts
     for (const id of Object.keys(POINTS).sort()) out.points[id] = v(this.getPointPos(id))
     for (const id of Object.keys(this.partBoxes).sort()) {
       const b = this.partBoxes[id]
@@ -502,7 +526,6 @@ export class MWNPCabinet extends BaseScriptComponent {
       out.expected[id] = v(this.getExpectedTagPos(id))
       out.badges[id] = v(this.getBadgePos(id))
     }
-    for (const w of this.getWireLabels()) out.wireLabels.push({name: w.name, text: w.text, pos: v(w.pos), ret: w.isReturn})
     for (const k of this.getKeyAreas()) out.keyAreas.push([k.id, r(k.cx), r(k.cy), r(k.w), r(k.h)])
     const hs = this.getBoardHalfSize()
     out.half = [r(hs.x), r(hs.y)]
@@ -679,6 +702,13 @@ export class MWNPCabinet extends BaseScriptComponent {
   setS1(position: string): void {
     this.s1Position = position
     if (!this.leverPivot) return
+    if (this.realisticLook && !!this.vertexMaterial) {
+      // The lever leans to the left of the lamp column (yaw -32 deg) and tips up or down (about 22 deg), so the ball tip stays clear of L1 / L2.
+      const tilt = ((position === "UP" ? -1 : 1) * this.leverAngleDeg * 0.63 * Math.PI) / 180
+      const lean = (-32 * Math.PI) / 180
+      this.leverPivot.getTransform().setLocalRotation(quat.angleAxis(lean, vec3.up()).multiply(quat.angleAxis(tilt, vec3.right())))
+      return
+    }
     const a = ((position === "UP" ? -1 : 1) * this.leverAngleDeg * Math.PI) / 180
     this.leverPivot.getTransform().setLocalRotation(quat.fromEulerAngles(a, 0, 0))
   }
@@ -800,7 +830,7 @@ export class MWNPCabinet extends BaseScriptComponent {
     const ph = bh - 2 * fr
     const e = 0.35
     kit.box(0, 0, -0.05, pw, ph, 0.1, RC.galv, undefined, ["pz"])
-    kit.speckle(-pw / 2, -ph / 2, pw / 2, ph / 2, 0.0, 60, 60, RC.galv, 0.1, 7)
+    kit.speckle(-pw / 2, -ph / 2, pw / 2, ph / 2, 0.0, 90, 90, RC.galv, 0.05, 7)
     kit.box(0, ph / 2 - e / 2, 0.04, pw, e, 0.08, RC.plateEdge)
     kit.box(0, -ph / 2 + e / 2, 0.04, pw, e, 0.08, RC.plateEdge)
     kit.box(-pw / 2 + e / 2, 0, 0.04, e, ph - 2 * e, 0.08, RC.plateEdge)
@@ -901,7 +931,7 @@ export class MWNPCabinet extends BaseScriptComponent {
     const sp = LAYOUT.switchPlate
     const frontZ = sp.z + sp.s[2] / 2 // 0.8
     kit.box(sp.c[0], sp.c[1], sp.z, sp.s[0], sp.s[1], sp.s[2], RC.galvLight, undefined, ["pz"])
-    kit.speckle(sp.c[0] - sp.s[0] / 2, sp.c[1] - sp.s[1] / 2, sp.c[0] + sp.s[0] / 2, sp.c[1] + sp.s[1] / 2, frontZ, 50, 10, RC.galvLight, 0.07, 11)
+    kit.speckle(sp.c[0] - sp.s[0] / 2, sp.c[1] - sp.s[1] / 2, sp.c[0] + sp.s[0] / 2, sp.c[1] + sp.s[1] / 2, frontZ, 50, 10, RC.galvLight, 0.035, 11)
     this.kitScrew(kit, sp.c[0] + sp.s[0] / 2 - 0.9, sp.c[1] + 1.2, frontZ, 0.3)
     LAYOUT.holes.rows.forEach((y) => {
       for (let col = 0; col < LAYOUT.holes.cols; col++) {
@@ -929,7 +959,7 @@ export class MWNPCabinet extends BaseScriptComponent {
     const fp = LAYOUT.fusePlate
     const frontZ = fp.z + fp.s[2] / 2
     kit.box(fp.c[0], fp.c[1], fp.z, fp.s[0], fp.s[1], fp.s[2], RC.galvLight, undefined, ["pz"])
-    kit.speckle(fp.c[0] - fp.s[0] / 2, fp.c[1] - fp.s[1] / 2, fp.c[0] + fp.s[0] / 2, fp.c[1] + fp.s[1] / 2, frontZ, 58, 14, RC.galvLight, 0.07, 19)
+    kit.speckle(fp.c[0] - fp.s[0] / 2, fp.c[1] - fp.s[1] / 2, fp.c[0] + fp.s[0] / 2, fp.c[1] + fp.s[1] / 2, frontZ, 58, 14, RC.galvLight, 0.035, 19)
     for (const x of LAYOUT.openFuseX) {
       kit.box(x, fp.c[1], frontZ + 0.01, LAYOUT.fuseSize[0], LAYOUT.fuseSize[1], 0.02, RC.slot)
       kit.box(x, fp.c[1] + LAYOUT.fuseSize[1] / 2 - 0.2, frontZ + 0.02, LAYOUT.fuseSize[0] - 0.3, 0.12, 0.02, RC.holeRing)
@@ -1027,51 +1057,13 @@ export class MWNPCabinet extends BaseScriptComponent {
     this.addMesh(this.obj(root, "CableTies"), kit.build(), this.vertexMaterial)
   }
 
-  /**
-   * Cream sleeve markers: the twin of each wire's number label, on the wire near the end FAR from the existing label (which stays where it
-   * is: the geometry lock). Empty unless the realistic look is on.
-   */
-  getWireSleeveEnds(): {wireName: string; text: string; pos: vec3}[] {
-    const out: {wireName: string; text: string; pos: vec3}[] = []
+  /** Wire routes for the cream sleeve markers (PartTags places two per wire, one near each end). Empty unless the realistic look is on. */
+  getWireRoutes(): {wireName: string; text: string; pts: V2[]}[] {
+    const out: {wireName: string; text: string; pts: V2[]}[] = []
     if (!this.netlist || !this.realisticLook || !this.vertexMaterial) return out
     this.netlist.data.wires.forEach((w, i) => {
       const r = ROUTES[w.from + ">" + w.to]
-      if (!r) return
-      const n = r.pts.length
-      const dA = Math.hypot(r.label[0] - r.pts[0][0], r.label[1] - r.pts[0][1])
-      const dB = Math.hypot(r.label[0] - r.pts[n - 1][0], r.label[1] - r.pts[n - 1][1])
-      const atStart = dA > dB // the existing label is nearer the end of the wire, so the twin goes near its start
-      const p0 = atStart ? r.pts[0] : r.pts[n - 1]
-      const p1 = atStart ? r.pts[1] : r.pts[n - 2]
-      // Walk along the route from that end and take the first spot that is clear of the key areas and of the other labels.
-      const path: V2[] = atStart ? r.pts.slice() : r.pts.slice().reverse()
-      const keys = this.getKeyAreas()
-      const clear = (x: number, y: number): boolean => {
-        for (const kA of keys) if (Math.abs(x - kA.cx) < kA.w / 2 + 1.7 && Math.abs(y - kA.cy) < kA.h / 2 + 1.1) return false
-        for (const q of Object.keys(ROUTES)) if (Math.abs(x - ROUTES[q].label[0]) < 2.4 && Math.abs(y - ROUTES[q].label[1]) < 1.5) return false
-        for (const t of Object.keys(LAYOUT.terminalX)) if (Math.abs(x - LAYOUT.terminalX[t]) < 1.6 && Math.abs(y - LAYOUT.terminal.y) < 3.4) return false
-        return true
-      }
-      let chosen: V2 | null = null
-      for (let dist = 1.9; dist <= 14 && !chosen; dist += 0.8) {
-        let left = dist
-        for (let q = 0; q < path.length - 1 && !chosen; q++) {
-          const a = path[q]
-          const b = path[q + 1]
-          const len = Math.hypot(b[0] - a[0], b[1] - a[1])
-          if (left <= len) {
-            const f = left / Math.max(0.01, len)
-            const x = a[0] + (b[0] - a[0]) * f
-            const y = a[1] + (b[1] - a[1]) * f
-            if (clear(x, y)) chosen = [x, y]
-            break
-          }
-          left -= len
-        }
-      }
-      if (chosen) out.push({wireName: "WireLabel_" + w.id + "_" + i, text: w.id, pos: new vec3(chosen[0], chosen[1], 1.6)})
-      void p0
-      void p1
+      if (r) out.push({wireName: "WireLabel_" + w.id + "_" + i, text: w.id, pts: r.pts.map((p) => [p[0], p[1]] as V2)})
     })
     return out
   }
