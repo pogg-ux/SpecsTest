@@ -41,3 +41,11 @@ A reading that logs and advances plays two clips in order: `logged`, then the ne
 ## Total
 
 9 step clips + 7 response clips = 16 files.
+
+## Optional extra clip for "Ask Sparky"
+
+| File | When | Line |
+|---|---|---|
+| `live_needs_connection.mp3` | "Sparky, ask ..." with no token or no connection (the same sentence is always shown on the answer card) | Live answers need a connection. |
+
+Answers themselves are generated live and spoken with text-to-speech, so they have no clip. This brings the total to 17 clips.
