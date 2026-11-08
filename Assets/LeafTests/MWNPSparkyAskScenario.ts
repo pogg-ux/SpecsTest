@@ -1,6 +1,6 @@
 // "Sparky, ask ...": grounded answers from the job files through RSG chat + text-to-speech.
 // Real requests (a handful of chat calls and one speech call), so it needs the local token in Assets/Local/RsgSecret.json; without it
-// only the no-connection path is checked. The refusal for something not in the files must be the exact sentence.
+// only the no-connection path is checked. The answer for something not in the files must start with the exact refusal sentence (then a next check).
 
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
@@ -85,7 +85,7 @@ export class MWNPSparkyAskScenario extends Scenario {
     expect(a3.indexOf("0.5") >= 0, "fuse rating mentions 0.5 A: " + a3).toBe(true)
     await sleep(2200)
     const a4 = await askAndWait("what's the torque spec")
-    expect(a4, "not in the files -> the exact refusal").toBe(REFUSAL)
+    expect(a4.indexOf(REFUSAL) === 0, "not in the files -> starts with the refusal: " + a4).toBe(true)
     ev("SPARKY ASK PASS", {})
   }
 }
