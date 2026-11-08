@@ -1,3 +1,3 @@
-Done: Sparky core merged to main (d0e104a); clip stretch built on branch sparky-voice (SparkyVoice plays named clips from its Clips list, stops ASR while one plays, restarts after, missing clip = silent skip); scenarios mwnp-sparky-voice and mwnp-sparky-clips PASS; clip list in devpost/SPARKY_CLIPS.md (16 files).
-In progress: nothing; waiting for the mp3 files in Assets/Audio/Sparky and a decision to merge the clip stretch into main.
-Next step: when the clips exist, wire them into SparkyVoice > Clips (drag, or ask Claude to 'wire the Sparky clips'), test by ear in the Preview, then merge sparky-voice into main.
+Done: live-speech bug fixed (self-inflicted ASR restart loop: starting a session cancels the old one, whose error callback triggered another restart; now stale-session errors are ignored, the 45 s silence restart is gone, real errors back off and give up after 6); non-wake finals now show on screen; mwnp-sparky-voice and mwnp-sparky-clips pass; session held 80 s with 0 errors and audio reaching ASR in 1.7 s.
+In progress: user's live test of Sparky in the Preview (mic on, refresh, dismiss the safety notice, pick a symptom, say 'Sparky, next').
+Next step: if live speech still fails, read the [SPARKY-VOICE] lines (session start, first transcript, heard-no-wake-word, ASR error); then wire the mp3 clips (Assets/Audio/Sparky) when they exist.

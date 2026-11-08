@@ -17,7 +17,7 @@ const DEDUP_SEC = 2.0
 const SETTLE_SEC = 1.0 // a command with an argument acts when its text has not changed for this long (or on the final)
 const HEARD_SEC = 2.0
 const MESSAGE_SEC = 4.0
-const SILENCE_RESTART_SEC = 45
+const MAX_FAILURES = 6 // real ASR errors in a row before Sparky gives up (the buttons keep working)
 
 const GREEN = new vec4(0.2, 1, 0.4, 1)
 const AMBER = new vec4(1, 0.72, 0, 1)
@@ -60,7 +60,10 @@ export class SparkyVoice extends BaseScriptComponent {
   // ASR session management.
   private lastUpdateT = 0
   private restartAt = -1
-  private restartAttempts = 0
+  private failures = 0
+  private sessionId = 0
+  private sessionStartT = 0
+  private heardAudio = false
   private errorShown = false
   // Indicator.
   private indRoot: SceneObject | null = null
@@ -108,6 +111,7 @@ export class SparkyVoice extends BaseScriptComponent {
   setAsrEnabled(on: boolean): void {
     this.asrEnabled = on
     if (!on) {
+      this.sessionId++
       this.listening = false
       if (this.asr) {
         try {
@@ -134,44 +138,66 @@ export class SparkyVoice extends BaseScriptComponent {
   }
 
   private startAsr(): void {
-    if (!this.asrEnabled) return
+    if (!this.asrEnabled || this.asrPaused) return
+    // Every session gets an id. Starting a session while one is running cancels the old one, and that cancellation raises an
+    // error callback ("InternalError", "Pipe was already closed") on the OLD session: it carries a stale id and is ignored,
+    // otherwise it would look like a failure and trigger another restart, forever.
+    const id = ++this.sessionId
     try {
       if (!this.asr) this.asr = require("LensStudio:AsrModule") as AsrModule
       const options = AsrModule.AsrTranscriptionOptions.create()
       options.mode = AsrModule.AsrMode.HighAccuracy
       options.silenceUntilTerminationMs = 600
       options.onTranscriptionUpdateEvent.add((e: AsrModule.TranscriptionUpdateEvent) => {
+        if (id !== this.sessionId) return
+        if (!this.heardAudio) {
+          this.heardAudio = true
+          this.log("ASR: first transcript " + (getTime() - this.sessionStartT).toFixed(1) + " s after the session started: audio is reaching ASR")
+        }
         this.lastUpdateT = getTime()
-        this.restartAttempts = 0
+        this.failures = 0
         this.errorShown = false
         this.onTranscript(e.text, e.isFinal)
       })
       options.onTranscriptionErrorEvent.add((code: AsrModule.AsrStatusCode) => {
-        if (this.asrPaused) return // stopped on purpose while a clip plays
-        this.log("ASR error " + code + ": restarting")
-        this.listening = false
-        this.errorShown = true
-        this.scheduleRestart()
-        this.refreshIndicator()
+        if (id !== this.sessionId || this.asrPaused) return // a cancelled old session, or stopped on purpose while a clip plays
+        this.onAsrError(code)
       })
       this.lastUpdateT = getTime()
+      this.sessionStartT = getTime()
+      this.heardAudio = false
       this.handled = 0
       this.lastText = ""
-      this.asr.startTranscribing(options) // starting again cancels a running session and begins a new one
+      this.asr.startTranscribing(options)
       this.listening = true
-      this.log("ASR session started")
+      this.log("ASR session " + id + " started")
     } catch (e) {
       this.log("ASR could not start: " + e)
-      this.listening = false
-      this.errorShown = true
-      this.scheduleRestart()
+      this.onAsrError(-1)
     }
     this.refreshIndicator()
   }
 
-  private scheduleRestart(): void {
-    this.restartAttempts++
-    this.restartAt = getTime() + Math.min(10, 1.5 * this.restartAttempts)
+  /** A real error on the current session: stop it, wait, start a fresh one. Gives up (red mic, a message) after a few in a row. */
+  private onAsrError(code: number): void {
+    this.listening = false
+    this.errorShown = true
+    this.failures++
+    this.log("ASR error " + code + " (failure " + this.failures + " of " + MAX_FAILURES + ")")
+    this.sessionId++ // anything the dying session still says is stale
+    try {
+      if (this.asr) this.asr.stopTranscribing()
+    } catch (e) {
+      /* nothing running */
+    }
+    if (this.failures >= MAX_FAILURES) {
+      this.restartAt = -1
+      this.showMessage("Voice unavailable (speech recognition error " + code + ")")
+      this.log("giving up after " + this.failures + " failures; buttons still work")
+    } else {
+      this.restartAt = getTime() + Math.min(10, 2 * this.failures)
+    }
+    this.refreshIndicator()
   }
 
   // ── Transcripts ───────────────────────────────────────────────────────────
@@ -181,6 +207,13 @@ export class SparkyVoice extends BaseScriptComponent {
     const now = getTime()
     const segs = wakeSegments(text)
     if (segs.length > 0) this.log((isFinal ? "final: " : "partial: ") + '"' + text + '"')
+    else if (isFinal && text.trim().length > 0) {
+      // ASR is hearing something but it does not start with the wake word: say so on screen, so a silent Sparky can be told from a deaf one.
+      this.log('heard, no wake word: "' + text + '"')
+      const shown = text.trim().length > 34 ? text.trim().substring(0, 34) + "..." : text.trim()
+      this.heardText = 'Heard: "' + shown + '" (start with Sparky)'
+      this.heardUntil = now + HEARD_SEC
+    }
     if (text !== this.lastText) {
       this.lastText = text
       this.lastChangeT = now
@@ -256,6 +289,7 @@ export class SparkyVoice extends BaseScriptComponent {
 
   private pauseAsr(): void {
     this.asrPaused = true
+    this.sessionId++ // whatever the stopping session still says is stale
     this.listening = false
     if (this.asr && this.asrEnabled) {
       try {
@@ -384,10 +418,8 @@ export class SparkyVoice extends BaseScriptComponent {
       if (this.restartAt >= 0 && now >= this.restartAt) {
         this.restartAt = -1
         this.startAsr()
-      } else if (this.listening && now - this.lastUpdateT > SILENCE_RESTART_SEC) {
-        this.log("silence for " + SILENCE_RESTART_SEC + " s: restarting the ASR session")
-        this.startAsr()
       }
+      // No restart on silence: a quiet session is normal and a restart cancels it (the spike ran 10 minutes on one session).
     }
   }
 }
