@@ -140,6 +140,13 @@ export class MWNPLeafInteractor extends DefaultLeafInteractor {
     await sleep(250)
   }
 
+  /** After a passing retest the job asks "Problem solved?": waits for it and taps "Yes, fixed" (the summary follows). */
+  async confirmFixed(): Promise<void> {
+    const t0 = getTime()
+    while (!findInteractablesByName("Btn_FixedYes", undefined, true)[0] && (getTime() - t0) < 6) await sleep(100)
+    await this.tap("Btn_FixedYes")
+  }
+
   /** Types a value on the number pad and presses Enter. */
   async enterReading(value: string): Promise<void> {
     for (const c of value) await this.tap(KEY_NAMES[c] || "Key_" + c)

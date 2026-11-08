@@ -183,6 +183,8 @@ export class MWNPMain extends BaseScriptComponent {
   private cameraReturn = "home"
   /** Notes of the current job, newest first (agent notes and the technician's). */
   notes: Note[] = []
+  /** "" | "fixed_q" (Problem solved? is showing) | "end_q" (End job? is showing on the summary). */
+  private verifyState: string = ""
   private nextNoteId = 1
   /** True while a job is in progress (from the start until End job; New job starts one again). */
   jobActive = true
@@ -352,6 +354,8 @@ export class MWNPMain extends BaseScriptComponent {
     this.cameraCard.onSnapshot.add(() => this.onSnapshot())
     this.cameraCard.onPhoto.add(() => this.onPhoto())
     this.findingCard.onRetest.add(() => this.onRetest())
+    this.findingCard.onFixed.add((yes) => this.onFixed(yes))
+    this.summaryCard.onEndAsk.add((yes) => this.onEndAsk(yes))
     this.summaryCard.onSave.add(() => this.onSave())
     this.cabinet.onS1Toggled.add((pos) => this.onS1Toggled(pos))
     this.stepCard.onSwitch.add((e) => this.onSwitchPicked(e.component, e.position))
@@ -703,6 +707,27 @@ export class MWNPMain extends BaseScriptComponent {
       case "open_camera":
         this.onLibraryPick("camera")
         return "Camera"
+      case "hide_display":
+        this.setDisplayHidden(true)
+        return "Cards hidden"
+      case "show_display":
+        this.setDisplayHidden(false)
+        return "Cards shown"
+      case "open_job":
+        this.onLibraryPick("job")
+        return "Job"
+      case "open_options":
+        this.onLibraryPick("options")
+        return "Options"
+      case "fixed":
+      case "not_fixed":
+        if (this.verifyState !== "fixed_q") return "Nothing to confirm yet"
+        this.onFixed(name === "fixed")
+        return name === "fixed" ? "Fixed" : "Not fixed"
+      case "end_job":
+        if (this.verifyState !== "end_q") return "Say end job when asked"
+        this.onEndAsk(true)
+        return "Job ended"
       case "highlight": {
         const ids: string[] = []
         nl.data.wires.forEach((w) => {
@@ -986,6 +1011,7 @@ export class MWNPMain extends BaseScriptComponent {
     this.lastResultColor = ""
     this.lastTagInfo = ""
     this.schematicWasOpen = false
+    this.verifyState = ""
     this.agent = new MWNPAgent(nl)
     const agent = this.agent as MWNPAgent
     agent.dismissNotice()
@@ -1013,6 +1039,7 @@ export class MWNPMain extends BaseScriptComponent {
   /** End job (after Yes): stamp the end time, file the report as Complete, clear the board, show the empty Job report. */
   private endJob(): void {
     if (!this.jobActive) return
+    this.verifyState = ""
     this.addNote("Agent", "Job ended: " + this.resultText() + ".")
     this.archiveJob("Complete")
     this.clearBoard()
@@ -1648,8 +1675,75 @@ export class MWNPMain extends BaseScriptComponent {
     }
     this.log("retest-passed")
     const ev = this.createEvent("DelayedCallbackEvent") as DelayedCallbackEvent
-    ev.bind(() => this.showSummary())
+    ev.bind(() => this.showVerify())
     ev.reset(this.summaryDelaySec)
+  }
+
+  /** Retest in spec: the job stays open. Ask "Problem solved?" (Yes, fixed / No, still faulty) in the finding card's slot. */
+  private showVerify(): void {
+    const nl = this.nl as Netlist
+    const agent = this.agent as MWNPAgent
+    if (agent.phase !== "done") return
+    const last = agent.readings[agent.readings.length - 1]
+    const evidence = "Retest: " + nl.display(last.pointId) + " " + nl.fmtReading(last.value) + " V " + CHECK + " in spec. Is the problem solved?"
+    this.stepCard.hide()
+    this.schematicPanel.close()
+    this.verifyState = "fixed_q"
+    this.findingCard.showVerify("Problem solved?", evidence, "Yes, fixed", "No, still faulty")
+    const away = this.visibleCard === "home" || this.visibleCard === "camera" || this.visibleCard === "options" || this.visibleCard === "notes"
+    if (this.visibleCard === "camera") this.cameraCard.hide()
+    this.flowCard = "finding"
+    if (away) this.findingCard.setVisible(false)
+    else this.visibleCard = "finding"
+    this.log("verify-ask")
+  }
+
+  /** "Yes, fixed" / "No, still faulty" (buttons or voice). Every decision goes in the job notes with its time. */
+  private onFixed(yes: boolean): void {
+    if (this.verifyState !== "fixed_q") return
+    const nl = this.nl as Netlist
+    const agent = this.agent as MWNPAgent
+    const last = agent.readings[agent.readings.length - 1]
+    const rt = last ? nl.display(last.pointId) + " " + nl.fmtReading(last.value) + " V" : "no reading"
+    const f = agent.finding ? agent.finding.head : "no finding"
+    this.click()
+    this.findingCard.hide()
+    if (yes) {
+      this.addNote("Tech", "Problem solved? Yes, fixed. Finding: " + f + ". Retest: " + rt + " in spec.")
+      this.verifyState = "end_q"
+      this.log("verify-fixed")
+      this.showSummary()
+      return
+    }
+    this.addNote("Tech", "Problem solved? No, still faulty. Finding: " + f + ". Retest: " + rt + " in spec. Back to the step list; job stays open.")
+    this.verifyState = ""
+    agent.reopenAfterNotFixed()
+    this.cabinet.clearOutlines()
+    this.cabinet.hideTraces()
+    this.updateLamps()
+    this.stepCard.show()
+    this.stepCard.setResult("", "")
+    this.flowCard = "step"
+    this.visibleCard = "step"
+    this.refreshStep()
+    this.applyTrace()
+    this.log("verify-not-fixed")
+  }
+
+  /** "End job?" on the summary: Yes closes the job; Not yet keeps it open. */
+  private onEndAsk(yes: boolean): void {
+    if (this.verifyState !== "end_q") return
+    this.click()
+    if (yes) {
+      this.verifyState = ""
+      this.addNote("Tech", "End job? Yes.")
+      this.endJob()
+      return
+    }
+    this.verifyState = ""
+    this.addNote("Tech", "End job? Not yet. Job stays open.")
+    this.buildReport(true, true)
+    this.log("end-not-yet")
   }
 
   private showSummary(): void {
@@ -1724,6 +1818,7 @@ export class MWNPMain extends BaseScriptComponent {
       resultLine: !final ? "Result: in progress" : "Result: " + this.resultText(),
       resultColor: final && agent.repaired ? "green" : "",
       saveLabel: "Save (this session)",
+      endAsk: final && this.verifyState === "end_q",
     }
   }
 

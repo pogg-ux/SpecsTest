@@ -195,6 +195,18 @@ export class MWNPAgent {
     return res
   }
 
+  /** "No, still faulty": back to the step list from the first check; the finding and readings stay in the log. */
+  reopenAfterNotFixed(): void {
+    this.phase = "steps"
+    this.repaired = false
+    this.entry = ""
+    this.stepColor = ""
+    this.finding = null
+    this.wireStates = {}
+    for (const idx of this.nl.activePathWireIndices(this.faultIndex)) this.wireStates[idx] = "active"
+    this.stepIndex = this.nextMeasurableStep(-1)
+  }
+
   startRetest(): void {
     // Single-function symptoms wait for the switch to be put back; others retest directly.
     this.phase = this.functionKey ? "retest_wait" : "retest"

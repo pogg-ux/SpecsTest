@@ -146,6 +146,7 @@ export class MWNPCameraCardScenario extends Scenario {
     }
     await waitFor((x) => x.phase === "retest" && x.s1 === "UP", 3000, "retest active")
     await ui.enterReading("12.0")
+    await ui.confirmFixed()
     s = await waitFor((x) => x.visibleCard === "summary", 4000, "job report")
     await sleep(700)
 

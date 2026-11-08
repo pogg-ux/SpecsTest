@@ -184,7 +184,9 @@ export class MWNPLayoutCardsScenario extends Scenario {
     }
     await waitFor((x) => x.phase === "retest" && x.s1 === "UP", 3000, "retest active")
     await ui.enterReading("12.0")
+    await ui.confirmFixed()
     await waitFor((x) => x.visibleCard === "summary", 4000, "findings summary")
+    await ui.tap("Btn_EndJobNo")
     await sleep(700)
     checkCard(cam, "SummaryCardCard")
     // Report text is white; only the status words are colored (rich text): "Result: " white, "<fixed part> restored" green.

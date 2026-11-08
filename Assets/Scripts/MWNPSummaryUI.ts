@@ -93,6 +93,8 @@ export interface SummaryData {
   /** "green" when the fault was fixed (the Result words turn green); anything else leaves the Result white. */
   resultColor?: string
   saveLabel: string
+  /** True after "Yes, fixed": the report asks "End job?" with Yes / Not yet buttons. */
+  endAsk?: boolean
 }
 
 @component
@@ -147,6 +149,7 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     return this._onAddNote.publicApi()
   }
   private _onSave = new Event<void>()
+  private _onEndAsk = new Event<boolean>()
   private _onPrevious = new Event<number>()
   private _onBack = new Event<void>()
   private _onThumb = new Event<number>()
@@ -158,6 +161,9 @@ export class MWNPSummaryUI extends BaseScriptComponent {
   }
   get onBack(): PublicApi<void> {
     return this._onBack.publicApi()
+  }
+  get onEndAsk(): PublicApi<boolean> {
+    return this._onEndAsk.publicApi()
   }
   get onSave(): PublicApi<void> {
     return this._onSave.publicApi()
@@ -240,6 +246,11 @@ export class MWNPSummaryUI extends BaseScriptComponent {
       if (caps.length === 0) out.push({h: this.textH("No pictures yet.", inner, em), build: (c) => addFitText(c, "PictureEmpty", "No pictures yet.", inner, em, {color: TEXT_SOFT})})
       caps.forEach((cap) => out.push({h: this.captureH(cap, inner, em), build: (c) => this.captureRow(c, cap, inner, em)}))
       return out
+    }
+    if (d.endAsk) {
+      out.push({h: this.textH("End job?", inner, em, true), keepNext: true, build: (c) => addFitText(c, "EndJobAsk", "End job?", inner, em, {bold: true, color: COLOR.amber})})
+      out.push({h: this.buttonH("Yes, end job", inner - 6, em), build: (c) => addButton(c, "Btn_EndJobYes", "Yes, end job", inner - 6, 3.6, () => this._onEndAsk.invoke(true), {emCm: em, primary: true, bold: true})})
+      out.push({h: this.buttonH("Not yet", inner - 6, em), build: (c) => addButton(c, "Btn_EndJobNo", "Not yet", inner - 6, 3.6, () => this._onEndAsk.invoke(false), {emCm: em, bold: true})})
     }
     if (d.backToCurrent) out.push({h: this.buttonH("Back to current job", inner - 6, em), build: (c) => addButton(c, "Btn_BackToCurrent", "Back to current job", inner - 6, 3.6, () => this._onBack.invoke(), {emCm: em, bold: true})})
     if (d.noJob) {

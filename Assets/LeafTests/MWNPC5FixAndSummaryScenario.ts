@@ -53,6 +53,7 @@ export class MWNPC5FixAndSummaryScenario extends Scenario {
 
     // Summary appears after summaryDelaySec (1.5 s).
     const t0 = getTime()
+    await ui.confirmFixed()
     const s = await waitFor((x) => x.visibleCard === "summary", 4000, "findings summary")
     const delay = getTime() - t0
     ev("C5 summary", {delaySec: delay, rows: s.summaryRows, finding: s.summaryFinding, result: s.summaryResult, readings: s.readings})

@@ -1,3 +1,3 @@
-Done: live-speech bug fixed (self-inflicted ASR restart loop: starting a session cancels the old one, whose error callback triggered another restart; now stale-session errors are ignored, the 45 s silence restart is gone, real errors back off and give up after 6); non-wake finals now show on screen; mwnp-sparky-voice and mwnp-sparky-clips pass; session held 80 s with 0 errors and audio reaching ASR in 1.7 s.
-In progress: user's live test of Sparky in the Preview (mic on, refresh, dismiss the safety notice, pick a symptom, say 'Sparky, next').
-Next step: if live speech still fails, read the [SPARKY-VOICE] lines (session start, first transcript, heard-no-wake-word, ASR error); then wire the mp3 clips (Assets/Audio/Sparky) when they exist.
+Done: verify-before-close flow (retest in spec -> "Problem solved?" Yes, fixed / No, still faulty -> summary asks "End job?"; job never auto-closes; every decision is a job note) and voice hide/show/open job/open options/fixed/not fixed/end job; mwnp-verify-fix and mwnp-sparky-voice pass.
+In progress: user's live test of the new flow and of hide/show by voice.
+Next step: fix anything the live test shows; then wire the mp3 clips (Assets/Audio/Sparky) when they exist.

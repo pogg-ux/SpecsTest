@@ -229,6 +229,7 @@ export class MWNPWorkflowScenario extends Scenario {
     await ui.tap("Btn_S1_UP")
     await waitFor((s) => s.phase === "retest", 3000, "retest active")
     await ui.enterReading("12.0")
+    await ui.confirmFixed()
     await waitFor((s) => s.visibleCard === "summary", 4000, "Job report")
     await sleep(900)
     await audit("SummaryCardCard")
@@ -309,6 +310,7 @@ export class MWNPWorkflowScenario extends Scenario {
     await ui.tap("Btn_S1_DOWN")
     await waitFor((x) => x.phase === "retest", 3000, "retest active B")
     await ui.enterReading("12.0")
+    await ui.confirmFixed()
     await waitFor((x) => x.visibleCard === "summary", 4000, "Job B report")
     await sleep(800)
     await audit("SummaryCardCard")
@@ -342,6 +344,7 @@ export class MWNPWorkflowScenario extends Scenario {
       await waitFor((x) => x.phase === "retest", 3000, "retest active C")
     }
     await ui.enterReading("12.0")
+    await ui.confirmFixed()
     await waitFor((x) => x.visibleCard === "summary", 4000, "Job C report")
     await sleep(800)
     await audit("SummaryCardCard")

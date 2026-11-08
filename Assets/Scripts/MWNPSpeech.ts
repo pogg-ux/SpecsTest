@@ -103,6 +103,13 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^open (the )?library$/.test(t)) return done("open_library")
   if (/^open (the )?report$/.test(t)) return done("open_report")
   if (/^open (the )?camera$/.test(t)) return done("open_camera")
+  if (/^hide( card| cards| display)?$/.test(t)) return done("hide_display")
+  if (/^show( card| cards| display)?$/.test(t)) return done("show_display")
+  if (/^open (the )?job$/.test(t)) return done("open_job")
+  if (/^open (the )?options$/.test(t)) return done("open_options")
+  if (/^(fixed|it is fixed|yes fixed|problem solved)$/.test(t)) return done("fixed")
+  if (/^(not fixed|still faulty|no not fixed)$/.test(t)) return done("not_fixed")
+  if (/^end job$/.test(t)) return done("end_job")
   const log = /^log (.+)$/.exec(t)
   if (log) {
     const n = parseNumber(log[1].replace(/ volts?$/, ""))

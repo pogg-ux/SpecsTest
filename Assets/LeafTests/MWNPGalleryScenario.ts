@@ -141,6 +141,7 @@ export class MWNPGalleryScenario extends Scenario {
     }
     await waitFor((s) => s.phase === "retest" && s.s1 === "UP", 3000, "retest active")
     await ui.enterReading("12.0")
+    await ui.confirmFixed()
     await waitFor((s) => s.visibleCard === "summary", 4000, "job report")
     await sleep(1400)
     if (shot === "job-control") {
