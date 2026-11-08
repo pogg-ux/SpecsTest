@@ -262,9 +262,18 @@ export class SparkyVoice extends BaseScriptComponent {
       this.act(cmd)
       this.handled = i + 1
     }
+    // Dictation grows after it was first acted on (a pause mid-sentence): keep the dictated card up to date.
+    const k = this.handled - 1
+    if (k >= 0 && k < this.lastSegs.length) {
+      const c = parseCommand(this.lastSegs[k])
+      if (c && c.name === "note" && c.arg !== this.lastNoteArg) this.act(c)
+    }
   }
 
+  private lastNoteArg = ""
+
   private act(cmd: VoiceCommand): void {
+    if (cmd.name === "note") this.lastNoteArg = cmd.arg
     const now = getTime()
     const key = cmd.name + ":" + normalize(cmd.arg)
     if (this.recent[key] !== undefined && now - this.recent[key] < DEDUP_SEC) {

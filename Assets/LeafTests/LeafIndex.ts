@@ -25,6 +25,7 @@ import {MWNPSparkyVoiceScenario} from "./MWNPSparkyVoiceScenario"
 import {MWNPSparkyClipsScenario} from "./MWNPSparkyClipsScenario"
 import {MWNPVerifyFixScenario} from "./MWNPVerifyFixScenario"
 import {MWNPSparkyHiddenScenario} from "./MWNPSparkyHiddenScenario"
+import {MWNPSparkyNotesScenario} from "./MWNPSparkyNotesScenario"
 
 /** LEAF's on-screen output: the log strip camera and the diagnostic report camera (both created lazily by Leaf.lspkg). */
 const LEAF_OVERLAY_ROOTS = ["LeafDebugUICamera", "LeafDiagnosticReportCamera"]
@@ -56,6 +57,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-sparky-clips", typename: MWNPSparkyClipsScenario.getTypeName()},
     {id: "mwnp-verify-fix", typename: MWNPVerifyFixScenario.getTypeName()},
     {id: "mwnp-sparky-hidden", typename: MWNPSparkyHiddenScenario.getTypeName()},
+    {id: "mwnp-sparky-notes", typename: MWNPSparkyNotesScenario.getTypeName()},
     {id: "mwnp-gallery", typename: MWNPGalleryScenario.getTypeName(), parameters: {shot: "start"}},
   ]
 

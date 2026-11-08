@@ -55,7 +55,7 @@ export class MWNPNotesCardUI extends BaseScriptComponent {
   textEmCm: number = 1.0
   @ui.group_end
 
-  /** "list" | "pick" | "other" — readable by tests. */
+  /** "list" | "pick" | "other" | "dictate" — readable by tests. */
   view: string = "list"
   /** The free text typed so far in the "other" view. */
   typed: string = ""
@@ -75,6 +75,13 @@ export class MWNPNotesCardUI extends BaseScriptComponent {
   private keysBound = false
   private _onNote = new Event<{text: string; placeholder: boolean}>()
   private _onEdit = new Event<{id: number; text: string}>()
+  private _onDictate = new Event<string>()
+  /** "Save note" on the dictated-text view. */
+  get onDictate(): PublicApi<string> {
+    return this._onDictate.publicApi()
+  }
+  /** The dictated text shown on the "dictate" view. */
+  dictated: string = ""
   get onNote(): PublicApi<{text: string; placeholder: boolean}> {
     return this._onNote.publicApi()
   }
@@ -130,6 +137,14 @@ export class MWNPNotesCardUI extends BaseScriptComponent {
       addButton(c, "Btn_NoteCancel", "Cancel", inner - 2, 3.6, () => this.setView("list"), {emCm: em})
       return
     }
+    if (this.view === "dictate") {
+      addCardHeader(c, "NotesTitle", "Dictated note", inner, this.sceneObject)
+      addFitText(c, "DictatedText", this.dictated, inner, em, {color: TEXT_BODY})
+      addFitText(c, "DictatedHint", "Say \"save note\" or \"cancel\". Say \"note ...\" again to replace the text.", inner, em, {color: TEXT_SOFT})
+      addButton(c, "Btn_DictSave", "Save note", inner - 2, 3.6, () => this.saveDictation(), {emCm: em, primary: true})
+      addButton(c, "Btn_DictCancel", "Cancel", inner - 2, 3.6, () => this.cancel(), {emCm: em})
+      return
+    }
     if (this.view === "other") {
       addCardHeader(c, "NotesTitle", this.editingId >= 0 ? "Edit note" : "Other note", inner, this.sceneObject)
       this.tOther = addFitText(c, "OtherText", this.typed.length > 0 ? this.typed + "_" : "_", inner, em, {color: TEXT_BODY})
@@ -182,9 +197,31 @@ export class MWNPNotesCardUI extends BaseScriptComponent {
     if (this.onDevice()) this.openKeyboard()
   }
 
+  /** Voice dictation: shows the text with Save note / Cancel. Called again, it replaces the text. */
+  showDictation(text: string): void {
+    this.dictated = text
+    this.view = "dictate"
+    this.rebuild()
+  }
+
+  /** Saves the dictated text (button or voice). False when there is nothing to save. */
+  saveDictation(): boolean {
+    if (this.view !== "dictate" || this.dictated.trim().length === 0) return false
+    const t = this.dictated
+    this.dictated = ""
+    this.view = "list"
+    this.rebuild()
+    this._onDictate.invoke(t)
+    return true
+  }
+
   /** Voice "cancel": leaves the pick / other view without adding anything. Returns false when there is nothing to cancel. */
   cancel(): boolean {
     if (this.view === "other") this.cancelOther()
+    else if (this.view === "dictate") {
+      this.dictated = ""
+      this.setView("list")
+    }
     else if (this.view === "pick") this.setView("list")
     else return false
     return true

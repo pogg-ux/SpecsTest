@@ -339,6 +339,11 @@ export class MWNPMain extends BaseScriptComponent {
     this.libraryCard.onChip.add(() => this.onLibraryChip())
     this.summaryCard.onAddNote.add(() => this.onReportAddNote())
     this.notesCard.onNote.add((n) => this.onNote(n.text, n.placeholder))
+    this.notesCard.onDictate.add((t) => {
+      this.click()
+      this.addNote("Tech", t)
+      this.log("note-dictated-saved")
+    })
     this.notesCard.onEdit.add((e) => this.onNoteEdit(e.id, e.text))
     this.summaryCard.onPrevious.add((i) => this.onPreviousPick(i))
     this.summaryCard.onBack.add(() => this.onBackToCurrent())
@@ -784,6 +789,33 @@ export class MWNPMain extends BaseScriptComponent {
         this.onSwitchPicked("S1", pos)
         return "S1 " + pos
       }
+      case "report_symptom": {
+        if (!this.jobActive || (agent.phase !== "job" && agent.phase !== "symptoms")) return "A symptom is already reported"
+        if (this.visibleCard !== "symptoms") {
+          this.hideOpenCard()
+          this.onReportSymptom()
+        }
+        return "Which symptom?"
+      }
+      case "open_notes":
+        if (this.visibleCard !== "report" && this.visibleCard !== "summary") this.onLibraryPick("report")
+        this.summaryCard.showTab("notes")
+        return "Notes & pictures"
+      case "note": {
+        const text = arg.trim().length > 0 ? arg.trim().charAt(0).toUpperCase() + arg.trim().substring(1) : ""
+        if (text.length === 0) return "Say the note after 'note'"
+        if (this.visibleCard !== "notes") {
+          this.hideOpenCard()
+          this.notesCard.show(this.notes)
+          this.visibleCard = "notes"
+        }
+        this.notesCard.showDictation(text)
+        this.log("voice note dictated (" + text.length + " chars)")
+        return "Note: " + (text.length > 30 ? text.substring(0, 30) + "..." : text) + " — say save note"
+      }
+      case "save_note":
+        if (this.visibleCard !== "notes" || !this.notesCard.saveDictation()) return "No note to save"
+        return "Note saved"
       case "hide_display":
         this.setDisplayHidden(true)
         return "Cards hidden"

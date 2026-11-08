@@ -193,6 +193,11 @@ export class MWNPSummaryUI extends BaseScriptComponent {
     this.render()
   }
 
+  /** Voice "open notes": switches to the Notes & pictures tab (or back to Summary). */
+  showTab(t: string): void {
+    this.setTab(t)
+  }
+
   private setTab(t: string): void {
     if (t === this.tab) return
     this.tab = t
