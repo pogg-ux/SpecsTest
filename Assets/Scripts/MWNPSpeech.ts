@@ -5,7 +5,7 @@
 // Must not: act on anything (SparkyVoice dispatches, Main performs).
 
 export interface VoiceCommand {
-  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" | "dismiss" | "symptom" | "retest" | "new_job" | "yes" | "no" | "not_yet" | "more" | "less" | "cancel" | "s1_up" | "s1_down" | "report_symptom" | "open_notes" | "save_note" | "note" | "hide_display" | "show_display" | "open_job" | "open_options" | "fixed" | "not_fixed" | "end_job" */
+  /** "next" | "back" | "repeat" | "undo" | "close" | "show_schematic" | "open_library" | "open_report" | "open_camera" | "log" | "highlight" | "dismiss" | "symptom" | "retest" | "new_job" | "yes" | "no" | "not_yet" | "more" | "less" | "cancel" | "s1_up" | "s1_down" | "report_symptom" | "open_notes" | "save_note" | "note" | "ask" | "hide_display" | "show_display" | "open_job" | "open_options" | "fixed" | "not_fixed" | "end_job" */
   name: string
   /** "log": the number as typed on the pad ("12.0"); "highlight": the spoken wire id words ("three b"). */
   arg: string
@@ -13,6 +13,8 @@ export interface VoiceCommand {
   complete: boolean
   /** Commands with an argument can still grow ("log twelve" -> "log twelve point five"): act on them only once the text settles. */
   needsSettle: boolean
+  /** Wait this long (seconds) for the text to stop changing before acting (a spoken question pauses mid-sentence). */
+  settleSec?: number
 }
 
 const WAKE = "(?:sparky|sparkie|sparkey|sparki|spargy|spark key)"
@@ -115,6 +117,9 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^(report symptom|report a symptom|show symptoms|open symptoms|symptoms|symptom list)$/.test(t)) return done("report_symptom")
   if (/^((show|open) (the )?)?notes$/.test(t)) return done("open_notes")
   if (/^save( the)? note$/.test(t)) return done("save_note")
+  const askQ = /^ask (.+)$/.exec(t)
+  if (askQ) return {name: "ask", arg: askQ[1], complete: true, needsSettle: true, settleSec: 2.0}
+  if (/^(why|whys|what is|what s|whats|what does|what do|what are|how much|how many|which)\b.+/.test(t)) return {name: "ask", arg: t, complete: true, needsSettle: true, settleSec: 2.0}
   const note = /^note (.+)$/.exec(t)
   if (note) return {name: "note", arg: note[1], complete: true, needsSettle: true}
   if (/^(dismiss|ok|okay|understood)$/.test(t)) return done("dismiss")

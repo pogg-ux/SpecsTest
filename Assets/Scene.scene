@@ -2189,6 +2189,7 @@
         - !<reference> 07d2877c-d7b6-4c22-a54a-b26f83cb369c
         - !<reference> 50fb2144-c517-4f27-983e-c5c5e08c18c1
         - !<reference> f7c856af-e4d3-4916-a875-308369835f63
+      rsgSecret: !<reference.JsonAsset> b241a7e9-c962-44ba-91ef-3405b9c68d24
   ScriptTypes:
     "":
       {}

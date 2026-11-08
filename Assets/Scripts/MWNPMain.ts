@@ -638,6 +638,47 @@ export class MWNPMain extends BaseScriptComponent {
    * Runs one Sparky command and returns the line to show ("Logged 12.0 V. Say 'undo' to remove."). Every command maps to an
    * action the buttons already have; nothing here decides anything the agent would not.
    */
+  /** A question waiting for SparkyVoice to send (set by voiceCommand "ask"). */
+  askRequest: {question: string; context: string} | null = null
+
+  /** Hands the waiting question to SparkyVoice (once). */
+  takeAsk(): {question: string; context: string} | null {
+    const r = this.askRequest
+    this.askRequest = null
+    return r
+  }
+
+  /**
+   * Everything the assistant may use to answer: the job files (the netlist file with its tolerances and check orders, as loaded)
+   * and the current job (symptom, current step, active test point, readings so far, finding). Nothing else.
+   */
+  private askContext(): string {
+    const nl = this.nl as Netlist
+    const agent = this.agent as MWNPAgent
+    const lines: string[] = []
+    lines.push("JOB FILES (netlist.json, complete):")
+    lines.push(JSON.stringify(nl.data))
+    lines.push("")
+    lines.push("CURRENT JOB:")
+    if (!this.jobActive || agent.faultIndex < 0) {
+      lines.push("No symptom reported yet.")
+    } else {
+      lines.push("Symptom: " + nl.symptomLabel(agent.faultIndex) + ". Phase: " + agent.phase + ".")
+      const step = agent.steps[agent.stepIndex]
+      if (step && (agent.phase === "steps" || agent.phase === "finding")) lines.push("Current step (" + (agent.stepIndex + 1) + " of " + agent.steps.length + "): " + JSON.stringify(step))
+      const ap = agent.activePoint()
+      if (ap) lines.push("Active test point: " + nl.display(ap) + (nl.rangeText(ap) ? " (expected " + nl.rangeText(ap) + ")" : "") + ".")
+      lines.push("Switch S1 position: " + this.cabinet.s1Position + ".")
+      if (agent.readings.length === 0) lines.push("Readings so far: none.")
+      else {
+        lines.push("Readings so far:")
+        agent.readings.forEach((r) => lines.push("- " + nl.display(r.pointId) + ": " + nl.fmtReading(r.value) + " V, " + r.cls + ", range " + r.range + (r.phase === "retest" ? " (retest)" : "")))
+      }
+      if (agent.finding) lines.push("Finding: " + agent.finding.head + " — " + agent.finding.conclusion)
+    }
+    return lines.join("\n")
+  }
+
   /** What the tech can say right now (appended to refusals so a refused command always says what to do instead). */
   private voiceHint(): string {
     const agent = this.agent as MWNPAgent
@@ -677,7 +718,7 @@ export class MWNPMain extends BaseScriptComponent {
     }
     // Hidden display: the commands that act on a card show the display first, so the tech never gets stuck. "show" / "hide" /
     // "close" / "dismiss" deal with it themselves.
-    if (this.displayHidden && ["hide_display", "show_display", "close", "dismiss"].indexOf(name) < 0) {
+    if (this.displayHidden && ["hide_display", "show_display", "close", "dismiss", "ask"].indexOf(name) < 0) {
       this.setDisplayHidden(false)
       this.log("voice auto-show for " + name)
     }
@@ -845,6 +886,17 @@ export class MWNPMain extends BaseScriptComponent {
       case "save_note":
         if (this.visibleCard !== "notes" || !this.notesCard.saveDictation()) return "No note to save. Say 'Sparky, note <your text>' first."
         return "Note saved"
+      case "ask": {
+        const wireIds: string[] = []
+        nl.data.wires.forEach((w) => {
+          if (wireIds.indexOf(w.id) < 0) wireIds.push(w.id)
+        })
+        const q = restoreIds(arg.trim(), nl.componentIds(), wireIds)
+        if (q.length === 0) return "Ask a question after 'ask'"
+        this.askRequest = {question: q, context: this.askContext()}
+        this.log("voice ask: " + q)
+        return "Asking: " + (q.length > 40 ? q.substring(0, 40) + "..." : q)
+      }
       case "hide_display":
         this.setDisplayHidden(true)
         return "Cards hidden"

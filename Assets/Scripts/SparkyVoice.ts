@@ -9,6 +9,7 @@
 // Test handles: scene object "SparkyVoice", "SparkyIndicator", global.mwnpSparky.
 
 import {normalize, parseCommand, VoiceCommand, wakeSegments} from "./MWNPSpeech"
+import {ask, OFFLINE, readToken, speak} from "./SparkyAsk"
 
 const micIcon = requireAsset("../Icons/mic.png") as Texture
 const imageMaterial = requireAsset("../Materials/ImageMaterial.mat") as Material
@@ -36,6 +37,10 @@ export class SparkyVoice extends BaseScriptComponent {
   @input
   @hint("Pre-recorded Sparky clips from Assets/Audio/Sparky, matched by file name (step_EXTEND_2, logged, undone, ...). A clip that is not here is skipped silently.")
   clips: AudioTrackAsset[]
+  @input
+  @allowUndefined
+  @hint("Local secret file Assets/Local/RsgSecret.json (gitignored). Only needed for Sparky, ask ...; leave empty on a fresh clone.")
+  rsgSecret: JsonAsset
 
   /** Clip names each command asked for (whether or not the file exists): for tests and the log. */
   requested: string[][] = []
@@ -134,7 +139,9 @@ export class SparkyVoice extends BaseScriptComponent {
 
   private start(): void {
     this.main = (global as any).mwnpAssistant
+    ;(global as any).mwnpAskTimerHost = this
     this.buildIndicator()
+    this.buildAnswerCard()
     if (this.asrEnabled) this.startAsr()
     this.refreshIndicator()
   }
@@ -259,6 +266,7 @@ export class SparkyVoice extends BaseScriptComponent {
         continue
       }
       if (cmd.needsSettle && isLast && kind === "partial") break // "log twelve" may become "log twelve point five"
+      if (cmd.settleSec && kind === "settled" && isLast && getTime() - this.lastChangeT < cmd.settleSec) break
       this.act(cmd)
       this.handled = i + 1
     }
@@ -281,7 +289,7 @@ export class SparkyVoice extends BaseScriptComponent {
       return
     }
     this.recent[key] = now
-    const label = cmd.name === "log" || cmd.name === "highlight" ? cmd.name + " " + cmd.arg : cmd.name.replace(/_/g, " ")
+    const label = cmd.name === "log" || cmd.name === "highlight" || cmd.name === "ask" ? cmd.name + " " + cmd.arg : cmd.name.replace(/_/g, " ")
     this.heardText = "Heard: " + label
     this.heardUntil = now + HEARD_SEC
     let result = "Not ready"
@@ -296,6 +304,144 @@ export class SparkyVoice extends BaseScriptComponent {
     const wanted: string[] = ((this.main && this.main.voiceClips) || []).filter((n: string) => n.length > 0)
     this.requested.push(wanted.slice())
     this.playClips(wanted)
+    if (cmd.name === "close") this.hideAnswer()
+    const askReq = this.main && this.main.takeAsk ? this.main.takeAsk() : null
+    if (askReq) this.runAsk(askReq)
+  }
+
+  // ── Ask Sparky (grounded question, spoken + shown answer) ─────────────────
+
+  /** Test hooks: speak the answer (needs a text-to-speech request); override the token (null = none) instead of the secret file. */
+  askSpeak = true
+  askTokenOverride: string | null | undefined = undefined
+  /** "idle" | "thinking" | "done" | "failed" and the text on the answer card. */
+  askState = "idle"
+  answerText = ""
+  private answerUntil = -1
+  private answerRoot: SceneObject | null = null
+  private answerTextComp: Text | null = null
+
+  /** True when a token is available for "ask" (the secret file, or the test override). */
+  hasAskToken(): boolean {
+    return (this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)).length > 0
+  }
+
+  private runAsk(req: {question: string; context: string}): void {
+    if (this.askState === "thinking") {
+      this.showMessage("Still thinking...")
+      return
+    }
+    this.askState = "thinking"
+    this.showAnswer("Thinking...", false)
+    const token = this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)
+    const t0 = getTime()
+    this.log("ASK question: " + req.question + " (context " + req.context.length + " chars)")
+    ask(req.question, req.context, token).then(
+      (text: string) => {
+        this.log("ASK answer after " + (getTime() - t0).toFixed(2) + " s: " + text)
+        this.answerText = text
+        this.askState = "done"
+        this.showAnswer(text, true)
+        if (!this.askSpeak) return
+        const s0 = getTime()
+        speak(text, token).then(
+          (track: AudioTrackAsset) => {
+            this.log("ASK speech ready after " + (getTime() - s0).toFixed(2) + " s")
+            this.playTrack(track)
+          },
+          (e: any) => this.log("ASK speech failed: " + e)
+        )
+      },
+      (e: any) => {
+        this.log("ASK failed after " + (getTime() - t0).toFixed(2) + " s: " + e)
+        this.answerText = OFFLINE
+        this.askState = "failed"
+        this.showAnswer(OFFLINE, true)
+        this.playClips(["live_needs_connection"]) // skipped silently when the clip file does not exist
+      }
+    )
+  }
+
+  /** Plays a spoken answer: ASR is stopped while it plays and restarted after (like the clips). */
+  playTrack(track: AudioTrackAsset): void {
+    this.queue = []
+    const token = ++this.clipToken
+    if (!this.asrPaused) this.pauseAsr()
+    let len = 1
+    try {
+      if (!this.audio) this.audio = this.sceneObject.createComponent("Component.AudioComponent") as AudioComponent
+      this.audio.audioTrack = track
+      this.audio.play(1)
+      len = Math.max(0.2, this.audio.duration || 1)
+    } catch (e) {
+      this.log("answer could not play: " + e)
+    }
+    this.log("ASK speaking (" + len.toFixed(1) + " s)")
+    if (!this.clipTimer) this.clipTimer = this.createEvent("DelayedCallbackEvent") as DelayedCallbackEvent
+    this.clipTimer.bind(() => {
+      if (token !== this.clipToken) return
+      this.resumeAsr()
+    })
+    this.clipTimer.reset(len + 0.3)
+    this.answerUntil = Math.max(this.answerUntil, getTime() + len + 6)
+  }
+
+  private buildAnswerCard(): void {
+    if (!this.indRoot) return
+    const root = global.scene.createSceneObject("SparkyAnswer")
+    root.setParent(this.indRoot)
+    root.getTransform().setLocalPosition(new vec3(21, -6.2, 0)) // free space right of the mic, above the cabinet, inside the display's right edge
+    const bgSO = global.scene.createSceneObject("SparkyAnswerBack")
+    bgSO.setParent(root)
+    const img = bgSO.createComponent("Component.Image") as Image
+    const mat = imageMaterial.clone()
+    const white = ProceduralTextureProvider.create(2, 2, Colorspace.RGBA)
+    ;(white.control as ProceduralTextureProvider).setPixels(0, 0, 2, 2, new Uint8Array(16).fill(255))
+    mat.mainPass.baseTex = white
+    mat.mainPass.baseColor = new vec4(0.3, 0.32, 0.36, 0.97) // mid grey like the cards: dark reads as transparent on the additive display
+    mat.mainPass.depthTest = true
+    mat.mainPass.depthWrite = false
+    img.clearMaterials()
+    img.addMaterial(mat)
+    bgSO.getTransform().setLocalScale(new vec3(19, 9.5, 1))
+    const textSO = global.scene.createSceneObject("SparkyAnswerText")
+    textSO.setParent(root)
+    textSO.getTransform().setLocalPosition(new vec3(0, 0, 0.05))
+    const t = textSO.createComponent("Component.Text") as Text
+    t.size = 40
+    t.horizontalAlignment = HorizontalAlignment.Left
+    t.verticalAlignment = VerticalAlignment.Center
+    t.horizontalOverflow = HorizontalOverflow.Wrap
+    t.verticalOverflow = VerticalOverflow.Shrink
+    t.layoutRect = Rect.create(-8.6, 8.6, -4.3, 4.3)
+    t.textFill.color = new vec4(1, 1, 1, 1)
+    t.text = ""
+    this.answerTextComp = t
+    this.answerRoot = root
+    root.enabled = false
+  }
+
+  /** The small answer card under the mic indicator (stays visible when the cards are hidden). */
+  private showAnswer(text: string, autoHide: boolean): void {
+    if (!this.answerRoot) return
+    if (this.answerTextComp) this.answerTextComp.text = text
+    this.answerRoot.enabled = true
+    this.answerUntil = autoHide ? getTime() + 14 : -1
+  }
+
+  /** Test hook: show a given text on the answer card (to look at a long answer without a request). */
+  setAnswerTextForTest(text: string): void {
+    this.showAnswer(text, false)
+  }
+
+  hideAnswer(): void {
+    if (this.answerRoot) this.answerRoot.enabled = false
+    this.answerUntil = -1
+  }
+
+  /** True while the answer card is up (tests). */
+  get answerVisible(): boolean {
+    return !!this.answerRoot && this.answerRoot.enabled
   }
 
   // ── Pre-recorded clips ────────────────────────────────────────────────────
@@ -447,6 +593,7 @@ export class SparkyVoice extends BaseScriptComponent {
     const now = getTime()
     this.placeIndicator()
     this.refreshIndicator()
+    if (this.answerUntil >= 0 && now > this.answerUntil) this.hideAnswer()
     // A command with an argument whose text has stopped changing.
     if (!this.lastIsFinal && this.lastSegs.length > 0 && now - this.lastChangeT >= SETTLE_SEC) this.process("settled")
     if (this.asrEnabled && !this.asrPaused) {

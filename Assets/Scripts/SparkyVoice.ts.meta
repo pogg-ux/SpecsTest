@@ -30,6 +30,7 @@
   ScriptInputsHidden:
     clips: false
     enableAsr: false
+    rsgSecret: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -42,6 +43,7 @@
     - enableAsr: true
       clips: !<reference.AudioTrackAsset[]>
         []
+      rsgSecret: !<reference.JsonAsset> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -50,3 +52,4 @@
     - '// @ui {"widget":"separator"}'
     - '// @input bool enableAsr = true {"hint":"Listen with the microphone. Off = only typed-text injection (tests)."}'
     - '// @input Asset.AudioTrackAsset[] clips {"hint":"Pre-recorded Sparky clips from Assets/Audio/Sparky, matched by file name (step_EXTEND_2, logged, undone, ...). A clip that is not here is skipped silently."}'
+    - '// @input Asset.JsonAsset rsgSecret {"hint":"Local secret file Assets/Local/RsgSecret.json (gitignored). Only needed for Sparky, ask ...; leave empty on a fresh clone."}'
