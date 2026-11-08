@@ -1,3 +1,3 @@
-Done: "report symptom"/"show symptoms", "open notes", voice dictation ("note ...", "save note", "cancel" -> Tech note with time stamp), board state reset after "not fixed", wake alias "spargy", "repaired" = retest; mwnp-sparky-notes passes.
-In progress: user's live test of dictation and the not-fixed rerun.
-Next step: add any phrase the live ASR mishears as an alias; consider keeping dictated capitalisation (currently first letter only).
+Done: every refusal now says what to do instead (phase-aware hint); dictated notes restore part ids (f1 -> F1, t s two -> TS-2, s one -> S1, wire three b -> wire 3b); mwnp-sparky-notes and mwnp-sparky-voice pass.
+In progress: user's live test of the new refusal messages and dictated ids.
+Next step: shorten any refusal that overflows the indicator; add id forms the live ASR spells differently.

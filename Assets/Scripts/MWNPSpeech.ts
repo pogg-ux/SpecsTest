@@ -172,3 +172,71 @@ export function resolveWire(spoken: string, validIds: string[]): {id: string | n
   }
   return {id: null, candidates: []}
 }
+
+/**
+ * Dictated text -> part ids in their proper form. "f1" -> "F1", "ts2" / "t s two" -> "TS-2", "s one" -> "S1", "wire three b" -> "wire 3b".
+ * Only ids that exist are restored (componentIds from the netlist, wireIds from its wires); a wire that is not a clear single match stays as spoken.
+ */
+export function restoreIds(text: string, componentIds: string[], wireIds: string[]): string {
+  const key = (id: string): string => id.toLowerCase().replace(/[^a-z0-9]/g, "")
+  const byKey: {[k: string]: string} = {}
+  for (const id of componentIds) byKey[key(id)] = id
+  const tokens = text.split(/\s+/).filter((w) => w.length > 0)
+  const HOMOPHONE: {[w: string]: boolean} = {to: true, too: true, for: true, o: true, oh: true}
+  // One spoken token as id characters: a digit word, a single letter, or an alphanumeric chunk like "ts2". Homophones only count inside a longer window.
+  const chars = (w: string, inWindow: boolean): string | null => {
+    const lw = w.toLowerCase().replace(/[.,;:!?]+$/, "")
+    if (/^[a-z0-9]+$/.test(lw) && (/\d/.test(lw) || lw.length === 1) && !(HOMOPHONE[lw] && !inWindow)) {
+      if (DIGIT_WORDS[lw] !== undefined && lw.length > 1) return inWindow || !HOMOPHONE[lw] ? DIGIT_WORDS[lw] : null
+      return lw
+    }
+    if (DIGIT_WORDS[lw] !== undefined && (inWindow || !HOMOPHONE[lw])) return DIGIT_WORDS[lw]
+    if (/^[a-z]+\d+$/.test(lw)) return lw
+    if (inWindow && /^[a-z]{2}$/.test(lw) && DIGIT_WORDS[lw] === undefined) return lw // "ts" in "ts two"
+    return null
+  }
+  const out: string[] = []
+  let i = 0
+  while (i < tokens.length) {
+    const t = tokens[i].toLowerCase()
+    if (t === "wire" && i + 1 < tokens.length) {
+      let done = false
+      for (let n = 3; n >= 1 && !done; n--) {
+        if (i + 1 + n > tokens.length) continue
+        const spoken = tokens.slice(i + 1, i + 1 + n).join(" ")
+        const r = resolveWire(spoken, wireIds)
+        if (r.id) {
+          out.push("wire " + r.id)
+          i += 1 + n
+          done = true
+        }
+      }
+      if (done) continue
+    }
+    let matched = false
+    for (let n = 4; n >= 1 && !matched; n--) {
+      if (i + n > tokens.length) continue
+      let s = ""
+      let ok = true
+      for (let k = 0; k < n; k++) {
+        const c = chars(tokens[i + k], n > 1)
+        if (c === null) {
+          ok = false
+          break
+        }
+        s += c
+      }
+      if (ok && byKey[s] !== undefined) {
+        const trail = /[.,;:!?]+$/.exec(tokens[i + n - 1])
+        out.push(byKey[s] + (trail ? trail[0] : ""))
+        i += n
+        matched = true
+      }
+    }
+    if (!matched) {
+      out.push(tokens[i])
+      i++
+    }
+  }
+  return out.join(" ")
+}

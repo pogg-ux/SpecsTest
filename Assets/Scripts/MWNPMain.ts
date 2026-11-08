@@ -16,7 +16,7 @@
 
 import {Netlist} from "./MWNPNetlist"
 import {AgentSnapshot, MWNPAgent} from "./MWNPAgent"
-import {resolveWire} from "./MWNPSpeech"
+import {resolveWire, restoreIds} from "./MWNPSpeech"
 import {MWNPCabinet} from "./MWNPCabinet"
 import {MWNPPartTagsUI} from "./MWNPPartTagsUI"
 import {MWNPSafetyNoticeUI} from "./MWNPSafetyNoticeUI"
@@ -581,7 +581,7 @@ export class MWNPMain extends BaseScriptComponent {
   private undoLastReading(): string {
     const agent = this.agent as MWNPAgent
     const u = this.lastUndo
-    if (!u) return "Nothing to undo"
+    if (!u) return "Nothing to undo. " + this.voiceHint()
     const ph = agent.phase
     const valid = (ph === "steps" || ph === "finding" || ph === "retest") && agent.readings.length === u.agent.readingsLen + 1
     this.lastUndo = null
@@ -616,7 +616,7 @@ export class MWNPMain extends BaseScriptComponent {
   /** "Sparky, log <number>": types the number on the pad's behalf and presses Enter, exactly as the buttons do. */
   private voiceLog(value: string): string {
     const agent = this.agent as MWNPAgent
-    if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "Nothing to log right now"
+    if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "No test point is active. " + (this.jobActive && (agent.phase === "job" || agent.phase === "symptoms") ? "Say 'Sparky, report symptom' to pick a symptom." : this.voiceHint())
     if (agent.phase === "retest_wait") return "Flip the switch first"
     if (this.visibleCard !== "step") {
       this.hideOpenCard()
@@ -638,6 +638,30 @@ export class MWNPMain extends BaseScriptComponent {
    * Runs one Sparky command and returns the line to show ("Logged 12.0 V. Say 'undo' to remove."). Every command maps to an
    * action the buttons already have; nothing here decides anything the agent would not.
    */
+  /** What the tech can say right now (appended to refusals so a refused command always says what to do instead). */
+  private voiceHint(): string {
+    const agent = this.agent as MWNPAgent
+    if (this.visibleCard === "safety") return "Say 'Sparky, understood'."
+    if (!this.jobActive) return "Say 'Sparky, new job'."
+    if (this.verifyState === "fixed_q") return "Say 'Sparky, fixed' or 'not fixed'."
+    if (this.verifyState === "end_q") return "Say 'Sparky, end job' or 'not yet'."
+    switch (agent.phase) {
+      case "job":
+      case "symptoms":
+        return "Say 'Sparky, report symptom' to pick one."
+      case "steps":
+        return "Say 'Sparky, log <value>' or 'next'."
+      case "finding":
+        return "Say 'Sparky, retest' after the repair."
+      case "retest_wait":
+        return "Flip the switch: 'Sparky, S1 up' or 'S1 down'."
+      case "retest":
+        return "Say 'Sparky, log <value>' for the retest."
+      default:
+        return "Say 'Sparky, end job' or 'new job'."
+    }
+  }
+
   voiceCommand(name: string, arg: string = ""): string {
     const agent = this.agent as MWNPAgent | null
     const nl = this.nl as Netlist | null
@@ -661,8 +685,8 @@ export class MWNPMain extends BaseScriptComponent {
     switch (name) {
       case "next":
       case "back": {
-        if (!steps) return "No step to move to"
-        if (!(name === "next" ? agent.stepForward() : agent.stepBack())) return name === "next" ? "Already on the last step" : "Already on the first step"
+        if (!steps) return "No step to move to. " + this.voiceHint()
+        if (!(name === "next" ? agent.stepForward() : agent.stepBack())) return name === "next" ? "Already on the last step. Log the reading to continue." : "Already on the first step."
         this.highlightIdx = -1
         this.showStepAgain()
         this.log("voice " + name)
@@ -670,7 +694,7 @@ export class MWNPMain extends BaseScriptComponent {
         return "Step " + (agent.stepIndex + 1) + " of " + agent.steps.length
       }
       case "repeat": {
-        if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "Nothing to repeat"
+        if (!this.jobActive || (agent.phase !== "steps" && agent.phase !== "retest" && agent.phase !== "retest_wait")) return "No step to repeat. " + this.voiceHint()
         this.highlightIdx = -1
         this.showStepAgain()
         this.log("voice repeat")
@@ -710,7 +734,7 @@ export class MWNPMain extends BaseScriptComponent {
           this.hideOpenCard()
           return "Closed"
         }
-        return "Nothing to close"
+        return "Nothing is open to close. Say 'Sparky, open library'."
       }
       case "open_library":
         if (this.visibleCard === "home") return "The Library is open"
@@ -723,9 +747,9 @@ export class MWNPMain extends BaseScriptComponent {
         this.onLibraryPick("camera")
         return "Camera"
       case "dismiss":
-        return "Nothing to dismiss"
+        return "No safety notice is showing."
       case "symptom": {
-        if (!this.jobActive || (agent.phase !== "job" && agent.phase !== "symptoms")) return "Not asking for a symptom now"
+        if (!this.jobActive || (agent.phase !== "job" && agent.phase !== "symptoms")) return "No symptom is being asked for. " + this.voiceHint()
         let idx = -1
         for (let i = 0; i < nl.faultCount(); i++) if (nl.symptomKey(i).toLowerCase() === arg.toLowerCase()) idx = i
         if (idx < 0) return "Unknown symptom"
@@ -737,7 +761,7 @@ export class MWNPMain extends BaseScriptComponent {
         return "Symptom: " + nl.symptomLabel(idx)
       }
       case "retest":
-        if (this.visibleCard !== "finding" || agent.phase !== "finding" || this.verifyState !== "") return "No retest to start"
+        if (this.visibleCard !== "finding" || agent.phase !== "finding" || this.verifyState !== "") return "Nothing to retest yet. " + this.voiceHint()
         this.onRetest()
         return "Retest"
       case "new_job":
@@ -762,15 +786,15 @@ export class MWNPMain extends BaseScriptComponent {
           this.onEndAsk(yes)
           return yes ? "Job ended" : "Job stays open"
         }
-        return "Nothing to confirm"
+        return "Nothing to confirm. " + this.voiceHint()
       }
       case "not_yet":
-        if (this.verifyState !== "end_q") return "Nothing to answer"
+        if (this.verifyState !== "end_q") return "'End job?' isn't showing. " + this.voiceHint()
         this.onEndAsk(false)
         return "Job stays open"
       case "more":
       case "less":
-        if (!this.stepCard.isVisible || this.stepCard.isCollapsed || this.stepCard.isKeypadOpen || this.visibleCard !== "step") return "No More button showing"
+        if (!this.stepCard.isVisible || this.stepCard.isCollapsed || this.stepCard.isKeypadOpen || this.visibleCard !== "step") return "No step card is open. Say 'Sparky, repeat'."
         this.stepCard.setMore(name === "more")
         return name === "more" ? "More" : "Less"
       case "cancel":
@@ -780,7 +804,7 @@ export class MWNPMain extends BaseScriptComponent {
           return "Cancelled"
         }
         if (this.visibleCard === "notes" && this.notesCard.cancel()) return "Cancelled"
-        return "Nothing to cancel"
+        return "Nothing to cancel."
       case "s1_up":
       case "s1_down": {
         const pos = name === "s1_up" ? "UP" : "DOWN"
@@ -790,7 +814,7 @@ export class MWNPMain extends BaseScriptComponent {
         return "S1 " + pos
       }
       case "report_symptom": {
-        if (!this.jobActive || (agent.phase !== "job" && agent.phase !== "symptoms")) return "A symptom is already reported"
+        if (!this.jobActive || (agent.phase !== "job" && agent.phase !== "symptoms")) return "A symptom is already reported. " + this.voiceHint()
         if (this.visibleCard !== "symptoms") {
           this.hideOpenCard()
           this.onReportSymptom()
@@ -802,7 +826,12 @@ export class MWNPMain extends BaseScriptComponent {
         this.summaryCard.showTab("notes")
         return "Notes & pictures"
       case "note": {
-        const text = arg.trim().length > 0 ? arg.trim().charAt(0).toUpperCase() + arg.trim().substring(1) : ""
+        const wireIds: string[] = []
+        nl.data.wires.forEach((w) => {
+          if (wireIds.indexOf(w.id) < 0) wireIds.push(w.id)
+        })
+        const fixed = restoreIds(arg.trim(), nl.componentIds(), wireIds)
+        const text = fixed.length > 0 ? fixed.charAt(0).toUpperCase() + fixed.substring(1) : ""
         if (text.length === 0) return "Say the note after 'note'"
         if (this.visibleCard !== "notes") {
           this.hideOpenCard()
@@ -814,7 +843,7 @@ export class MWNPMain extends BaseScriptComponent {
         return "Note: " + (text.length > 30 ? text.substring(0, 30) + "..." : text) + " — say save note"
       }
       case "save_note":
-        if (this.visibleCard !== "notes" || !this.notesCard.saveDictation()) return "No note to save"
+        if (this.visibleCard !== "notes" || !this.notesCard.saveDictation()) return "No note to save. Say 'Sparky, note <your text>' first."
         return "Note saved"
       case "hide_display":
         this.setDisplayHidden(true)
@@ -830,7 +859,7 @@ export class MWNPMain extends BaseScriptComponent {
         return "Options"
       case "fixed":
       case "not_fixed":
-        if (this.verifyState !== "fixed_q") return "Nothing to confirm yet"
+        if (this.verifyState !== "fixed_q") return agent.phase === "finding" ? "Retest first. Say 'Sparky, retest'." : "Nothing to confirm yet. " + this.voiceHint()
         this.onFixed(name === "fixed")
         return name === "fixed" ? "Fixed" : "Not fixed"
       case "end_job":
@@ -838,7 +867,7 @@ export class MWNPMain extends BaseScriptComponent {
           this.onEndAsk(true)
           return "Job ended"
         }
-        if (!this.jobActive) return "No job to end"
+        if (!this.jobActive) return "No job is open. Say 'Sparky, new job'."
         this.askConfirm("end")
         return "End job? Say yes or no"
       case "highlight": {

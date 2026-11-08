@@ -3,6 +3,7 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
+import {restoreIds} from "../Scripts/MWNPSpeech"
 import {ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 @component
@@ -33,11 +34,20 @@ export class MWNPSparkyNotesScenario extends Scenario {
     expect(mwnpState().visibleCard === "report" || mwnpState().visibleCard === "summary", "report open: " + mwnpState().visibleCard).toBe(true)
     expect(mwnpState().reportTab, "open notes -> Notes & pictures tab").toBe("notes")
 
+    // Part ids in dictated text.
+    const cids = ["F1", "S1", "L1", "TS-2", "TS-4"]
+    const wids = ["0", "1", "2a", "3a", "3b", "3c"]
+    expect(restoreIds("replace f1 then check ts2", cids, wids), "f1, ts2").toBe("replace F1 then check TS-2")
+    expect(restoreIds("meter t s two to s one", cids, wids), "t s two, s one").toBe("meter TS-2 to S1")
+    expect(restoreIds("l one is dark", cids, wids), "l one").toBe("L1 is dark")
+    expect(restoreIds("check wire three b now", cids, wids), "wire three b").toBe("check wire 3b now")
+    expect(restoreIds("go to the store for two", cids, wids), "plain words stay").toBe("go to the store for two")
+    expect(restoreIds("wire three d", cids, wids), "an ambiguous wire stays as spoken").toBe("wire three d")
     // Dictate, cancel.
     const before = app.notes.length
-    await say("note replace the fuse F1 and retest", 900)
+    await say("note replace the fuse f1 and retest ts two", 900)
     expect(app.notesCard.view, "dictation card showing").toBe("dictate")
-    expect(app.notesCard.dictated, "text capitalised: " + app.notesCard.dictated).toBe("Replace the fuse f1 and retest")
+    expect(app.notesCard.dictated, "text capitalised: " + app.notesCard.dictated).toBe("Replace the fuse F1 and retest TS-2")
     await say("cancel")
     expect(app.notesCard.view, "cancel leaves it").toBe("list")
     expect(app.notes.length, "nothing saved").toBe(before)

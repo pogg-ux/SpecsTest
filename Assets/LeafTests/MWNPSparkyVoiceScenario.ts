@@ -112,7 +112,7 @@ export class MWNPSparkyVoiceScenario extends Scenario {
     sparky.inject("Sparky, undo")
     await sleep(2100)
     sparky.inject("Sparky, undo")
-    expect(last().result, "nothing left to undo").toBe("Nothing to undo")
+    expect(last().result, "nothing left to undo").toBe("Nothing to undo. Say 'Sparky, log <value>' or 'next'.")
 
     // highlight wire (stretch): an id that exists; near misses that are not a clear single match ask.
     sparky.inject("Sparky, highlight wire three b")
@@ -179,7 +179,7 @@ export class MWNPSparkyVoiceScenario extends Scenario {
     expect(parsed("fuse replaced"), "fuse replaced").toBe("retest")
     expect(parsed("start job"), "start job").toBe("new_job")
     expect(parsed("not yet"), "not yet").toBe("not_yet")
-    expect(app.voiceCommand("dismiss"), "dismiss with no safety notice").toBe("Nothing to dismiss")
+    expect(app.voiceCommand("dismiss"), "dismiss with no safety notice").toBe("No safety notice is showing.")
 
     // more / less on the step card; cancel on the keypad.
     await say("repeat")
