@@ -34,7 +34,20 @@ export class MWNPSparkyClipsScenario extends Scenario {
     const n0 = sparky.acted.length
     sparky.inject("Sparky, next") // Sparky must not act on what it 'hears' while it speaks
     expect(sparky.acted.length, "speech during a clip is ignored").toBe(n0)
-    await sleep(1500)
+    expect(sparky.droppedWhileSpeaking > 0, "the dropped transcript is counted").toBe(true)
+    expect(sparky.indicatorText, "the mic indicator shows the speaking state").toBe("Speaking...")
+    // A transcript arriving mid-playback (clip is 0.6 s; now ~0.3 s in) is dropped; so is one in the 0.5 s after it ends (~0.85 s in).
+    await sleep(350)
+    const d1 = sparky.droppedWhileSpeaking
+    sparky.inject("Sparky, next")
+    expect(sparky.droppedWhileSpeaking, "a transcript mid-playback is dropped").toBe(d1 + 1)
+    await sleep(400)
+    expect(sparky.speaking, "still speaking in the 0.5 s after the clip ends").toBe(true)
+    sparky.inject("Sparky, next")
+    expect(sparky.acted.length, "a transcript in the 0.5 s after the clip is dropped too").toBe(n0)
+    await sleep(500) // ~1.5 s in: the clip ended at 0.6 s, the quiet time at 1.1 s
+    expect(sparky.speaking, "speaking is over after the clip plus 0.5 s").toBe(false)
+    expect(sparky.indicatorText === "Speaking...", "the speaking state is gone from the indicator").toBe(false)
     expect(sparky.asrPaused, "ASR is back after the clip").toBe(false)
 
     // next -> step 2 clip; log -> "logged" then the step 3 clip, in that order.

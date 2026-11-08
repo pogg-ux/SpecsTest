@@ -87,6 +87,11 @@ export class MWNPSparkyAskScenario extends Scenario {
       await sleep(150)
     }
     expect(paused, "ASR pauses while the answer is spoken").toBe(true)
+    // Something "heard" while the answer plays is dropped.
+    const nSpeak = sparky.acted.length
+    sparky.inject("Sparky, next")
+    expect(sparky.acted.length, "a transcript during the spoken answer is dropped").toBe(nSpeak)
+    expect(sparky.indicatorText, "the indicator shows the speaking state").toBe("Speaking...")
     const t2 = Date.now()
     while (sparky.asrPaused && Date.now() - t2 < 20000) await sleep(200)
     expect(sparky.asrPaused, "ASR resumes after the answer").toBe(false)

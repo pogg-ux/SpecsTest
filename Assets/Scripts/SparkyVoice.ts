@@ -22,6 +22,10 @@ const HEARD_SEC = 2.0
 const MESSAGE_SEC = 4.0
 const MAX_FAILURES = 6 // real ASR errors in a row before Sparky gives up (the buttons keep working)
 
+/** Seconds after a clip or an Ask answer ends before Sparky listens again: its own last echo must not be heard as a command. */
+const SPEAK_TAIL_SEC = 0.5
+
+const BLUE = new vec4(0.35, 0.65, 1, 1)
 const GREEN = new vec4(0.2, 1, 0.4, 1)
 const AMBER = new vec4(1, 0.72, 0, 1)
 const RED = new vec4(1, 0.23, 0.19, 1)
@@ -46,6 +50,15 @@ export class SparkyVoice extends BaseScriptComponent {
   requested: string[][] = []
   /** True while a clip is playing and ASR is stopped. */
   asrPaused: boolean = false
+  /**
+   * True while Sparky is speaking: from the start of any clip or Ask answer until SPEAK_TAIL_SEC after it ends (ASR stays stopped for
+   * exactly that time). Everything "heard" meanwhile is dropped, and the mic indicator shows "Speaking...".
+   */
+  get speaking(): boolean {
+    return this.asrPaused
+  }
+  /** How many transcripts were dropped because Sparky was speaking (tests, log). */
+  droppedWhileSpeaking: number = 0
 
   /** What ran, in order: for tests and for the log. */
   acted: {name: string; arg: string; result: string}[] = []
@@ -212,7 +225,12 @@ export class SparkyVoice extends BaseScriptComponent {
   // ── Transcripts ───────────────────────────────────────────────────────────
 
   private onTranscript(text: string, isFinal: boolean): void {
-    if (this.asrPaused) return // a clip is playing: Sparky must not hear itself
+    if (this.speaking) {
+      // A clip or an answer is playing (or just ended): Sparky must not hear itself. Typed-text injection is dropped the same way.
+      this.droppedWhileSpeaking++
+      this.log("dropped while speaking: " + text)
+      return
+    }
     const now = getTime()
     // A new utterance that follows one with no final (ASR restarted, a session replaced) must not inherit its "already handled" count,
     // or its first command is skipped ("Sparky, retest" worked, then "Sparky, show card" was swallowed).
@@ -382,7 +400,7 @@ export class SparkyVoice extends BaseScriptComponent {
       if (token !== this.clipToken) return
       this.resumeAsr()
     })
-    this.clipTimer.reset(len + 0.3)
+    this.clipTimer.reset(len + SPEAK_TAIL_SEC)
     this.answerUntil = Math.max(this.answerUntil, getTime() + len + 6)
   }
 
@@ -519,7 +537,8 @@ export class SparkyVoice extends BaseScriptComponent {
     this.log("clip " + name + " (" + seconds.toFixed(1) + " s)")
     if (!this.clipTimer) this.clipTimer = this.createEvent("DelayedCallbackEvent") as DelayedCallbackEvent
     this.clipTimer.bind(next)
-    this.clipTimer.reset(seconds + 0.3) // a short tail so the room's last echo is gone before ASR restarts
+    // Clips in a queue are followed by the next clip after the same gap; after the last one ASR restarts, so the room's last echo is gone.
+    this.clipTimer.reset(seconds + SPEAK_TAIL_SEC)
   }
 
   // ── Indicator ─────────────────────────────────────────────────────────────
@@ -565,12 +584,13 @@ export class SparkyVoice extends BaseScriptComponent {
   private refreshIndicator(): void {
     const now = getTime()
     let text = ""
-    if (now < this.msgUntil) text = this.msgText
+    if (this.speaking) text = "Speaking..."
+    else if (now < this.msgUntil) text = this.msgText
     else if (now < this.heardUntil) text = this.heardText
     this.indicatorText = text
     if (this.indText && this.indText.text !== text) this.indText.text = text
     if (this.indIconMat) {
-      const c = !this.asrEnabled ? GRAY : this.errorShown || !this.listening ? RED : now < this.heardUntil || now < this.msgUntil ? AMBER : GREEN
+      const c = this.speaking ? BLUE : !this.asrEnabled ? GRAY : this.errorShown || !this.listening ? RED : now < this.heardUntil || now < this.msgUntil ? AMBER : GREEN
       this.indIconMat.mainPass.baseColor = new vec4(c.x, c.y, c.z, 1)
     }
   }
