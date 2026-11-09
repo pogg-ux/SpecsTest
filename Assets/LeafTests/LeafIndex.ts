@@ -70,7 +70,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-sparky-voice", typename: MWNPSparkyVoiceScenario.getTypeName()},
     {id: "mwnp-sparky-clips", typename: MWNPSparkyClipsScenario.getTypeName()},
     {id: "mwnp-demo-driver", typename: MWNPDemoDriverScenario.getTypeName()},
-    {id: "mwnp-demo-autoplay", typename: MWNPDemoAutoplayScenario.getTypeName()},
+    {id: "mwnp-demo-autoplay", typename: MWNPDemoAutoplayScenario.getTypeName(), parameters: {shot: ""}},
     {id: "mwnp-voice-report-symptom", typename: MWNPVoiceReportSymptomScenario.getTypeName()},
     {id: "mwnp-voice-fuzzy", typename: MWNPVoiceFuzzyScenario.getTypeName()},
     {id: "mwnp-verify-fix", typename: MWNPVerifyFixScenario.getTypeName()},

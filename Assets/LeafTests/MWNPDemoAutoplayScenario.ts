@@ -3,6 +3,7 @@
 // DEMO_DRIVER stays false: the autoplay class is driven directly, with the real app and SparkyVoice but no clips and no keys.
 
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
+import {ScenarioConfig} from "Leaf.lspkg/Scenarios/scenario/ScenarioConfig"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {DEMO_DRIVER, DemoAutoplay, DemoRunner} from "../Scripts/DemoDriver"
@@ -14,7 +15,9 @@ const NAMES = ["dismiss", "report_symptom", "symptom", "hide_display", "log", "l
 
 @component
 export class MWNPDemoAutoplayScenario extends Scenario {
-  async run(): Promise<void> {
+  /** Parameter `shot` (screenshot runs): "labels" stops right after "show labels" with the end state held for 120 s; "" runs the whole check. */
+  async run(config?: ScenarioConfig): Promise<void> {
+    const shot = (config && config.get("shot")) || ""
     // ── The numbers ──
     expect(DEMO_DRIVER, "DEMO_DRIVER is false in the project").toBe(false)
     expect(DEMO_LINES.length, "17 lines").toBe(17)
@@ -77,6 +80,15 @@ export class MWNPDemoAutoplayScenario extends Scenario {
       origPlay(names)
     }
     await sleep(300)
+    // Which cards are on screen right now (the Library chip is not a card).
+    const openCards = (): string[] => {
+      const cards: {[k: string]: any} = {stepCard: app.stepCard, findingCard: app.findingCard, summaryCard: app.summaryCard, notesCard: app.notesCard, cameraCard: app.cameraCard, optionsCard: app.optionsCard, photoViewer: app.photoViewer}
+      const out: string[] = Object.keys(cards).filter((k) => !!cards[k] && cards[k].isVisible === true)
+      if (app.schematicPanel && app.schematicPanel.isOpen) out.push("schematicPanel")
+      return out
+    }
+    let cardsAfterEndJob = ""
+    let cardAfterEndJob = ""
     const n0 = sparky.acted.length
     const lineStarts: number[] = []
     const lineNos: number[] = []
@@ -99,6 +111,11 @@ export class MWNPDemoAutoplayScenario extends Scenario {
           if (mm) {
             lineNos.push(parseInt(mm[1], 10))
             lineStarts.push(getTime())
+            // Line 17 ("show labels") starts right after "end job" (line 16) and its hold: what is on screen now is the end-job state.
+            if (mm[1] === "17") {
+              cardsAfterEndJob = openCards().join(",")
+              cardAfterEndJob = mwnpState().visibleCard
+            }
           }
           if (m === "autoplay done") doneCount++
         },
@@ -129,6 +146,49 @@ export class MWNPDemoAutoplayScenario extends Scenario {
     }
     expect(mwnpState().jobActive, "end job closed the job").toBe(false)
     expect(mwnpState().labelTags.on, "show labels turned the labels on").toBe(true)
+
+    // After "end job": only the Job report is open. The Notes card left over from "save note" must not sit under it (their tabs and
+    // Add note buttons drew on top of each other).
+    expect(cardsAfterEndJob, "after end job only the Job report is open, no Notes card under it").toBe("summaryCard")
+    expect(cardAfterEndJob, "and it is the report").toBe("report")
+
+    // "show labels" at the end shows the component tags on the full cabinet: all of them (no step focus: the job is over), fully opaque.
+    await sleep(600) // the fade-in is 0.35 s; the 10 s reveal is still running
+    const lt = mwnpState().labelTags
+    expect(lt.on === true && lt.alpha === 1 && lt.fading === false, "the tags are faded in: " + JSON.stringify(lt)).toBe(true)
+    const roots: SceneObject[] = app.partTags.labelRoots()
+    const off = roots.filter((r) => !r.isEnabledInHierarchy).map((r) => r.name)
+    expect(roots.length > 10, "the cabinet has its tags: " + roots.length).toBe(true)
+    expect(off.join(","), "every component tag, leader and wire label is on (none hidden by a step focus)").toBe("")
+    const firstText = (so: SceneObject): Text | null => {
+      const t = so.getComponent("Component.Text") as Text
+      if (t) return t
+      for (let i = 0; i < so.getChildrenCount(); i++) {
+        const c = firstText(so.getChild(i))
+        if (c) return c
+      }
+      return null
+    }
+    const tagRoots = roots.filter((r) => r.name.indexOf("Tag_") === 0)
+    const faint = tagRoots.filter((r) => {
+      const t = firstText(r)
+      return !t || t.textFill.color.w < 0.9
+    }).map((r) => r.name)
+    expect(tagRoots.length > 8, "component tags: " + tagRoots.length).toBe(true)
+    expect(faint.join(","), "and every tag's text is opaque").toBe("")
+    if (shot === "labels") {
+      // Capture run: the end state (report open, labels showing) is held for 120 s (test-only override) so a screenshot can follow.
+      app.setLabelFadeSec(120)
+      app.revealLabels()
+      ev("end state held for capture", {cards: openCards(), tags: tagRoots.length, labelTags: mwnpState().labelTags})
+      return
+    }
+
+    // "close" afterwards leaves no card on screen.
+    sparky.inject("Sparky, close")
+    await sleep(800)
+    expect(openCards().join(","), "after end job + close no card remains").toBe("")
+    expect(mwnpState().visibleCard, "the Library menu is all that is left").toBe("home")
 
     // Sparky speaks step 1 after "extend doesn't work" (the 3rd command): the clip is asked for and played.
     expect(sparky.requested[n0 + 2].join(","), "picking the symptom by voice asks for step 1's clip").toBe("step_EXTEND_1")
