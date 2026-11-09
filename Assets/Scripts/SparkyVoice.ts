@@ -180,6 +180,7 @@ export class SparkyVoice extends BaseScriptComponent {
         this.lastUpdateT = getTime()
         this.failures = 0
         this.errorShown = false
+        this.log("ASR heard: " + e.text + (e.isFinal ? " [final]" : ""))
         this.onTranscript(e.text, e.isFinal)
       })
       options.onTranscriptionErrorEvent.add((code: AsrModule.AsrStatusCode) => {

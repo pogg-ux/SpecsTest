@@ -17,9 +17,39 @@ export interface VoiceCommand {
   settleSec?: number
 }
 
-const WAKE = "(?:sparky|sparkie|sparkey|sparki|spargy|spark key)"
-const WAKE_START = new RegExp("^" + WAKE + "(?: |$)")
-const WAKE_ANY = new RegExp("(?:^| )" + WAKE + "(?= |$)", "g")
+// The wake word as live ASR actually writes it. At the START of a transcript (where a mishearing costs the whole command) the match
+// is tolerant: a listed variant, or any single word one letter away from "sparky" (sporky, parky, sparks, spunky is listed ...), or
+// "spark" + e / he / key. "sports" (3 edits) and "party" (2) do not match. Later in the same transcript ("sparky next sparky back")
+// only the strict spellings split a segment, so a dictated note ("note the motor sparks") is not cut in two.
+const WAKE_WORD = "sparky"
+const WAKE_LISTED: {[w: string]: boolean} = {
+  sparky: true, sparkie: true, sparkey: true, sparki: true, spargy: true, sporky: true, sparks: true, parky: true, sporty: true, spunky: true,
+}
+const WAKE_MID: {[w: string]: boolean} = {sparky: true, sparkie: true, sparkey: true, sparki: true, spargy: true, sporky: true}
+const WAKE_SPARK_TAIL: {[w: string]: boolean} = {key: true, e: true, he: true}
+
+/** True when a and b are equal or differ by one inserted, deleted or substituted letter. */
+function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true
+  if (Math.abs(a.length - b.length) > 1) return false
+  let i = 0
+  while (i < a.length && i < b.length && a.charAt(i) === b.charAt(i)) i++
+  if (a.length === b.length) return a.substring(i + 1) === b.substring(i + 1)
+  return a.length > b.length ? a.substring(i + 1) === b.substring(i) : a.substring(i) === b.substring(i + 1)
+}
+
+/** How many tokens from `i` are the wake word at the start of a transcript (0 = not a wake word). */
+function wakeLenAtStart(tokens: string[], i: number): number {
+  const w = tokens[i]
+  if (w === "spark" && i + 1 < tokens.length && WAKE_SPARK_TAIL[tokens[i + 1]] === true) return 2
+  return WAKE_LISTED[w] === true || withinOneEdit(w, WAKE_WORD) ? 1 : 0
+}
+
+/** How many tokens from `i` are a wake word later in the transcript (strict spellings only). */
+function wakeLenMid(tokens: string[], i: number): number {
+  if (tokens[i] === "spark" && i + 1 < tokens.length && tokens[i + 1] === "key") return 2
+  return WAKE_MID[tokens[i]] === true ? 1 : 0
+}
 
 /** Lower case, punctuation to spaces (a "." between digits stays), single spaces. */
 export function normalize(raw: string): string {
@@ -35,11 +65,24 @@ export function normalize(raw: string): string {
  * talk) gives no segments. "sparky next sparky next" -> ["next", "next"].
  */
 export function wakeSegments(raw: string): string[] {
-  const t = normalize(raw)
-  if (!WAKE_START.test(t)) return []
-  const parts = t.split(WAKE_ANY)
+  const tokens = normalize(raw).split(" ").filter((w) => w.length > 0)
+  if (tokens.length === 0) return []
+  let i = wakeLenAtStart(tokens, 0)
+  if (i === 0) return []
   const out: string[] = []
-  for (let i = 1; i < parts.length; i++) out.push(parts[i].trim())
+  let cur: string[] = []
+  while (i < tokens.length) {
+    const n = wakeLenMid(tokens, i)
+    if (n > 0) {
+      out.push(cur.join(" "))
+      cur = []
+      i += n
+    } else {
+      cur.push(tokens[i])
+      i++
+    }
+  }
+  out.push(cur.join(" "))
   return out
 }
 
