@@ -434,7 +434,13 @@ export class MWNPMain extends BaseScriptComponent {
     this.log("symptoms-open")
   }
 
-  private onSymptomPicked(i: number): void {
+  /**
+   * Set by SparkyVoice: plays Sparky's clips that exist, in order. For things the tech does with a button (a voice command hands its
+   * clips back in voiceClips instead, which SparkyVoice plays after the command).
+   */
+  clipSink: ((names: string[]) => void) | null = null
+
+  private onSymptomPicked(i: number, viaVoice: boolean = false): void {
     const nl = this.nl as Netlist
     const agent = this.agent as MWNPAgent
     this.click()
@@ -460,6 +466,12 @@ export class MWNPMain extends BaseScriptComponent {
     this.stepCard.setReadout("— V")
     this.visibleCard = "step"
     this.refreshStep()
+    // Sparky speaks step 1 (step_<SYMPTOM>_1), like every later step. By voice the clip rides back on voiceClips; by button it is played now.
+    const clip = this.stepClipName()
+    if (clip) {
+      if (viaVoice) this.voiceClips.push(clip)
+      else if (this.clipSink) this.clipSink([clip])
+    }
     this.log("symptom-picked")
   }
 
@@ -844,7 +856,7 @@ export class MWNPMain extends BaseScriptComponent {
           this.hideOpenCard()
           this.onReportSymptom()
         }
-        this.onSymptomPicked(idx)
+        this.onSymptomPicked(idx, true)
         return "Symptom: " + nl.symptomLabel(idx)
       }
       case "retest":
