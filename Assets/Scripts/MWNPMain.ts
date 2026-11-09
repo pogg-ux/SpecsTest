@@ -1322,6 +1322,9 @@ export class MWNPMain extends BaseScriptComponent {
   private endJob(): void {
     if (!this.jobActive) return
     this.verifyState = ""
+    // Whatever card is open (the Notes card after "save note", the camera, the options, ...) closes before the report opens: the report
+    // replaces visibleCard, so a card left up would stay on screen under it and "close" would only close the report.
+    this.hideOpenCard()
     this.addNote("Agent", "Job ended: " + this.resultText() + ".")
     this.archiveJob("Complete")
     this.clearBoard()

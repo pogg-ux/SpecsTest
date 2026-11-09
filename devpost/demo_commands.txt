@@ -3,8 +3,11 @@ tech_02.mp3|Sparky, report symptom
 tech_03.mp3|Sparky, extend doesn't work
 tech_17.mp3|Sparky, hide
 tech_04.mp3|Sparky, log twelve point one
-tech_05.mp3|Sparky, log twelve point zero
+tech_22.mp3|Sparky, log twelve point oh
+tech_15.mp3|Sparky, yes
 tech_18.mp3|Sparky, show
+tech_19.mp3|Sparky, show schematic
+tech_20.mp3|Sparky, close
 tech_06.mp3|Sparky, log zero
 tech_07.mp3|Sparky, why that terminal
 tech_08.mp3|Sparky, what's the torque spec on the terminals
@@ -14,4 +17,5 @@ tech_13.mp3|Sparky, yes fixed
 tech_09.mp3|Sparky, note replaced F1, half amp fast-blow
 tech_10.mp3|Sparky, save note
 tech_14.mp3|Sparky, end job
+tech_20.mp3|Sparky, close
 tech_16.mp3|Sparky, show labels

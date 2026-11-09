@@ -1,4 +1,4 @@
-// Demo driver: steps through all 17 demo lines and checks each command ran (and, around hide / show, what is on screen). The N/B key polling is a thin layer over
+// Demo driver: steps through all 21 demo lines and checks each command ran (and, around hide / show, what is on screen). The N/B key polling is a thin layer over
 // DemoRunner (next/back), which is what this drives; the clips are checked as imported assets, not played. DEMO_DRIVER stays false.
 // The presenter's only action is flipping S1 to UP right after "Sparky, retest" (the retest waits for it).
 
@@ -9,16 +9,19 @@ import {DEMO_DRIVER, DemoRunner} from "../Scripts/DemoDriver"
 import {DEMO_CLIPS, DEMO_LINES} from "../Scripts/DemoScript"
 import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
-/** The clips in the order the script plays them (tech_15 is not in the script), and the command each line must run. */
-const CLIP_ORDER = [1, 2, 3, 17, 4, 5, 18, 6, 7, 8, 11, 12, 13, 9, 10, 14, 16]
+/** The clips in the order the script plays them (tech_20, "close", is used twice), and the command each line must run. */
+const CLIP_ORDER = [1, 2, 3, 17, 4, 22, 15, 18, 19, 20, 6, 7, 8, 11, 12, 13, 9, 10, 14, 20, 16]
 const EXPECT: {name: string; arg?: string}[] = [
   {name: "dismiss"},
   {name: "report_symptom"},
   {name: "symptom", arg: "extend"},
   {name: "hide_display"},
   {name: "log", arg: "12.1"},
-  {name: "log", arg: "12.0"},
+  {name: "log_confirm", arg: "12.0"}, // "log twelve point oh": "oh" is read back, not logged
+  {name: "log", arg: "12.0"}, // "yes" logs it
   {name: "show_display"},
+  {name: "show_schematic"},
+  {name: "close"}, // closes the schematic
   {name: "log", arg: "0"},
   {name: "ask"},
   {name: "ask"},
@@ -28,6 +31,7 @@ const EXPECT: {name: string; arg?: string}[] = [
   {name: "note"},
   {name: "save_note"},
   {name: "end_job"},
+  {name: "close"}, // closes the report
   {name: "show_labels"},
 ]
 
@@ -48,7 +52,7 @@ export class MWNPDemoDriverScenario extends Scenario {
       expect(DEMO_CLIPS[i].name.indexOf("tech_" + n) === 0, "clip " + n + " is " + DEMO_CLIPS[i].name).toBe(true)
       expect(DEMO_LINES[i].command.indexOf("Sparky, ") === 0, "line " + (i + 1) + " starts with the wake word").toBe(true)
     }
-    expect(DEMO_LINES.some((l) => l.clip === "tech_15.mp3"), "tech_15 ('yes') is not in the script").toBe(false)
+    expect(DEMO_LINES.filter((l) => l.clip === "tech_20.mp3").length, "tech_20 ('close') is used twice").toBe(2)
 
     // ── The cursor: forward plays and sends together; back moves without playing; the end stops ──
     {
@@ -122,6 +126,10 @@ export class MWNPDemoDriverScenario extends Scenario {
         expect(mwnpState().labelTags.on, "the component tags stay hidden").toBe(false)
         expect(mwnpState().display.alpha, "no card is visible").toBe(0)
       }
+      if (want.name === "log_confirm") {
+        expect(mwnpState().display.hidden, "the display is still hidden after the readback").toBe(true)
+        expect(mwnpState().badges["F1:IN"], "'oh' is only read back: nothing logged yet").toBe(undefined)
+      }
       if (want.name === "log" && a.arg === "12.0" && !seenFirst120) {
         seenFirst120 = true
         expect(mwnpState().display.hidden, "the display is still hidden after logging 12.0").toBe(true)
@@ -135,6 +143,18 @@ export class MWNPDemoDriverScenario extends Scenario {
         await waitFor((s) => s.display.hidden === false && s.display.alpha === 1 && s.display.fading === false, 3000, "cards faded back in after 'show'")
         expect(mwnpState().visibleCard, "after 'show' the Step card is back").toBe("step")
         expect(mwnpState().activePoint, "on the step the readings led to").toBe("F1:OUT")
+      }
+      if (want.name === "show_schematic") {
+        expect(a.result, "show schematic opened it").toBe("Schematic")
+        expect(mwnpState().schematicOpen, "the schematic is open").toBe(true)
+      }
+      if (want.name === "close" && i === 9) {
+        expect(a.result, "close closed the schematic").toBe("Closed the schematic")
+        expect(mwnpState().schematicOpen === false && mwnpState().visibleCard === "step", "back on the Step card").toBe(true)
+      }
+      if (want.name === "close" && i === 19) {
+        expect(a.result, "close closed the report").toBe("Closed")
+        expect(mwnpState().visibleCard, "no card is left").toBe("home")
       }
       if (want.name === "log" && a.arg === "0") await waitFor((s) => s.visibleCard === "finding", 3000, "finding card after the 0 V reading")
       if (want.name === "retest") {
