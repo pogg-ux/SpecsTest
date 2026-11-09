@@ -38,17 +38,28 @@ function withinOneEdit(a: string, b: string): boolean {
   return a.length > b.length ? a.substring(i + 1) === b.substring(i) : a.substring(i) === b.substring(i + 1)
 }
 
+/**
+ * A word that SOUNDS like "sparky" (same phonetic key, 5+ letters): "spargi", "sporky", "sparkee", "spurgy". Live ASR gave "Spargi" for
+ * "Sparky", two letters off, so letter distance alone missed it. "sports", "party", "spooky", "sparkle" have different keys.
+ */
+const WAKE_KEY = phoneticKey(WAKE_WORD)
+function soundsLikeWake(w: string): boolean {
+  return w.length >= 5 && phoneticKey(w) === WAKE_KEY
+}
+/** Real words with the same sound that must not split a dictated note ("note the spark gap"). */
+const NOT_MID_WAKE: {[w: string]: boolean} = {spark: true, sprig: true, spork: true}
+
 /** How many tokens from `i` are the wake word at the start of a transcript (0 = not a wake word). */
 function wakeLenAtStart(tokens: string[], i: number): number {
   const w = tokens[i]
   if (w === "spark" && i + 1 < tokens.length && WAKE_SPARK_TAIL[tokens[i + 1]] === true) return 2
-  return WAKE_LISTED[w] === true || withinOneEdit(w, WAKE_WORD) ? 1 : 0
+  return WAKE_LISTED[w] === true || withinOneEdit(w, WAKE_WORD) || soundsLikeWake(w) ? 1 : 0
 }
 
-/** How many tokens from `i` are a wake word later in the transcript (strict spellings only). */
+/** How many tokens from `i` are a wake word later in the transcript (strict spellings and sound-alikes, not real words like "spark"). */
 function wakeLenMid(tokens: string[], i: number): number {
   if (tokens[i] === "spark" && i + 1 < tokens.length && tokens[i + 1] === "key") return 2
-  return WAKE_MID[tokens[i]] === true ? 1 : 0
+  return WAKE_MID[tokens[i]] === true || (NOT_MID_WAKE[tokens[i]] !== true && soundsLikeWake(tokens[i])) ? 1 : 0
 }
 
 /** Lower case, punctuation to spaces (a "." between digits stays), single spaces. */

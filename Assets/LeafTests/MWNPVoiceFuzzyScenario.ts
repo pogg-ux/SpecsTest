@@ -5,12 +5,21 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {COMMAND_CONFIDENCE, interpret, speakNumber} from "../Scripts/MWNPSpeech"
+import {COMMAND_CONFIDENCE, interpret, speakNumber, wakeSegments} from "../Scripts/MWNPSpeech"
 import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 @component
 export class MWNPVoiceFuzzyScenario extends Scenario {
   async run(): Promise<void> {
+    // ── The wake word as live ASR writes it (the log showed "Spargi" for "Sparky") ──
+    for (const w of ["Sporky", "Spargi", "Spargi.", "sparkey", "sparkie", "sparki", "Spark e", "spark he", "sparks", "parky", "sporty", "spunky"]) {
+      expect(wakeSegments(w + ", report symptom").join("|"), "wake word '" + w + "'").toBe("report symptom")
+    }
+    expect(wakeSegments("Spargi. Spargi. Confirm.").join("|"), "a repeated 'Spargi' splits like a repeated 'Sparky'").toBe("|confirm")
+    for (const w of ["sports", "party", "spooky", "sparkle", "sparrow"]) {
+      expect(wakeSegments(w + ", report symptom").length, "'" + w + "' is not the wake word").toBe(0)
+    }
+
     // ── Misheard variants: each must be a fuzzy match to the right command, at or above the threshold ──
     const variants: {[command: string]: string[]} = {
       report_symptom: ["report simptom", "report symtom", "reporting symptom"],
@@ -83,11 +92,22 @@ export class MWNPVoiceFuzzyScenario extends Scenario {
     await ui.tap("Btn_Lib_Job")
     await waitFor((s) => s.visibleCard === "job", 3000, "job card")
     let n = sparky.acted.length
-    sparky.inject("Sparky, report simptom")
+    // "Sporky" (a wake-word mishearing) + an exact command.
+    sparky.inject("Sporky, report symptom")
     await sleep(500)
-    expect(last().name, "'report simptom' ran report_symptom").toBe("report_symptom")
+    expect(last().name, "'Sporky, report symptom' ran report_symptom").toBe("report_symptom")
     expect(mwnpState().visibleCard, "and opened the symptom picker").toBe("symptoms")
     expect(sparky.acted.length, "once").toBe(n + 1)
+    await sleep(2100)
+    sparky.inject("Sparky, close")
+    await sleep(500)
+    expect(mwnpState().visibleCard, "closed -> library menu").toBe("home")
+    // "Spargi" (heard live for "Sparky") + a misheard command.
+    await sleep(2100)
+    sparky.inject("Spargi, report simptom")
+    await sleep(500)
+    expect(last().name, "'Spargi, report simptom' ran report_symptom").toBe("report_symptom")
+    expect(mwnpState().visibleCard, "and opened the symptom picker again").toBe("symptoms")
     await ui.tap("Btn_Symptom_EXTEND")
     await waitFor((s) => s.visibleCard === "step" && s.activePoint === "TS-4", 3000, "step card at TS-4")
 
