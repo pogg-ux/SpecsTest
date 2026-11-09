@@ -760,9 +760,11 @@ export class MWNPMain extends BaseScriptComponent {
       this.voiceClips.push("dismiss_safety")
       return "Dismiss the safety notice first"
     }
-    // Hidden display: the commands that act on a card show the display first, so the tech never gets stuck. "show" / "hide" /
-    // "close" / "dismiss" deal with it themselves.
-    if (this.displayHidden && ["hide_display", "show_display", "close", "dismiss", "ask"].indexOf(name) < 0) {
+    // Hidden display: the commands that open or act on a card show the display first, so the tech never gets stuck. "show" / "hide" /
+    // "close" / "dismiss" deal with it themselves. log / next / back / repeat / undo work the test, not a card: they run with the
+    // cards hidden (Sparky still speaks; the badges and the step's wire highlight stay on the cabinet). A finding they produce
+    // shows the display (showFinding), so it is never missed.
+    if (this.displayHidden && ["hide_display", "show_display", "close", "dismiss", "ask", "log", "next", "back", "repeat", "undo"].indexOf(name) < 0) {
       this.setDisplayHidden(false)
       this.log("voice auto-show for " + name)
     }
@@ -1997,6 +1999,12 @@ export class MWNPMain extends BaseScriptComponent {
     const agent = this.agent as MWNPAgent
     const f = agent.finding
     if (!f) return
+    // A finding is never missed: with the display hidden (readings by voice run hidden) it comes back first.
+    if (this.hiddenFlag) {
+      this.setDisplayHidden(false)
+      this.revealLabels()
+      this.log("finding auto-show")
+    }
     if (f.kind === "component") this.cabinet.setOutline(f.id, "red")
     this.cabinet.setActivePoint(null, null)
     this.partTags.hideExpected()
@@ -2417,7 +2425,8 @@ export class MWNPMain extends BaseScriptComponent {
     const stepKey = JSON.stringify([ids, wire])
     if (stepKey !== this.labelStepKey) {
       this.labelStepKey = stepKey
-      if (!always && ids) this.revealLabels()
+      // A hidden display keeps its tags hidden through step changes (readings by voice); "show" reveals them.
+      if (!always && ids && !this.hiddenFlag) this.revealLabels()
     }
     const want = always || getTime() < this.labelRevealUntil
     if (want !== this.tagsOn) {

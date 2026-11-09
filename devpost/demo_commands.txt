@@ -1,8 +1,10 @@
 tech_01.mp3|Sparky, understood
 tech_02.mp3|Sparky, report symptom
 tech_03.mp3|Sparky, extend doesn't work
+tech_17.mp3|Sparky, hide
 tech_04.mp3|Sparky, log twelve point one
 tech_05.mp3|Sparky, log twelve point zero
+tech_18.mp3|Sparky, show
 tech_06.mp3|Sparky, log zero
 tech_07.mp3|Sparky, why that terminal
 tech_08.mp3|Sparky, what's the torque spec on the terminals
