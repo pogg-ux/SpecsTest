@@ -204,6 +204,235 @@ export function parseCommand(segment: string): VoiceCommand | null {
   return null
 }
 
+// ── Fuzzy command matching ────────────────────────────────────────────────────────────────────────────────────────────────────────
+// parseCommand above is the strict parser (exact phrases). When a segment is not one of them, interpret() below compares it with
+// every known command phrase, word by word, and acts only when the best match is clearly good:
+//   - score = 1 - (word edit distance) / (longest phrase length in words). A substituted word costs 1 - similarity, where similarity
+//     is the letter edit similarity, or 0.9 for two words that sound alike (same phonetic key, 4+ letters). "under stood" (split) also counts.
+//   - best score < COMMAND_CONFIDENCE: nothing runs (Sparky says "Say again?").
+//   - another command scores within AMBIGUITY_GAP of the best (and is itself above the threshold): nothing runs (Sparky asks "Did you mean X or Y?").
+//   - NUMBERS ARE NEVER FUZZY: a word with a digit or a number word must match exactly, and "log <reading>" is parsed strictly. A reading that is
+//     not a clean number ("to", "for", "oh" can be 2, 4, 0 or plain words) is read back for a "Sparky, yes" instead of being logged.
+
+/** Minimum match score (0..1) at which a fuzzy match acts. */
+export const COMMAND_CONFIDENCE = 0.8
+/** Two different commands this close to the best score (both above the threshold) are ambiguous: ask instead of guessing. */
+const AMBIGUITY_GAP = 0.1
+
+export interface Phrase {
+  name: string
+  arg: string
+  phrase: string
+}
+const phr = (name: string, arg: string, ...phrases: string[]): Phrase[] => phrases.map((p) => ({name, arg, phrase: p}))
+
+/** Every spoken form of the fixed commands (the commands with a free argument - log, note, ask, highlight - are handled by their keyword). */
+export const COMMAND_PHRASES: Phrase[] = ([] as Phrase[]).concat(
+  phr("next", "", "next", "next step"),
+  phr("back", "", "back", "go back", "previous step"),
+  phr("repeat", "", "repeat", "repeat that", "say again"),
+  phr("undo", "", "undo", "undo that", "undo last"),
+  phr("close", "", "close", "close it", "close this"),
+  phr("show_schematic", "", "show schematic", "open schematic"),
+  phr("open_library", "", "library", "open library", "show library"),
+  phr("open_report", "", "report", "open report", "show report", "job report", "open job report"),
+  phr("open_camera", "", "camera", "open camera", "show camera"),
+  phr("show_labels", "", "show me", "show labels"),
+  phr("clear_labels", "", "clear", "clear labels", "hide labels"),
+  phr("hide_display", "", "hide", "hide card", "hide cards", "hide display"),
+  phr("show_display", "", "show", "show card", "show cards", "show display"),
+  phr("open_job", "", "job", "open job", "show job"),
+  phr("open_options", "", "options", "open options", "show options"),
+  phr("s1_up", "", "s1 up", "switch up"),
+  phr("s1_down", "", "s1 down", "switch down"),
+  phr("fixed", "", "fixed", "it is fixed", "yes fixed", "problem solved"),
+  phr("not_fixed", "", "not fixed", "still faulty", "no not fixed"),
+  phr("end_job", "", "end job"),
+  phr("report_symptom", "", "report symptom", "report a symptom", "show symptoms", "open symptoms", "symptoms", "symptom list"),
+  phr("open_notes", "", "notes", "open notes", "show notes"),
+  phr("save_note", "", "save note", "save the note"),
+  phr("dismiss", "", "dismiss", "ok", "okay", "understood"),
+  phr("symptom", "extend", "extend doesnt work", "symptom extend"),
+  phr("symptom", "retract", "retract doesnt work", "symptom retract"),
+  phr("symptom", "neither", "neither works"),
+  phr("retest", "", "retest", "fuse replaced", "repaired", "repaired retest", "fuse replaced retest", "replaced"),
+  phr("new_job", "", "new job", "start job", "start new job"),
+  phr("yes", "", "yes"),
+  phr("no", "", "no"),
+  phr("not_yet", "", "not yet"),
+  phr("more", "", "more"),
+  phr("less", "", "less"),
+  phr("cancel", "", "cancel")
+)
+
+const NUMBER_WORDS: {[w: string]: boolean} = {point: true, dot: true}
+for (const w of Object.keys(ONES)) NUMBER_WORDS[w] = true
+for (const w of Object.keys(TENS)) NUMBER_WORDS[w] = true
+/** A word that carries a number: never fuzzy-matched. */
+function numberLike(w: string): boolean {
+  return /\d/.test(w) || NUMBER_WORDS[w] === true
+}
+
+function letterEdits(a: string, b: string): number {
+  const prev: number[] = []
+  for (let j = 0; j <= b.length; j++) prev.push(j)
+  for (let i = 1; i <= a.length; i++) {
+    let diag = prev[0]
+    prev[0] = i
+    for (let j = 1; j <= b.length; j++) {
+      const up = prev[j]
+      prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, diag + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1))
+      diag = up
+    }
+  }
+  return prev[b.length]
+}
+
+/** A rough sound key: voiced/unvoiced pairs merged (b/p, d/t, g/k/c/q, v/f, z/s), vowels and h/w dropped after the first letter. */
+export function phoneticKey(word: string): string {
+  let w = word.toLowerCase().replace(/[^a-z]/g, "")
+  w = w.replace(/ph/g, "f").replace(/ck/g, "k").replace(/^kn/, "n").replace(/^wr/, "r").replace(/x/g, "ks").replace(/c(?=[eiy])/g, "s")
+  const MAP: {[c: string]: string} = {b: "p", d: "t", g: "k", c: "k", q: "k", v: "f", z: "s"}
+  let out = ""
+  for (let i = 0; i < w.length; i++) {
+    const c = w.charAt(i)
+    const m = MAP[c] !== undefined ? MAP[c] : c
+    if (i > 0 && "aeiouyhw".indexOf(m) >= 0) continue
+    if (out.length > 0 && out.charAt(out.length - 1) === m) continue
+    out += m
+  }
+  return out
+}
+
+/** 0..1: how alike two words are. Number words never match approximately. */
+function wordSim(a: string, b: string): number {
+  if (a === b) return 1
+  if (numberLike(a) || numberLike(b)) return 0
+  const letters = 1 - letterEdits(a, b) / Math.max(a.length, b.length)
+  let sound = 0
+  if (a.length >= 4 && b.length >= 4) {
+    const ka = phoneticKey(a)
+    if (ka.length >= 3 && ka === phoneticKey(b)) sound = 0.9
+  }
+  return Math.max(letters, sound)
+}
+
+/** Word-level similarity of two phrases (token edit distance, a substitution costing 1 - wordSim). 1 = identical. */
+function phraseScore(heard: string[], phrase: string[]): number {
+  const n = heard.length
+  const m = phrase.length
+  if (n === 0 || m === 0) return 0
+  const d: number[][] = []
+  for (let i = 0; i <= n; i++) {
+    d.push([])
+    for (let j = 0; j <= m; j++) d[i].push(i === 0 ? j : j === 0 ? i : 0)
+  }
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (1 - wordSim(heard[i - 1], phrase[j - 1])))
+    }
+  }
+  return 1 - d[n][m] / Math.max(n, m)
+}
+
+/** Score of a heard text against one phrase: word by word, or with the spaces taken out ("under stood" = "understood"). */
+function scoreAgainst(heard: string[], phrase: string): number {
+  const p = phrase.split(" ")
+  let s = phraseScore(heard, p)
+  if (heard.length > 1 || p.length > 1) s = Math.max(s, wordSim(heard.join(""), p.join("")) * 0.98)
+  return s
+}
+
+/** "12.1" -> "Twelve point one" (what Sparky reads back). Whole numbers over 99 are read digit by digit. */
+export function speakNumber(value: string): string {
+  const W = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+  const T = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+  const parts = value.split(".")
+  const ip = parts[0]
+  let words: string[]
+  if (ip.length <= 2) {
+    const v = parseInt(ip, 10)
+    words = [v < 20 ? W[v] : T[Math.floor(v / 10)] + (v % 10 > 0 ? " " + W[v % 10] : "")]
+  } else words = ip.split("").map((c) => W[parseInt(c, 10)])
+  if (parts.length > 1) words.push("point", ...parts[1].split("").map((c) => W[parseInt(c, 10)]))
+  const s = words.join(" ")
+  return s.charAt(0).toUpperCase() + s.substring(1)
+}
+
+const HOMOPHONE_DIGITS: {[w: string]: boolean} = {to: true, too: true, for: true, o: true, oh: true}
+/** The reading in `text` as the number pad takes it (null = not a number), and whether every word was unmistakably a number. */
+export function numberClarity(text: string): {value: string | null; clean: boolean} {
+  const value = parseNumber(text)
+  if (value === null) return {value: null, clean: false}
+  const tokens = normalize(text).split(" ")
+  return {value, clean: tokens.every((w) => HOMOPHONE_DIGITS[w] !== true)}
+}
+
+/** How "log" comes out of live ASR; a reading after one of these is always read back first. */
+const LOG_ALIASES: {[w: string]: boolean} = {lock: true, lug: true, logs: true, logged: true, lag: true, luck: true}
+
+export interface Interpretation {
+  /** exact: strict parse | fuzzy: close enough to one command | ambiguous: two close commands | confirm_log: read the value back first |
+   *  unclear_log: "log" without a usable number | none: nothing matched. */
+  kind: "exact" | "fuzzy" | "ambiguous" | "confirm_log" | "unclear_log" | "none"
+  /** The command to run (exact / fuzzy). */
+  cmd: VoiceCommand | null
+  /** Match score 0..1 (exact = 1; none = the best score found). */
+  score: number
+  /** The command it was matched to ("report_symptom", "log:12.1", "none"). */
+  matched: string
+  /** The catalog phrase a fuzzy match was made to, or the two phrases of an ambiguous one joined by " / ". */
+  phrase: string
+  /** ambiguous: the two phrases to offer. */
+  options: string[]
+  /** confirm_log: the number as the pad takes it. */
+  value: string
+}
+
+function label(c: VoiceCommand): string {
+  return c.name + (c.arg ? ":" + c.arg : "")
+}
+
+/** Decides what a segment (the text after the wake word) is. Strict parse first; fuzzy matching only when that finds nothing. */
+export function interpret(segment: string, catalog: Phrase[] = COMMAND_PHRASES): Interpretation {
+  const t = normalize(segment).replace(/^(the|a) /, "")
+  const res = (kind: Interpretation["kind"], cmd: VoiceCommand | null, score: number, matched: string, phrase: string = "", options: string[] = [], value: string = ""): Interpretation => ({kind, cmd, score, matched, phrase, options, value})
+  const exact = parseCommand(segment)
+  if (exact) {
+    if (exact.name === "log") {
+      const m = /^log (.+)$/.exec(t)
+      const c = numberClarity(m ? m[1].replace(/ volts?$/, "") : "")
+      if (c.value === null) return res("unclear_log", null, 1, "log")
+      if (!c.clean) return res("confirm_log", null, 1, "log:" + c.value, "", [], c.value)
+    }
+    return res("exact", exact, 1, label(exact))
+  }
+  const tokens = t.split(" ").filter((w) => w.length > 0)
+  if (tokens.length === 0) return res("none", null, 0, "none")
+  // "lock twelve point one": a misheard "log". The number is still strict, and the value is always read back.
+  if (tokens.length > 1 && LOG_ALIASES[tokens[0]] === true) {
+    const c = numberClarity(tokens.slice(1).join(" ").replace(/ volts?$/, ""))
+    return c.value === null ? res("none", null, 0, "none") : res("confirm_log", null, 0.9, "log:" + c.value, tokens[0], [], c.value)
+  }
+  const best: {[key: string]: {score: number; p: Phrase}} = {}
+  for (const p of catalog) {
+    const s = scoreAgainst(tokens, p.phrase)
+    const key = p.name + ":" + p.arg
+    if (!best[key] || s > best[key].score) best[key] = {score: s, p}
+  }
+  const ranked = Object.keys(best).map((k) => best[k]).sort((a, b) => b.score - a.score)
+  const top = ranked[0]
+  if (!top) return res("none", null, 0, "none")
+  const EPS = 1e-9
+  if (top.score < COMMAND_CONFIDENCE - EPS) return res("none", null, top.score, "none", top.p.phrase)
+  const second = ranked[1]
+  if (second && second.score >= COMMAND_CONFIDENCE - EPS && top.score - second.score < AMBIGUITY_GAP) {
+    return res("ambiguous", null, top.score, "ambiguous", top.p.phrase + " / " + second.p.phrase, [top.p.phrase, second.p.phrase])
+  }
+  const cmd: VoiceCommand = {name: top.p.name, arg: top.p.arg, complete: true, needsSettle: false}
+  return res("fuzzy", cmd, top.score, label(cmd), top.p.phrase)
+}
+
 const LETTER_WORDS: {[w: string]: string} = {ay: "a", eh: "a", bee: "b", be: "b", see: "c", sea: "c", dee: "d", ee: "e", gee: "g", pee: "p", tee: "t", vee: "v", zee: "z"}
 /** Letters ASR confuses with each other when spelling ("b", "c", "d" all end in the same vowel). */
 const EE_SET = "bcdegptvz"

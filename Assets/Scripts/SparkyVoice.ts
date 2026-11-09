@@ -8,7 +8,7 @@
 // Must not: decide what a command does (MWNPMain.voiceCommand maps it to the same actions the buttons run), or touch cards.
 // Test handles: scene object "SparkyVoice", "SparkyIndicator", global.mwnpSparky.
 
-import {normalize, parseCommand, VoiceCommand, wakeSegments} from "./MWNPSpeech"
+import {COMMAND_CONFIDENCE, Interpretation, interpret, normalize, parseCommand, speakNumber, VoiceCommand, wakeSegments} from "./MWNPSpeech"
 import {ask, OFFLINE, readToken, speak} from "./SparkyAsk"
 import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {addCardHeader, addFitText, fitText, makeCardBody, makeObj, MIN_GAP_CM, textWidthCm, TEXT_BODY} from "./MWNPSharedUI"
@@ -23,6 +23,7 @@ const SETTLE_SEC = 1.0 // a command with an argument acts when its text has not 
 const HEARD_SEC = 2.0
 const MESSAGE_SEC = 4.0
 const MAX_FAILURES = 6 // real ASR errors in a row before Sparky gives up (the buttons keep working)
+const LOG_CONFIRM_SEC = 20 // a reading read back for confirmation waits this long for "Sparky, yes"
 
 /** Seconds after a clip or an Ask answer ends before Sparky listens again: its own last echo must not be heard as a command. */
 const SPEAK_TAIL_SEC = 0.5
@@ -273,22 +274,41 @@ export class SparkyVoice extends BaseScriptComponent {
     }
   }
 
-  /** Acts on every complete command not yet handled in this utterance. kind: "partial" | "settled" | "final". */
+  /**
+   * Acts on every complete command not yet handled in this utterance. kind: "partial" | "settled" | "final".
+   * An exact phrase acts at once (arguments wait for the text to settle). A fuzzy match, a reading to confirm, and "Say again?" /
+   * "Did you mean ...?" wait for the settled text or the final, so a half-heard word is never acted on.
+   */
   private process(kind: string): void {
     for (let i = this.handled; i < this.lastSegs.length; i++) {
       const seg = this.lastSegs[i]
       const isLast = i === this.lastSegs.length - 1
-      const cmd = parseCommand(seg)
-      if (!cmd || !cmd.complete) {
-        if (isLast && kind !== "final") break // may still grow into a command
+      const it = interpret(seg)
+      if (it.kind === "exact" && it.cmd) {
+        const cmd = it.cmd
+        if (cmd.needsSettle && isLast && kind === "partial") break // "log twelve" may become "log twelve point five"
+        if (cmd.settleSec && kind === "settled" && isLast && getTime() - this.lastChangeT < cmd.settleSec) break
+        this.logMatch(it, seg)
+        this.act(cmd)
         this.handled = i + 1
-        if (kind === "final" && seg.length > 0) this.showMessage("Didn't catch that: " + seg)
         continue
       }
-      if (cmd.needsSettle && isLast && kind === "partial") break // "log twelve" may become "log twelve point five"
-      if (cmd.settleSec && kind === "settled" && isLast && getTime() - this.lastChangeT < cmd.settleSec) break
-      this.act(cmd)
+      if (it.kind === "fuzzy" || it.kind === "confirm_log") {
+        if (isLast && kind === "partial") break // may still be extended or corrected
+        this.logMatch(it, seg)
+        if (it.kind === "fuzzy" && it.cmd) this.act(it.cmd)
+        else this.askLogConfirm(it.value)
+        this.handled = i + 1
+        continue
+      }
+      // Nothing usable (none / ambiguous / a "log" without a number): it may still grow into a command, so only a final gives up.
+      if (isLast && kind !== "final") break
       this.handled = i + 1
+      if (seg.length === 0) continue
+      this.logMatch(it, seg)
+      if (it.kind === "ambiguous") this.sayPrompt("Did you mean " + it.options[0] + " or " + it.options[1] + "?", "")
+      else if (it.kind === "unclear_log") this.sayPrompt("Say the reading again.", "")
+      else this.sayPrompt("Say again?", "say_again")
     }
     // Dictation grows after it was first acted on (a pause mid-sentence): keep the dictated card up to date.
     const k = this.handled - 1
@@ -300,7 +320,75 @@ export class SparkyVoice extends BaseScriptComponent {
 
   private lastNoteArg = ""
 
+  // ── What Sparky says back: "Say again?", "Did you mean X or Y?", "Twelve point one. Log it?" ──────────────
+
+  /** Everything Sparky said as a prompt, in order (tests, log). Spoken as a clip when one exists, else by text-to-speech when a token is set; always shown. */
+  spoken: string[] = []
+  /** A reading waiting for "Sparky, yes" (a number that was not clean). */
+  private pendingLog: {value: string; until: number} | null = null
+  private promptTracks: {[text: string]: AudioTrackAsset} = {}
+
+  private logMatch(it: Interpretation, seg: string): void {
+    const detail =
+      it.kind === "fuzzy" || it.kind === "confirm_log"
+        ? ' heard "' + seg + '"' + (it.phrase ? ' as "' + it.phrase + '"' : "")
+        : it.kind === "ambiguous"
+        ? " " + it.phrase
+        : it.kind === "none" && it.phrase
+        ? ' best guess "' + it.phrase + '" is below ' + COMMAND_CONFIDENCE
+        : ""
+    this.log("matched: " + it.matched + " (" + it.score.toFixed(2) + ")" + detail)
+  }
+
+  private sayPrompt(text: string, clipName: string): void {
+    this.spoken.push(text)
+    this.log("SAY: " + text)
+    this.showMessage(text)
+    if (clipName && this.hasClip(clipName)) {
+      this.playClips([clipName])
+      return
+    }
+    if (!this.askSpeak || !this.hasAskToken()) return // no voice available: the line on the indicator is all there is
+    const cached = this.promptTracks[text]
+    if (cached) {
+      this.playTrack(cached)
+      return
+    }
+    const token = this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)
+    this.speechRequests++
+    speak(text, token).then(
+      (track: AudioTrackAsset) => {
+        this.promptTracks[text] = track
+        this.playTrack(track)
+      },
+      (e: any) => this.log("prompt speech failed: " + e)
+    )
+  }
+
+  /** Reads the number back and waits for "Sparky, yes" (any other command, or 20 s, drops it). Nothing is logged yet. */
+  private askLogConfirm(value: string): void {
+    this.pendingLog = {value, until: getTime() + LOG_CONFIRM_SEC}
+    const text = speakNumber(value) + ". Log it?"
+    this.acted.push({name: "log_confirm", arg: value, result: text})
+    this.requested.push([])
+    this.sayPrompt(text, "")
+  }
+
   private act(cmd: VoiceCommand): void {
+    const pending = this.pendingLog
+    this.pendingLog = null
+    if (pending && getTime() <= pending.until) {
+      if (cmd.name === "yes") {
+        this.log("log confirmed: " + pending.value)
+        cmd = {name: "log", arg: pending.value, complete: true, needsSettle: false}
+      } else if (cmd.name === "no" || cmd.name === "cancel") {
+        this.acted.push({name: cmd.name, arg: "", result: "Not logged"})
+        this.requested.push([])
+        this.log("log not confirmed: " + pending.value)
+        this.showMessage("Not logged")
+        return
+      }
+    }
     if (cmd.name === "note") this.lastNoteArg = cmd.arg
     const now = getTime()
     const key = cmd.name + ":" + normalize(cmd.arg)
