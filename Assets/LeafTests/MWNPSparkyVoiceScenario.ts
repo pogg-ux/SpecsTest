@@ -21,6 +21,16 @@ export class MWNPSparkyVoiceScenario extends Scenario {
     expect(parseNumber("banana"), "not a number").toBe(null)
     expect(wakeSegments("Sparky, next. Sparky, back.").join("|"), "two segments after two wake words").toBe("next|back")
     expect(wakeSegments("Spark key, next").join("|"), "'spark key' is accepted").toBe("next")
+    // Wake word as live ASR writes it: variants (one letter off "sparky" or listed) start a command; other words do not.
+    for (const v of ["Sporky", "sparkey", "sparkie", "sparki", "Spark e", "spark he", "sparks", "parky", "sporty", "spunky", "SPORKY!", "Sporky?", "sporky."]) {
+      expect(wakeSegments(v + ", next").join("|"), "wake variant '" + v + "'").toBe("next")
+    }
+    expect(wakeSegments("Sporky, report symptom").join("|"), "sporky + report symptom").toBe("report symptom")
+    expect(wakeSegments("sporky next sparky back").join("|"), "variants split segments").toBe("next|back")
+    for (const w of ["sports", "party", "sparrow", "spooky", "park", "marky", "hello"]) {
+      expect(wakeSegments(w + " next").length, "'" + w + "' is not the wake word").toBe(0)
+    }
+    expect(wakeSegments("sparky note the motor sparks badly").join("|"), "'sparks' mid-sentence does not split a note").toBe("note the motor sparks badly")
     expect(wakeSegments("hello sparky next").length, "must START with the wake word").toBe(0)
     expect(wakeSegments("the TV says next").length, "no wake word, no command").toBe(0)
     const logCmd = parseCommand("log twelve point zero")

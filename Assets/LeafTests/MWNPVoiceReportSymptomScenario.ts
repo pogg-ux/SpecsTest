@@ -103,6 +103,26 @@ export class MWNPVoiceReportSymptomScenario extends Scenario {
     sparky.inject("Sparky, job report", true)
     await sleep(600)
     expect(isReport(), "'job report' opens the Job Report: " + mwnpState().visibleCard).toBe(true)
+    // The wake word as live ASR writes it: "Sporky, report symptom" works; "sports ..." / "party ..." do nothing.
+    await sleep(2100)
+    sparky.inject("Sparky, close")
+    await sleep(500)
+    expect(mwnpState().visibleCard, "closed -> library menu").toBe("home")
+    n = sparky.acted.length
+    sparky.inject("Sports, report symptom")
+    sparky.inject("Party, report symptom")
+    await sleep(400)
+    expect(sparky.acted.length, "'sports' / 'party' are not the wake word").toBe(n)
+    expect(mwnpState().visibleCard, "and nothing opened").toBe("home")
+    for (const w of ["Sporky", "Sparkey", "Spark e"]) {
+      await sleep(2100)
+      sparky.inject(w + ", report symptom")
+      await sleep(500)
+      expect(mwnpState().visibleCard, w + ", report symptom opens the symptom picker").toBe("symptoms")
+      await sleep(2100)
+      sparky.inject("Sparky, close")
+      await sleep(500)
+    }
     ev("VOICE REPORT SYMPTOM PASS", {acted: sparky.acted.length})
   }
 }
