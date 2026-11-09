@@ -92,10 +92,25 @@ export function parseNumber(text: string): string | null {
   return out.length <= 6 ? out : null // the number pad takes six characters
 }
 
+/**
+ * Commands whose shortest phrase is a word-prefix of a phrase of a DIFFERENT command (collision audit, see parseCommand):
+ *   open_report "report"  <- "report symptom" / "report a symptom" (report_symptom)
+ *   open_job    "job"     <- "job report" (open_report)
+ *   show_display "show"   <- "show me" / "show labels" / "show schematic" / "show library" / "show symptoms" ... (many)
+ *   hide_display "hide"   <- "hide labels" (clear_labels)
+ *   yes         "yes"     <- "yes fixed" (fixed)
+ *   no          "no"      <- "no not fixed" (not_fixed)
+ * Prefixes inside the SAME command ("next" / "next step", "close" / "close it", "undo" / "undo that") are harmless and not listed.
+ */
+const HEAD_OF_LONGER: {[name: string]: boolean} = {open_report: true, open_job: true, show_display: true, hide_display: true, yes: true, no: true}
+
 /** Parses the text after the wake word. Returns null when it is not a command Sparky knows. */
 export function parseCommand(segment: string): VoiceCommand | null {
   const t = normalize(segment).replace(/^(the|a) /, "")
-  const done = (name: string): VoiceCommand => ({name, arg: "", complete: true, needsSettle: false})
+  // A command whose phrase is the START of a longer phrase ("report" -> "report symptom", "yes" -> "yes fixed") must not act on a
+  // partial: the partial "sparky report" arrives before "symptom" and would open the wrong card. It acts on the final, or once the
+  // text has stopped changing (SparkyVoice's settle). The longer phrase has needsSettle false, so it acts the moment it is heard.
+  const done = (name: string): VoiceCommand => ({name, arg: "", complete: true, needsSettle: HEAD_OF_LONGER[name] === true})
   if (/^(next|next step)$/.test(t)) return done("next")
   if (/^(back|go back|previous step)$/.test(t)) return done("back")
   if (/^(repeat|repeat that|say again)$/.test(t)) return done("repeat")
@@ -103,7 +118,7 @@ export function parseCommand(segment: string): VoiceCommand | null {
   if (/^close( it| this)?$/.test(t)) return done("close")
   if (/^(show|open) (the )?schematic$/.test(t)) return done("show_schematic")
   if (/^((show|open) (the )?)?library$/.test(t)) return done("open_library")
-  if (/^((show|open) (the )?)?report$/.test(t)) return done("open_report")
+  if (/^((show|open) (the )?)?(job )?report$/.test(t)) return done("open_report")
   if (/^((show|open) (the )?)?camera$/.test(t)) return done("open_camera")
   if (/^(show me|show (the )?labels)$/.test(t)) return done("show_labels")
   if (/^(clear|clear (the )?labels|hide (the )?labels)$/.test(t)) return done("clear_labels")
