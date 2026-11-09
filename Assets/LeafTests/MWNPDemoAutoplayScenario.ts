@@ -7,7 +7,7 @@ import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {DEMO_DRIVER, DemoAutoplay, DemoRunner} from "../Scripts/DemoDriver"
 import {DEMO_HOLD_SEC, DEMO_INTRO_HOLD_SEC, DEMO_LINES} from "../Scripts/DemoScript"
-import {ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
+import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 /** The command each line must run, in order (SparkyVoice.acted[].name). */
 const NAMES = ["dismiss", "report_symptom", "symptom", "hide_display", "log", "log", "show_display", "log", "ask", "ask", "retest", "log", "fixed", "note", "save_note", "end_job", "show_labels"]
@@ -68,6 +68,14 @@ export class MWNPDemoAutoplayScenario extends Scenario {
     sparky.askSpeak = false
     sparky.askTokenOverride = null // no network request for the two questions
     sparky.addFakeClip("logged", 3.0) // a stand-in for Sparky's reply to a reading: the autoplay has to wait for it
+    sparky.addFakeClip("step_EXTEND_1", 0.5) // step 1 after picking the symptom
+    // Spy on every request to play clips (by voice command or by button), keeping the real behavior.
+    const clipCalls: string[][] = []
+    const origPlay = sparky.playClips.bind(sparky)
+    sparky.playClips = (names: string[]) => {
+      clipCalls.push(names.slice())
+      origPlay(names)
+    }
     await sleep(300)
     const n0 = sparky.acted.length
     const lineStarts: number[] = []
@@ -121,6 +129,21 @@ export class MWNPDemoAutoplayScenario extends Scenario {
     }
     expect(mwnpState().jobActive, "end job closed the job").toBe(false)
     expect(mwnpState().labelTags.on, "show labels turned the labels on").toBe(true)
+
+    // Sparky speaks step 1 after "extend doesn't work" (the 3rd command): the clip is asked for and played.
+    expect(sparky.requested[n0 + 2].join(","), "picking the symptom by voice asks for step 1's clip").toBe("step_EXTEND_1")
+    expect(clipCalls.some((c) => c.indexOf("step_EXTEND_1") >= 0), "and Sparky played it").toBe(true)
+
+    // The same by button: a new job, then the EXTEND symptom button, plays step 1 too.
+    const ui = new MWNPLeafInteractor()
+    const before = clipCalls.length
+    await ui.tap("Btn_Lib_Job")
+    await ui.tap("Btn_NewJob")
+    await waitFor((s) => s.visibleCard === "symptoms", 3000, "symptom list")
+    expect(clipCalls.length, "opening the symptom list plays nothing").toBe(before)
+    await ui.tap("Btn_Symptom_EXTEND")
+    await waitFor((s) => s.visibleCard === "step" && s.activePoint === "TS-4", 3000, "step 1 after the symptom button")
+    expect(clipCalls.slice(before).some((c) => c.join(",") === "step_EXTEND_1"), "picking the symptom with the button speaks step 1: " + JSON.stringify(clipCalls.slice(before))).toBe(true)
     ev("DEMO AUTOPLAY PASS", {names: names.length, seconds: +(getTime() - t0).toFixed(1)})
   }
 }

@@ -163,6 +163,9 @@ export class MWNPLeafInteractor extends DefaultLeafInteractor {
     await waitFor((s) => s.visibleCard === "job", 3000, "job card")
     await this.tap("Btn_ReportSymptom")
     await waitFor((s) => s.visibleCard === "symptoms", 3000, "symptom list")
+    // Picking a symptom now makes Sparky speak step 1 (a ~7 s clip, during which it ignores commands): tests use stand-ins, not the real mp3s.
+    const sp = (global as any).mwnpSparky
+    if (sp && sp.setRealClips) sp.setRealClips(false)
     await this.tap("Btn_Symptom_EXTEND")
     return await waitFor((s) => s.visibleCard === "step" && s.activePoint === "TS-4", 3000, "step card at TS-4")
   }

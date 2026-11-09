@@ -164,6 +164,7 @@ export class SparkyVoice extends BaseScriptComponent {
 
   private start(): void {
     this.main = (global as any).mwnpAssistant
+    if (this.main) this.main.clipSink = (names: string[]) => this.playClips(names) // clips for button actions (picking a symptom)
     ;(global as any).mwnpAskTimerHost = this
     this.buildIndicator()
     if (this.asrEnabled) this.startAsr()
