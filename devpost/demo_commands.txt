@@ -1,0 +1,15 @@
+tech_01.mp3|Sparky, understood
+tech_02.mp3|Sparky, report symptom
+tech_03.mp3|Sparky, extend doesn't work
+tech_04.mp3|Sparky, log twelve point one
+tech_05.mp3|Sparky, log twelve point zero
+tech_06.mp3|Sparky, log zero
+tech_07.mp3|Sparky, why that terminal
+tech_08.mp3|Sparky, what's the torque spec on the terminals
+tech_11.mp3|Sparky, retest
+tech_12.mp3|Sparky, log twelve point zero
+tech_13.mp3|Sparky, yes fixed
+tech_09.mp3|Sparky, note replaced F1, half amp fast-blow
+tech_10.mp3|Sparky, save note
+tech_14.mp3|Sparky, end job
+tech_16.mp3|Sparky, show labels
