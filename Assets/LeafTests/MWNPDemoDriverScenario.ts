@@ -1,22 +1,24 @@
-// Demo driver: steps through all 15 demo lines and checks each command ran. The Right/Left arrow polling is a thin layer over
+// Demo driver: steps through all 17 demo lines and checks each command ran (and, around hide / show, what is on screen). The Right/Left arrow polling is a thin layer over
 // DemoRunner (next/back), which is what this drives; the clips are checked as imported assets, not played. DEMO_DRIVER stays false.
 // The presenter's only action is flipping S1 to UP right after "Sparky, retest" (the retest waits for it).
 
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
-import {sleep} from "Leaf.lspkg/Utils/common/Utils"
+import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {DEMO_DRIVER, DemoRunner} from "../Scripts/DemoDriver"
 import {DEMO_CLIPS, DEMO_LINES} from "../Scripts/DemoScript"
 import {MWNPLeafInteractor, ev, mwnpState, waitFor} from "./MWNPLeafInteractor"
 
 /** The clips in the order the script plays them (tech_15 is not in the script), and the command each line must run. */
-const CLIP_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 9, 10, 14, 16]
+const CLIP_ORDER = [1, 2, 3, 17, 4, 5, 18, 6, 7, 8, 11, 12, 13, 9, 10, 14, 16]
 const EXPECT: {name: string; arg?: string}[] = [
   {name: "dismiss"},
   {name: "report_symptom"},
   {name: "symptom", arg: "extend"},
+  {name: "hide_display"},
   {name: "log", arg: "12.1"},
   {name: "log", arg: "12.0"},
+  {name: "show_display"},
   {name: "log", arg: "0"},
   {name: "ask"},
   {name: "ask"},
@@ -84,6 +86,7 @@ export class MWNPDemoDriverScenario extends Scenario {
     const results: string[] = []
     const playedClips: number[] = []
     let notesBefore = 0
+    let seenFirst120 = false
     const runner = new DemoRunner(DEMO_LINES, (i) => playedClips.push(i), (c, f) => sparky.inject(c, f), (m) => print("[DEMO-TEST] " + m))
     for (let i = 0; i < N; i++) {
       const want = EXPECT[i]
@@ -95,7 +98,7 @@ export class MWNPDemoDriverScenario extends Scenario {
       const before = sparky.acted.length
       if (want.name === "note") notesBefore = mwnpState().notes.length
       runner.next()
-      await sleep(i === 6 || i === 7 ? 700 : 900)
+      await sleep(want.name === "ask" ? 700 : 900)
       const a = sparky.acted[sparky.acted.length - 1]
       expect(sparky.acted.length > before, "line " + (i + 1) + " '" + DEMO_LINES[i].command + "' ran something").toBe(true)
       expect(a.name + (want.arg !== undefined ? ":" + a.arg : ""), "line " + (i + 1) + " ran " + want.name + " -> " + a.result).toBe(want.name + (want.arg !== undefined ? ":" + want.arg : ""))
@@ -103,6 +106,36 @@ export class MWNPDemoDriverScenario extends Scenario {
       await sleep(300)
       if (want.name === "report_symptom") expect(mwnpState().visibleCard, "report symptom opened the symptom list").toBe("symptoms")
       if (want.name === "symptom") await waitFor((s) => s.visibleCard === "step" && s.activePoint === "TS-4", 3000, "step card at TS-4")
+      // Hide / show around the first two readings.
+      if (want.name === "hide_display") {
+        await waitFor((s) => s.display.hidden === true && s.display.alpha === 0 && s.display.fading === false, 3000, "cards faded out after 'hide'")
+        expect(mwnpState().display.alpha, "after 'hide' no card is visible (display alpha 0)").toBe(0)
+        expect(mwnpState().activePoint, "still on the first test point").toBe("TS-4")
+      }
+      if (want.name === "log" && a.arg === "12.1") {
+        expect(mwnpState().display.hidden, "the display is still hidden after logging 12.1").toBe(true)
+        expect(mwnpState().activePoint, "12.1 advanced the step to F1:IN").toBe("F1:IN")
+        expect(mwnpState().badges["TS-4"], "and added the TS-4 badge").toBe("12.1 V ✓")
+        const b = findSceneObjectByName("Badge_TS-4")
+        expect(!!b && b.isEnabledInHierarchy, "the badge is on the cabinet while the cards are hidden").toBe(true)
+        expect(mwnpState().display.labelsHidden === false && mwnpState().display.labelsAlpha === 1, "badges and the wire highlight are not faded").toBe(true)
+        expect(mwnpState().labelTags.on, "the component tags stay hidden").toBe(false)
+        expect(mwnpState().display.alpha, "no card is visible").toBe(0)
+      }
+      if (want.name === "log" && a.arg === "12.0" && !seenFirst120) {
+        seenFirst120 = true
+        expect(mwnpState().display.hidden, "the display is still hidden after logging 12.0").toBe(true)
+        expect(mwnpState().activePoint, "12.0 advanced the step to F1:OUT").toBe("F1:OUT")
+        expect(mwnpState().badges["F1:IN"], "and added the F1:IN badge").toBe("12.0 V ✓")
+        const b = findSceneObjectByName("Badge_F1:IN")
+        expect(!!b && b.isEnabledInHierarchy, "the F1:IN badge is on the cabinet while the cards are hidden").toBe(true)
+        expect(mwnpState().labelTags.on, "the component tags are still hidden").toBe(false)
+      }
+      if (want.name === "show_display") {
+        await waitFor((s) => s.display.hidden === false && s.display.alpha === 1 && s.display.fading === false, 3000, "cards faded back in after 'show'")
+        expect(mwnpState().visibleCard, "after 'show' the Step card is back").toBe("step")
+        expect(mwnpState().activePoint, "on the step the readings led to").toBe("F1:OUT")
+      }
       if (want.name === "log" && a.arg === "0") await waitFor((s) => s.visibleCard === "finding", 3000, "finding card after the 0 V reading")
       if (want.name === "retest") {
         // The presenter's one action: flip S1 to UP right after the retest starts.

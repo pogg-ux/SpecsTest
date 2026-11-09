@@ -1,8 +1,8 @@
-// DemoScript.ts — the demo's 15 lines: which spoken clip goes with which command, in the order they are stepped through.
+// DemoScript.ts — the demo's 17 lines: which spoken clip goes with which command, in the order they are stepped through.
 //
 // Copied from devpost/demo_commands.txt (clip|command, one per line). A Lens cannot read files outside Assets/ at runtime, so the
 // lines live here as a constant; if devpost/demo_commands.txt changes, change DEMO_LINES (and DEMO_CLIPS, same order) to match.
-// tech_15 ("yes") is not part of the script. Used only by DemoDriver.ts.
+// tech_15 ("yes") is not part of the script; tech_17 ("hide") and tech_18 ("show") are. Used only by DemoDriver.ts.
 
 export interface DemoLine {
   /** Clip file name in Assets/Audio/Tech. */
@@ -15,8 +15,10 @@ export const DEMO_LINES: DemoLine[] = [
   {clip: "tech_01.mp3", command: "Sparky, understood"},
   {clip: "tech_02.mp3", command: "Sparky, report symptom"},
   {clip: "tech_03.mp3", command: "Sparky, extend doesn't work"},
+  {clip: "tech_17.mp3", command: "Sparky, hide"},
   {clip: "tech_04.mp3", command: "Sparky, log twelve point one"},
   {clip: "tech_05.mp3", command: "Sparky, log twelve point zero"},
+  {clip: "tech_18.mp3", command: "Sparky, show"},
   {clip: "tech_06.mp3", command: "Sparky, log zero"},
   {clip: "tech_07.mp3", command: "Sparky, why that terminal"},
   {clip: "tech_08.mp3", command: "Sparky, what's the torque spec on the terminals"},
@@ -34,8 +36,10 @@ export const DEMO_CLIPS: AudioTrackAsset[] = [
   requireAsset("../Audio/Tech/tech_01.mp3") as AudioTrackAsset,
   requireAsset("../Audio/Tech/tech_02.mp3") as AudioTrackAsset,
   requireAsset("../Audio/Tech/tech_03.mp3") as AudioTrackAsset,
+  requireAsset("../Audio/Tech/tech_17.mp3") as AudioTrackAsset,
   requireAsset("../Audio/Tech/tech_04.mp3") as AudioTrackAsset,
   requireAsset("../Audio/Tech/tech_05.mp3") as AudioTrackAsset,
+  requireAsset("../Audio/Tech/tech_18.mp3") as AudioTrackAsset,
   requireAsset("../Audio/Tech/tech_06.mp3") as AudioTrackAsset,
   requireAsset("../Audio/Tech/tech_07.mp3") as AudioTrackAsset,
   requireAsset("../Audio/Tech/tech_08.mp3") as AudioTrackAsset,
