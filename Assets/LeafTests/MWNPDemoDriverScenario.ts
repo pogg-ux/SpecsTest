@@ -1,4 +1,4 @@
-// Demo driver: steps through all 17 demo lines and checks each command ran (and, around hide / show, what is on screen). The Right/Left arrow polling is a thin layer over
+// Demo driver: steps through all 17 demo lines and checks each command ran (and, around hide / show, what is on screen). The N/B key polling is a thin layer over
 // DemoRunner (next/back), which is what this drives; the clips are checked as imported assets, not played. DEMO_DRIVER stays false.
 // The presenter's only action is flipping S1 to UP right after "Sparky, retest" (the retest waits for it).
 

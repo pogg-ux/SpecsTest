@@ -60,6 +60,15 @@ export class SparkyVoice extends BaseScriptComponent {
   get speaking(): boolean {
     return this.asrPaused
   }
+  /** Text-to-speech requests sent and not yet answered (an Ask answer or a prompt whose audio is still being fetched). */
+  private speechInFlight = 0
+  /**
+   * True while Sparky is saying anything or is about to: a clip or answer playing (or in its tail), an Ask question being answered,
+   * or speech audio being fetched. Read-only; the demo autoplay waits on it before moving to the next line.
+   */
+  get busySpeaking(): boolean {
+    return this.asrPaused || this.askState === "thinking" || this.speechInFlight > 0
+  }
   /** How many transcripts were dropped because Sparky was speaking (tests, log). */
   droppedWhileSpeaking: number = 0
 
@@ -356,12 +365,17 @@ export class SparkyVoice extends BaseScriptComponent {
     }
     const token = this.askTokenOverride !== undefined ? this.askTokenOverride || "" : readToken(this.rsgSecret)
     this.speechRequests++
+    this.speechInFlight++
     speak(text, token).then(
       (track: AudioTrackAsset) => {
+        this.speechInFlight--
         this.promptTracks[text] = track
         this.playTrack(track)
       },
-      (e: any) => this.log("prompt speech failed: " + e)
+      (e: any) => {
+        this.speechInFlight--
+        this.log("prompt speech failed: " + e)
+      }
     )
   }
 
@@ -488,14 +502,19 @@ export class SparkyVoice extends BaseScriptComponent {
         if (!this.askSpeak) return
         const s0 = getTime()
         this.speechRequests++
+        this.speechInFlight++
         speak(text, token).then(
           (track: AudioTrackAsset) => {
+            this.speechInFlight--
             this.log("ASK speech ready after " + (getTime() - s0).toFixed(2) + " s")
             this.lastAnswerTrack = track // "Sparky, repeat" plays this again: no new request
             this.lastSpoken = "answer"
             this.playTrack(track)
           },
-          (e: any) => this.log("ASK speech failed: " + e)
+          (e: any) => {
+            this.speechInFlight--
+            this.log("ASK speech failed: " + e)
+          }
         )
       },
       (e: any) => {

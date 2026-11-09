@@ -31,6 +31,33 @@ export const DEMO_LINES: DemoLine[] = [
   {clip: "tech_16.mp3", command: "Sparky, show labels"},
 ]
 
+/**
+ * Autoplay (P key): seconds to hold after each line - once its clip, its command and any Sparky speech (clip, TTS, live answer) have
+ * fully finished - before the next line starts. Same order as DEMO_LINES; tweak the numbers here.
+ */
+export const DEMO_HOLD_SEC: number[] = [
+  7, //   1  understood
+  2, //   2  report symptom
+  10, //  3  extend doesn't work (labels fade)
+  10, //  4  hide
+  1.5, // 5  log twelve point one
+  1.5, // 6  log twelve point zero
+  1.5, // 7  show
+  6, //   8  log zero
+  1.5, // 9  why that terminal
+  6, //   10 what's the torque spec
+  2, //   11 retest (S1 is flipped to UP when this line has finished)
+  2, //   12 log twelve point zero
+  1.5, // 13 yes fixed
+  1.5, // 14 note
+  1.5, // 15 save note
+  5, //   16 end job
+  15, //  17 show labels
+]
+
+/** Autoplay: seconds to wait after P before the first line (the Sparky intro gets added in the edit). */
+export const DEMO_INTRO_HOLD_SEC = 15
+
 /** The clips, in the same order as DEMO_LINES (static references so Lens Studio imports and bundles them). */
 export const DEMO_CLIPS: AudioTrackAsset[] = [
   requireAsset("../Audio/Tech/tech_01.mp3") as AudioTrackAsset,
