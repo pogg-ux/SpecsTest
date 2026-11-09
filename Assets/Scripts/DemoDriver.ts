@@ -7,7 +7,8 @@
 //   B  steps back one line without playing anything (the next N plays that line again).
 //   P  autoplay: starts from line 1 (the cursor is reset first) and plays the whole script; P again stops it. Per line: the clip,
 //      then its command, then it waits until the clip AND all Sparky speech (clip, TTS, live Ask answer) have fully finished, then
-//      holds DEMO_HOLD_SEC[line] seconds. DEMO_INTRO_HOLD_SEC passes before the first line. When "retest" has finished, S1 is flipped
+//      holds DEMO_HOLD_SEC[line] seconds. Sparky speaks an intro first (then DEMO_INTRO_HOLD_SEC), a sign-off after "end job" and a closer after the
+//      last line's hold, each waited out like any Sparky speech. When "retest" has finished, S1 is flipped
 //      to UP (the retest waits for it). N / B are ignored while autoplay runs.
 // (Not the arrow keys, W/A/S/D or Q/E: the Spectacles preview uses those for camera movement.)
 // Live ASR is switched off while it runs, so the speakers cannot trigger Sparky. It shows nothing on screen; it only logs "[DEMO] ...".
@@ -15,7 +16,7 @@
 // (SparkyVoice does).
 // Test handle: global.mwnpDemo (only when it is running); DemoRunner and DemoAutoplay are the cursor / timing logic, tested on their own.
 
-import {DEMO_CLIPS, DEMO_HOLD_SEC, DEMO_INTRO_HOLD_SEC, DEMO_LINES, DemoLine} from "./DemoScript"
+import {DEMO_CLIPS, DEMO_CLOSER_SPEECH, DEMO_HOLD_SEC, DEMO_INTRO_HOLD_SEC, DEMO_INTRO_SPEECH, DEMO_LINES, DEMO_SIGNOFF_SPEECH, DemoLine} from "./DemoScript"
 
 /** Set to true to turn the demo driver on (preview only). */
 export const DEMO_DRIVER = false
@@ -76,6 +77,17 @@ export interface AutoplayHost {
   /** Flips S1 to UP (the retest waits for it). */
   flipS1(): void
   log(msg: string): void
+  /** Sparky says `text` aloud (the same text-to-speech path as "Sparky, ask"); busy() is true until it has finished. Absent = no speech. */
+  speak?(text: string): void
+}
+
+/** What Sparky says in the autoplay (see DemoScript.ts). */
+export interface AutoplaySpeech {
+  intro: string
+  /** After the "end job" line has finished and held. */
+  signoff: string
+  /** After the last line has finished and held, just before "autoplay done". */
+  closer: string
 }
 
 /**
@@ -87,9 +99,12 @@ export class DemoAutoplay {
   finished = false
   /** 0-based index of the line being played or held (-1 before the first). */
   line = -1
-  private state: "idle" | "intro" | "line" | "hold" = "idle"
+  private state: "idle" | "say" | "gap" | "line" | "hold" = "idle"
   private until = 0
   private lineStart = 0
+  /** What Sparky is saying in the "say" state, and what has been said already. */
+  private saying: "intro" | "signoff" | "closer" = "intro"
+  private signoffDone = false
 
   constructor(
     private runner: DemoRunner,
@@ -98,7 +113,8 @@ export class DemoAutoplay {
     private holds: number[],
     private introSec: number,
     /** A line that is still "busy" after this long is given up on (a hung live answer must not stall the demo). */
-    private maxWaitSec: number = 60
+    private maxWaitSec: number = 60,
+    private speech: AutoplaySpeech | null = null
   ) {}
 
   /** Starts from line 1: the cursor is reset first. */
@@ -107,9 +123,32 @@ export class DemoAutoplay {
     this.running = true
     this.finished = false
     this.line = -1
-    this.state = "intro"
-    this.until = this.host.now() + this.introSec
-    this.host.log("autoplay started: " + this.introSec + " s before line 1")
+    this.signoffDone = false
+    if (this.canSpeak() && this.speech!.intro) {
+      this.host.log("autoplay started: Sparky speaks the intro, then " + this.introSec + " s before line 1")
+      this.say("intro", this.speech!.intro)
+    } else {
+      this.state = "gap"
+      this.until = this.host.now() + this.introSec
+      this.host.log("autoplay started: " + this.introSec + " s before line 1")
+    }
+  }
+
+  private canSpeak(): boolean {
+    return !!this.speech && !!this.host.speak
+  }
+
+  /** Sparky speaks; the autoplay waits until busy() is false (like for any other Sparky speech), then carries on. */
+  private say(kind: "intro" | "signoff" | "closer", text: string): void {
+    this.saying = kind
+    this.state = "say"
+    this.lineStart = this.host.now()
+    this.host.log("autoplay Sparky says (" + kind + ")")
+    this.host.speak!(text)
+  }
+
+  private isEndJob(i: number): boolean {
+    return this.lines[i].command.toLowerCase().replace(/[^a-z ]/g, "").trim().endsWith("end job")
   }
 
   stop(): void {
@@ -134,8 +173,18 @@ export class DemoAutoplay {
   tick(): void {
     if (!this.running) return
     const now = this.host.now()
-    if (this.state === "intro") {
+    if (this.state === "gap") {
       if (now >= this.until) this.playLine()
+    } else if (this.state === "say") {
+      if (this.host.busy()) {
+        if (now - this.lineStart < this.maxWaitSec) return
+        this.host.log("autoplay Sparky still busy after " + this.maxWaitSec + " s: moving on")
+      }
+      if (this.saying === "intro") {
+        this.state = "gap"
+        this.until = now + this.introSec
+      } else if (this.saying === "signoff") this.playLine()
+      else this.finish()
     } else if (this.state === "line") {
       if (this.host.busy()) {
         if (now - this.lineStart < this.maxWaitSec) return
@@ -149,13 +198,21 @@ export class DemoAutoplay {
       this.until = now + (this.line < this.holds.length ? this.holds[this.line] : 1.5)
     } else if (this.state === "hold") {
       if (now < this.until) return
-      if (this.line + 1 >= this.lines.length) {
-        this.running = false
-        this.finished = true
-        this.state = "idle"
-        this.host.log("autoplay done")
+      if (this.canSpeak() && this.speech!.signoff && !this.signoffDone && this.isEndJob(this.line) && this.line + 1 < this.lines.length) {
+        this.signoffDone = true
+        this.say("signoff", this.speech!.signoff)
+      } else if (this.line + 1 >= this.lines.length) {
+        if (this.canSpeak() && this.speech!.closer) this.say("closer", this.speech!.closer)
+        else this.finish()
       } else this.playLine()
     }
+  }
+
+  private finish(): void {
+    this.running = false
+    this.finished = true
+    this.state = "idle"
+    this.host.log("autoplay done")
   }
 }
 
@@ -211,10 +268,13 @@ export class DemoDriver extends BaseScriptComponent {
           busy: () => this.pending !== null || this.clipPlaying() || !!this.sparky.busySpeaking,
           flipS1: () => this.flipS1(),
           log: (msg) => print("[DEMO] " + msg),
+          speak: (text) => this.sparky.sayPrompt(text, ""),
         },
         DEMO_LINES,
         DEMO_HOLD_SEC,
-        DEMO_INTRO_HOLD_SEC
+        DEMO_INTRO_HOLD_SEC,
+        60,
+        {intro: DEMO_INTRO_SPEECH, signoff: DEMO_SIGNOFF_SPEECH, closer: DEMO_CLOSER_SPEECH}
       )
       ;(global as any).mwnpDemo = runner
       print("[DEMO] driver on: live ASR off. N = next line (plays, then sends), B = back one (silent), P = autoplay from line 1 / stop")
