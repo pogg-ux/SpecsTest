@@ -23,6 +23,7 @@ import {MWNPCameraCloseScenario} from "./MWNPCameraCloseScenario"
 import {MWNPCardTextScenario} from "./MWNPCardTextScenario"
 import {MWNPSparkyVoiceScenario} from "./MWNPSparkyVoiceScenario"
 import {MWNPSparkyClipsScenario} from "./MWNPSparkyClipsScenario"
+import {MWNPVoiceReportSymptomScenario} from "./MWNPVoiceReportSymptomScenario"
 import {MWNPVerifyFixScenario} from "./MWNPVerifyFixScenario"
 import {MWNPSparkyHiddenScenario} from "./MWNPSparkyHiddenScenario"
 import {MWNPSparkyNotesScenario} from "./MWNPSparkyNotesScenario"
@@ -65,6 +66,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "mwnp-card-text", typename: MWNPCardTextScenario.getTypeName()},
     {id: "mwnp-sparky-voice", typename: MWNPSparkyVoiceScenario.getTypeName()},
     {id: "mwnp-sparky-clips", typename: MWNPSparkyClipsScenario.getTypeName()},
+    {id: "mwnp-voice-report-symptom", typename: MWNPVoiceReportSymptomScenario.getTypeName()},
     {id: "mwnp-verify-fix", typename: MWNPVerifyFixScenario.getTypeName()},
     {id: "mwnp-sparky-hidden", typename: MWNPSparkyHiddenScenario.getTypeName()},
     {id: "mwnp-sparky-notes", typename: MWNPSparkyNotesScenario.getTypeName()},
