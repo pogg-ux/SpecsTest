@@ -5,7 +5,7 @@
 //                mwnpSparky.inject(command, true) - exactly like a final transcript from live speech.
 //   Left arrow   steps back one line without playing anything (the next Right arrow plays that line again).
 // Live ASR is switched off while it runs, so the speakers cannot trigger Sparky. It shows nothing on screen; it only logs "[DEMO] ...".
-// Owns: the cursor over the 16 DemoScript lines, the key polling, the clip playback. Must not: act on a command (SparkyVoice does).
+// Owns: the cursor over the DemoScript lines, the key polling, the clip playback. Must not: act on a command (SparkyVoice does).
 // Test handle: global.mwnpDemo (only when it is running); DemoRunner is the cursor logic, tested on its own.
 
 import {DEMO_CLIPS, DEMO_LINES, DemoLine} from "./DemoScript"
